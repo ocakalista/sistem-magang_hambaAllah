@@ -1,4 +1,4 @@
-# pemrog_hambaallah
+# HambaAllah_Project
 
 A new Flutter project.
 
@@ -19,6 +19,5 @@ samples, guidance on mobile development, and a full API reference.
 ## 🎨 UI/UX Design
 
 Prototype dan desain antarmuka aplikasi dapat diakses melalui link berikut:
-
 https://www.figma.com/design/rnulkBkT6TdvuUAs3SQ9wm/COLLEGE_PROJECT?node-id=0-1&t=oH6KeatoRSpad7Ox-1
 
