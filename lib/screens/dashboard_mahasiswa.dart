@@ -1,5 +1,10 @@
 import 'package:flutter/material.dart';
 
+import '../models/application_model.dart';
+import '../models/nexus_app_state.dart';
+import 'application_status_screen.dart';
+import 'internship_detail_screen.dart';
+import 'internship_progress_screen.dart';
 import '../theme/app_theme.dart';
 
 class DashboardMahasiswa extends StatefulWidget {
@@ -14,23 +19,7 @@ class DashboardMahasiswa extends StatefulWidget {
 class _DashboardMahasiswaState extends State<DashboardMahasiswa> {
   int _selectedIndex = 0;
   final List<String> _filters = ['All', 'Engineering', 'Design', 'Marketing'];
-  final List<Map<String, String>> _recommended = const [
-    {
-      'company': 'Gojek',
-      'title': 'Product Design Intern',
-      'meta': 'Applied 2d ago',
-    },
-    {
-      'company': 'Telkom Indonesia',
-      'title': 'Frontend Engineering Intern',
-      'meta': 'Ends in 5 days',
-    },
-    {
-      'company': 'Tokopedia',
-      'title': 'Marketing Growth Intern',
-      'meta': 'Applied 1d ago',
-    },
-  ];
+  final List<Internship> _recommended = const [demoInternship];
 
   final List<Map<String, String>> _activities = const [
     {
@@ -52,6 +41,7 @@ class _DashboardMahasiswaState extends State<DashboardMahasiswa> {
 
   @override
   Widget build(BuildContext context) {
+    final appState = NexusScope.of(context);
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -230,7 +220,18 @@ class _DashboardMahasiswaState extends State<DashboardMahasiswa> {
                   separatorBuilder: (_, __) => const SizedBox(width: 14),
                   itemBuilder: (context, index) {
                     final item = _recommended[index];
-                    return _RecommendationCard(item: item);
+                    return _RecommendationCard(
+                      internship: item,
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder:
+                                (_) => InternshipDetailScreen(internship: item),
+                          ),
+                        );
+                      },
+                    );
                   },
                 ),
               ),
@@ -257,8 +258,25 @@ class _DashboardMahasiswaState extends State<DashboardMahasiswa> {
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _selectedIndex,
-        onDestinationSelected:
-            (index) => setState(() => _selectedIndex = index),
+        onDestinationSelected: (index) {
+          if (index == 1) {
+            final application = appState.currentApplication;
+            if (application == null) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Apply for an internship first.')),
+              );
+              return;
+            }
+            final route =
+                application.status == ApplicationStatus.accepted
+                    ? InternshipProgressScreen(application: application)
+                    : ApplicationStatusScreen(application: application);
+            Navigator.push(context, MaterialPageRoute(builder: (_) => route));
+            return;
+          }
+
+          setState(() => _selectedIndex = index);
+        },
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.home_outlined),
@@ -287,55 +305,104 @@ class _DashboardMahasiswaState extends State<DashboardMahasiswa> {
 }
 
 class _RecommendationCard extends StatelessWidget {
-  const _RecommendationCard({required this.item});
+  const _RecommendationCard({required this.internship, required this.onTap});
 
-  final Map<String, String> item;
+  final Internship internship;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 210,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF8F5FF),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: const Color(0xFFE9E0FA)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: const BoxDecoration(
-              color: AppColors.white,
-              shape: BoxShape.circle,
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(24),
+      child: Container(
+        width: 280,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFFF7F2FF), Color(0xFFFDFBFF)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: const Color(0xFFE9E0FA)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: const BoxDecoration(
+                    color: AppColors.white,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.apartment_rounded,
+                    color: AppColors.primary,
+                  ),
+                ),
+                const Spacer(),
+                const Icon(
+                  Icons.arrow_forward_rounded,
+                  color: AppColors.primary,
+                ),
+              ],
             ),
-            child: const Icon(
-              Icons.apartment_rounded,
-              color: AppColors.primary,
+            const SizedBox(height: 14),
+            Text(
+              internship.position,
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
             ),
-          ),
-          const SizedBox(height: 14),
-          Text(
-            item['title'] ?? '',
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-          const SizedBox(height: 6),
-          Text(
-            item['company'] ?? '',
-            style: Theme.of(
-              context,
-            ).textTheme.bodyMedium?.copyWith(color: AppColors.neutral),
-          ),
-          const Spacer(),
-          Text(
-            item['meta'] ?? '',
-            style: Theme.of(
-              context,
-            ).textTheme.labelMedium?.copyWith(color: AppColors.primary),
-          ),
-        ],
+            const SizedBox(height: 6),
+            Text(
+              internship.company,
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: AppColors.neutral),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              internship.location,
+              style: Theme.of(
+                context,
+              ).textTheme.labelMedium?.copyWith(color: AppColors.primary),
+            ),
+            const Spacer(),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children:
+                  internship.tags
+                      .map(
+                        (tag) => Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 7,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Text(
+                            tag,
+                            style: Theme.of(
+                              context,
+                            ).textTheme.labelSmall?.copyWith(
+                              color: AppColors.primary,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      )
+                      .toList(),
+            ),
+          ],
+        ),
       ),
     );
   }
