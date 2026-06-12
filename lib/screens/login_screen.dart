@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
+import '../models/nexus_app_state.dart';
 import 'dashboard_mahasiswa.dart';
+import 'admin/admin_dashboard_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   static const routeName = '/login';
@@ -16,6 +18,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
+  bool _loginAsAdmin = false;
 
   @override
   void dispose() {
@@ -145,14 +148,29 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                     const SizedBox(height: 4),
+                    // TODO: Replace this demo toggle with real auth + role check
+                    CheckboxListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('Login as Admin (demo)'),
+                      value: _loginAsAdmin,
+                      onChanged: (v) => setState(() => _loginAsAdmin = v ?? false),
+                    ),
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed:
-                            () => Navigator.pushReplacementNamed(
+                        onPressed: () {
+                          final state = NexusScope.of(context);
+                          // For demo: set role locally — in production this should be from auth
+                          state.setUserRole(_loginAsAdmin ? UserRole.admin : UserRole.student);
+                          if (_loginAsAdmin) {
+                            Navigator.pushReplacementNamed(context, AdminDashboardScreen.routeName);
+                          } else {
+                            Navigator.pushReplacementNamed(
                               context,
                               DashboardMahasiswa.routeName,
-                            ),
+                            );
+                          }
+                        },
                         child: const Text('LOGIN TO NEXUS →'),
                       ),
                     ),

@@ -6,7 +6,8 @@ import '../models/nexus_app_state.dart';
 import '../theme/app_theme.dart';
 import 'dashboard_mahasiswa.dart';
 import 'internship_progress_screen.dart';
-import 'nexus_bottom_navigation_bar.dart';
+import 'notifications_screen.dart';
+import '../widgets/bottom_nav.dart';
 
 class ApplicationStatusScreen extends StatelessWidget {
   const ApplicationStatusScreen({super.key, this.application});
@@ -172,6 +173,14 @@ class ApplicationStatusScreen extends StatelessWidget {
   void _handleNav(BuildContext context, int index) {
     if (index == 0) {
       Navigator.pushReplacementNamed(context, DashboardMahasiswa.routeName);
+      return;
+    }
+
+    if (index == 2) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const NotificationsScreen()),
+      );
     }
   }
 }

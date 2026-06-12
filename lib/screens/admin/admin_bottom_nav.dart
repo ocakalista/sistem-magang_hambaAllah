@@ -1,0 +1,45 @@
+import 'package:flutter/material.dart';
+import '../../theme/app_theme.dart';
+
+class AdminBottomNav extends StatelessWidget {
+  const AdminBottomNav({
+    super.key,
+    required this.selectedIndex,
+    required this.onDestinationSelected,
+  });
+
+  final int selectedIndex;
+  final ValueChanged<int> onDestinationSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return NavigationBar(
+      selectedIndex: selectedIndex,
+      onDestinationSelected: onDestinationSelected,
+      backgroundColor: AppColors.white,
+      indicatorColor: AppColors.primary.withValues(alpha: 0.12),
+      destinations: const [
+        NavigationDestination(
+          icon: Icon(Icons.dashboard_outlined),
+          selectedIcon: Icon(Icons.dashboard_rounded),
+          label: 'Home',
+        ),
+        NavigationDestination(
+          icon: Icon(Icons.work_outline_rounded),
+          selectedIcon: Icon(Icons.work_rounded),
+          label: 'Lowongan',
+        ),
+        NavigationDestination(
+          icon: Icon(Icons.group_outlined),
+          selectedIcon: Icon(Icons.group_rounded),
+          label: 'Pengguna',
+        ),
+        NavigationDestination(
+          icon: Icon(Icons.person_outline_rounded),
+          selectedIcon: Icon(Icons.person_rounded),
+          label: 'Profile',
+        ),
+      ],
+    );
+  }
+}
