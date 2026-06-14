@@ -46,7 +46,7 @@ class InternshipDetailScreen extends StatelessWidget {
           children: [
             _HeroHeader(internship: internship),
             Transform.translate(
-              offset: const Offset(0, -54),
+              offset: const Offset(0, -52),
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: _CompanyCard(internship: internship),
@@ -77,18 +77,18 @@ class InternshipDetailScreen extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 20),
-                  _SectionTitle(
+                  _SectionCard(
                     title: 'Job Description',
                     child: Text(
                       internship.description,
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        height: 1.65,
+                        height: 1.7,
                         color: Colors.black87,
                       ),
                     ),
                   ),
-                  const SizedBox(height: 20),
-                  _SectionTitle(
+                  const SizedBox(height: 16),
+                  _SectionCard(
                     title: 'Requirements',
                     child: Column(
                       children:
@@ -106,28 +106,19 @@ class InternshipDetailScreen extends StatelessWidget {
                               .toList(),
                     ),
                   ),
-                  const SizedBox(height: 20),
-                  _SectionTitle(
+                  const SizedBox(height: 16),
+                  _SectionCard(
                     title: 'Benefits',
-                    child: Wrap(
-                      spacing: 10,
-                      runSpacing: 10,
+                    child: Column(
                       children:
-                          internship.benefits.map((benefit) {
-                            final icon = switch (benefit) {
-                              'Competitive Stipend' => '💰',
-                              'Mentorship Program' => '🧭',
-                              _ => '🚀',
-                            };
-                            return Chip(
-                              avatar: Text(icon),
-                              label: Text(benefit),
-                              backgroundColor: Colors.white,
-                              side: BorderSide(
-                                color: AppColors.primary.withValues(alpha: 0.1),
-                              ),
-                            );
-                          }).toList(),
+                          internship.benefits
+                              .map(
+                                (benefit) => Padding(
+                                  padding: const EdgeInsets.only(bottom: 12),
+                                  child: _BenefitRow(benefit: benefit),
+                                ),
+                              )
+                              .toList(),
                     ),
                   ),
                 ],
@@ -200,7 +191,7 @@ class _HeroHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 280,
+      height: 300,
       width: double.infinity,
       decoration: const BoxDecoration(
         gradient: LinearGradient(
@@ -212,23 +203,23 @@ class _HeroHeader extends StatelessWidget {
       child: Stack(
         children: [
           Positioned(
-            top: 24,
-            right: 26,
+            top: 18,
+            right: 18,
             child: Container(
-              width: 110,
-              height: 110,
+              width: 128,
+              height: 128,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.white.withValues(alpha: 0.08),
+                color: Colors.white.withValues(alpha: 0.09),
               ),
             ),
           ),
           Positioned(
-            left: 28,
-            top: 88,
+            left: 24,
+            top: 92,
             child: Container(
-              width: 160,
-              height: 160,
+              width: 180,
+              height: 180,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: Colors.white.withValues(alpha: 0.08),
@@ -238,7 +229,7 @@ class _HeroHeader extends StatelessWidget {
           Positioned(
             left: 20,
             right: 20,
-            bottom: 28,
+            bottom: 22,
             child: Container(
               padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
@@ -249,8 +240,8 @@ class _HeroHeader extends StatelessWidget {
               child: Row(
                 children: [
                   Container(
-                    width: 64,
-                    height: 64,
+                    width: 60,
+                    height: 60,
                     decoration: const BoxDecoration(
                       color: Colors.white,
                       shape: BoxShape.circle,
@@ -356,8 +347,8 @@ class _CompanyCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            width: 54,
-            height: 54,
+            width: 56,
+            height: 56,
             decoration: BoxDecoration(
               color: AppColors.primary.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(18),
@@ -383,7 +374,7 @@ class _CompanyCard extends StatelessWidget {
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 12),
                 Wrap(
                   spacing: 8,
                   runSpacing: 8,
@@ -419,6 +410,13 @@ class _InfoCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.white,
         borderRadius: BorderRadius.circular(22),
+        boxShadow: const [
+          BoxShadow(
+            blurRadius: 20,
+            offset: Offset(0, 10),
+            color: Color(0x0B000000),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -449,8 +447,8 @@ class _InfoCard extends StatelessWidget {
   }
 }
 
-class _SectionTitle extends StatelessWidget {
-  const _SectionTitle({required this.title, required this.child});
+class _SectionCard extends StatelessWidget {
+  const _SectionCard({required this.title, required this.child});
 
   final String title;
   final Widget child;
@@ -459,20 +457,41 @@ class _SectionTitle extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.only(left: 14),
-      decoration: const BoxDecoration(
-        border: Border(left: BorderSide(color: AppColors.primary, width: 4)),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: const [
+          BoxShadow(
+            blurRadius: 22,
+            offset: Offset(0, 12),
+            color: Color(0x08000000),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            title,
-            style: Theme.of(
-              context,
-            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+          Row(
+            children: [
+              Container(
+                width: 4,
+                height: 22,
+                decoration: BoxDecoration(
+                  color: AppColors.primary,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                title,
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+              ),
+            ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 14),
           child,
         ],
       ),
@@ -530,6 +549,59 @@ class _TagChip extends StatelessWidget {
           color: AppColors.primary,
           fontWeight: FontWeight.w700,
         ),
+      ),
+    );
+  }
+}
+
+class _BenefitRow extends StatelessWidget {
+  const _BenefitRow({required this.benefit});
+
+  final String benefit;
+
+  @override
+  Widget build(BuildContext context) {
+    final icon = switch (benefit) {
+      'Competitive Stipend' => '💰',
+      'Mentorship Program' => '🧭',
+      _ => '🚀',
+    };
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.12)),
+      ),
+      child: Row(
+        children: [
+          Text(icon, style: const TextStyle(fontSize: 18)),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              benefit,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+                color: Colors.black87,
+              ),
+            ),
+          ),
+          Container(
+            width: 24,
+            height: 24,
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(alpha: 0.08),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.chevron_right_rounded,
+              size: 18,
+              color: AppColors.primary,
+            ),
+          ),
+        ],
       ),
     );
   }

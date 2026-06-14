@@ -103,28 +103,35 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         ),
                         const SizedBox(height: 24),
                         _PageIndicator(selectedIndex: _currentPage),
-                        const Spacer(),
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton(
-                            onPressed:
-                                () => Navigator.pushReplacementNamed(
-                                  context,
-                                  LoginScreen.routeName,
-                                ),
-                            child: const Text('Lanjutkan →'),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          'Geser untuk melihat lainnya',
-                          style: Theme.of(context).textTheme.bodySmall
-                              ?.copyWith(color: AppColors.neutral),
-                        ),
                       ],
                     ),
                   );
                 },
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed:
+                          () => Navigator.pushReplacementNamed(
+                            context,
+                            LoginScreen.routeName,
+                          ),
+                      child: const Text('Lanjutkan →'),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Geser untuk melihat lainnya',
+                    style: Theme.of(context).textTheme.bodySmall
+                        ?.copyWith(color: AppColors.neutral),
+                  ),
+                ],
               ),
             ),
           ],

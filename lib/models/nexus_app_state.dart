@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 
 import 'application_model.dart';
 import 'admin_model.dart';
+import 'notification_model.dart';
+import '../theme/app_theme.dart';
 
 enum UserRole { student, admin }
-import 'admin_model.dart';
-import 'notification_model.dart';
 
 class NexusAppState extends ChangeNotifier {
   NexusAppState() {
@@ -20,7 +20,8 @@ class NexusAppState extends ChangeNotifier {
   late PlatformStats adminStats;
   final List<StudentEnrollment> studentEnrollments = <StudentEnrollment>[];
   final List<PendingLowongan> pendingLowongan = <PendingLowongan>[];
-  final List<InternshipDistribution> internshipDistribution = <InternshipDistribution>[];
+  final List<InternshipDistribution> internshipDistribution =
+      <InternshipDistribution>[];
 
   Application? get currentApplication => _currentApplication;
 
@@ -122,26 +123,31 @@ class NexusAppState extends ChangeNotifier {
 
     final report = application.weeklyReports[reportIndex];
     final previousStatus = report.status;
-    report.status = status;
+    application.weeklyReports[reportIndex] = WeeklyReport(
+      weekNumber: report.weekNumber,
+      title: report.title,
+      description: report.description,
+      status: status,
+      dueDate: report.dueDate,
+      feedbackFromLecturer: feedbackFromLecturer ?? report.feedbackFromLecturer,
+      lecturerName: lecturerName ?? report.lecturerName,
+    );
 
-    if (feedbackFromLecturer != null) {
-      report.feedbackFromLecturer = feedbackFromLecturer;
-    }
-    if (lecturerName != null) {
-      report.lecturerName = lecturerName;
-    }
+    final updatedReport = application.weeklyReports[reportIndex];
 
     if (previousStatus != 'completed' &&
         status == 'completed' &&
-        (report.feedbackFromLecturer ?? '').isNotEmpty) {
-      _addNotification(_buildLogbookNotification(application, report));
+        (updatedReport.feedbackFromLecturer ?? '').isNotEmpty) {
+      _addNotification(_buildLogbookNotification(application, updatedReport));
     }
 
     notifyListeners();
   }
 
   void markNotificationAsRead(String id) {
-    final index = _notifications.indexWhere((notification) => notification.id == id);
+    final index = _notifications.indexWhere(
+      (notification) => notification.id == id,
+    );
     if (index == -1) {
       return;
     }

@@ -2,12 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../models/application_model.dart';
 import '../models/nexus_app_state.dart';
-import '../theme/app_theme.dart';
-import '../widgets/bottom_nav.dart';
 import 'application_status_screen.dart';
 import 'internship_detail_screen.dart';
 import 'internship_progress_screen.dart';
-import 'notifications_screen.dart';
+import '../theme/app_theme.dart';
 
 class DashboardMahasiswa extends StatefulWidget {
   static const routeName = '/dashboard';
@@ -258,7 +256,7 @@ class _DashboardMahasiswaState extends State<DashboardMahasiswa> {
         foregroundColor: Colors.white,
         child: const Icon(Icons.add_rounded),
       ),
-      bottomNavigationBar: NexusBottomNavigationBar(
+      bottomNavigationBar: NavigationBar(
         selectedIndex: _selectedIndex,
         onDestinationSelected: (index) {
           if (index == 1) {
@@ -277,16 +275,30 @@ class _DashboardMahasiswaState extends State<DashboardMahasiswa> {
             return;
           }
 
-          if (index == 2) {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const NotificationsScreen()),
-            );
-            return;
-          }
-
           setState(() => _selectedIndex = index);
         },
+        destinations: const [
+          NavigationDestination(
+            icon: Icon(Icons.home_outlined),
+            selectedIcon: Icon(Icons.home_rounded),
+            label: 'Home',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.work_outline_rounded),
+            selectedIcon: Icon(Icons.work_rounded),
+            label: 'My Internship',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.notifications_none_rounded),
+            selectedIcon: Icon(Icons.notifications_rounded),
+            label: 'Alerts',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.person_outline_rounded),
+            selectedIcon: Icon(Icons.person_rounded),
+            label: 'Profile',
+          ),
+        ],
       ),
     );
   }
