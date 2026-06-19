@@ -4,6 +4,7 @@ import '../theme/app_theme.dart';
 import '../models/nexus_app_state.dart';
 import 'dashboard_mahasiswa.dart';
 import 'admin/admin_dashboard_screen.dart';
+import '../services/api_service.dart';
 
 class LoginScreen extends StatefulWidget {
   static const routeName = '/login';
@@ -19,6 +20,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
   bool _loginAsAdmin = false;
+  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -132,10 +134,9 @@ class _LoginScreenState extends State<LoginScreen> {
                                 ? Icons.visibility_off_outlined
                                 : Icons.visibility_outlined,
                           ),
-                          onPressed:
-                              () => setState(
-                                () => _obscurePassword = !_obscurePassword,
-                              ),
+                          onPressed: () => setState(
+                            () => _obscurePassword = !_obscurePassword,
+                          ),
                         ),
                       ),
                     ),
@@ -153,25 +154,81 @@ class _LoginScreenState extends State<LoginScreen> {
                       contentPadding: EdgeInsets.zero,
                       title: const Text('Login as Admin (demo)'),
                       value: _loginAsAdmin,
-                      onChanged: (v) => setState(() => _loginAsAdmin = v ?? false),
+                      onChanged: (v) =>
+                          setState(() => _loginAsAdmin = v ?? false),
                     ),
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: () {
-                          final state = NexusScope.of(context);
-                          // For demo: set role locally — in production this should be from auth
-                          state.setUserRole(_loginAsAdmin ? UserRole.admin : UserRole.student);
-                          if (_loginAsAdmin) {
-                            Navigator.pushReplacementNamed(context, AdminDashboardScreen.routeName);
-                          } else {
-                            Navigator.pushReplacementNamed(
-                              context,
-                              DashboardMahasiswa.routeName,
-                            );
-                          }
-                        },
-                        child: const Text('LOGIN TO NEXUS →'),
+                        onPressed: _isLoading
+                            ? null
+                            : () async {
+                                // 1. Nyalakan efek putaran loading
+                                setState(() => _isLoading = true);
+
+                                final emailOrNim = _emailController.text;
+                                final password = _passwordController.text;
+
+                                // 2. Tembak API Backend buatanmu!
+                                final response = await ApiService.login(
+                                  emailOrNim,
+                                  password,
+                                );
+
+                                // 3. Matikan efek loading
+                                setState(() => _isLoading = false);
+
+                                // 4. Cek apakah Laravel membalas dengan memberikan 'token'
+                                if (response.containsKey('token')) {
+                                  final state = NexusScope.of(context);
+
+                                  // Ambil role asli dari database
+                                  final role = response['role'] == 'admin'
+                                      ? UserRole.admin
+                                      : UserRole.student;
+                                  state.setUserRole(role);
+
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Login Berhasil!'),
+                                    ),
+                                  );
+
+                                  // Arahkan ke dasbor yang tepat
+                                  if (role == UserRole.admin) {
+                                    Navigator.pushReplacementNamed(
+                                      context,
+                                      AdminDashboardScreen.routeName,
+                                    );
+                                  } else {
+                                    Navigator.pushReplacementNamed(
+                                      context,
+                                      DashboardMahasiswa.routeName,
+                                    );
+                                  }
+                                } else {
+                                  // 5. Tampilkan pesan error dari Laravel (misal: NIM/Password salah)
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        response['message'] ??
+                                            'Gagal terhubung ke server',
+                                      ),
+                                      backgroundColor: Colors.red.shade400,
+                                    ),
+                                  );
+                                }
+                              },
+                        child: _isLoading
+                            ? const SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 2.5,
+                                ),
+                              )
+                            : const Text('LOGIN TO NEXUS →'),
                       ),
                     ),
                     const SizedBox(height: 18),
@@ -188,12 +245,11 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                           Text(
                             'Register now',
-                            style: Theme.of(
-                              context,
-                            ).textTheme.bodyMedium?.copyWith(
-                              color: AppColors.primary,
-                              fontWeight: FontWeight.w600,
-                            ),
+                            style: Theme.of(context).textTheme.bodyMedium
+                                ?.copyWith(
+                                  color: AppColors.primary,
+                                  fontWeight: FontWeight.w600,
+                                ),
                           ),
                         ],
                       ),
