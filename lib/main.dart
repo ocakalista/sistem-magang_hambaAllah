@@ -5,6 +5,8 @@ import 'screens/dashboard_mahasiswa.dart';
 import 'screens/login_screen.dart';
 import 'screens/notifications_screen.dart';
 import 'screens/admin/admin_dashboard_screen.dart';
+import 'screens/dosen/dosen_dashboard_screen.dart';
+import 'screens/dosen/weekly_report_detail_screen.dart';
 import 'widgets/role_guard.dart';
 import 'screens/onboarding_screen.dart';
 import 'screens/splash_screen.dart';
@@ -33,7 +35,11 @@ class _NexusAppState extends State<NexusApp> {
         title: 'Nexus',
         theme: AppTheme.lightTheme,
         initialRoute: SplashScreen.routeName,
-        // TODO: Implement role-based routing / protect admin routes behind an auth+role check
+        // TODO: Enhance role-based routing to protect all role-specific routes behind auth+role checks
+        // - Admin routes: /admin (requires UserRole.admin)
+        // - Dosen routes: /dosen (requires UserRole.dosen), /dosen/weekly-report-detail
+        // - Student routes: /dashboard (requires UserRole.student)
+        // Currently protected via RoleGuard wrapper, but consider moving to onGenerateRoute for centralized control
         routes: {
           SplashScreen.routeName: (_) => const SplashScreen(),
           OnboardingScreen.routeName: (_) => const OnboardingScreen(),
@@ -42,6 +48,25 @@ class _NexusAppState extends State<NexusApp> {
           AdminDashboardScreen.routeName: (_) => const RoleGuard(
                 requiredRole: UserRole.admin,
                 child: AdminDashboardScreen(),
+              ),
+          DosenDashboardScreen.routeName: (_) => const RoleGuard(
+                requiredRole: UserRole.dosen,
+                child: DosenDashboardScreen(),
+              ),
+          WeeklyReportDetailScreen.routeName: (_) => Builder(
+                builder: (context) {
+                  final args = ModalRoute.of(context)?.settings.arguments
+                      as Map<String, dynamic>?;
+                  if (args == null) {
+                    return const Scaffold(
+                      body: Center(child: Text('Invalid report data')),
+                    );
+                  }
+                  return WeeklyReportDetailScreen(
+                    report: args['report'],
+                    student: args['student'],
+                  );
+                },
               ),
           NotificationsScreen.routeName: (_) => const NotificationsScreen(),
         },

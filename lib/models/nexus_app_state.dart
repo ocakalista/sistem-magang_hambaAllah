@@ -2,15 +2,17 @@ import 'package:flutter/material.dart';
 
 import 'application_model.dart';
 import 'admin_model.dart';
+import 'dosen_model.dart';
 import 'notification_model.dart';
 import '../theme/app_theme.dart';
 
-enum UserRole { student, admin }
+enum UserRole { student, admin, dosen }
 
 class NexusAppState extends ChangeNotifier {
   NexusAppState() {
     _notifications.addAll(_buildStaticDemoNotifications());
     _initAdminData();
+    _initDosenData();
   }
 
   Application? _currentApplication;
@@ -22,6 +24,11 @@ class NexusAppState extends ChangeNotifier {
   final List<PendingLowongan> pendingLowongan = <PendingLowongan>[];
   final List<InternshipDistribution> internshipDistribution =
       <InternshipDistribution>[];
+
+  // Dosen role related state
+  late DosenStats dosenStats;
+  final List<MahasiswaBimbingan> mahasiswaBimbingan = <MahasiswaBimbingan>[];
+  final List<WeeklyReportDosen> recentDosenReports = <WeeklyReportDosen>[];
 
   Application? get currentApplication => _currentApplication;
 
@@ -343,6 +350,210 @@ class NexusAppState extends ChangeNotifier {
         group: 'Earlier Today',
       ),
     ];
+  }
+
+  void _initDosenData() {
+    // Initialize DosenStats with demo data
+    dosenStats = DosenStats(
+      totalApprovalNeeded: 8,
+      approvalChangeFromYesterday: 2,
+      completedInternships: 14,
+      ongoingInternships: 10,
+    );
+
+    // Weekly reports for Arkananta Rizky
+    final arkanantaReports = [
+      WeeklyReportDosen(
+        id: 'report-ark-12',
+        weekNumber: 12,
+        title: 'Final Sprint Completion',
+        submittedBy: 'Arkananta Rizky',
+        submittedAt: DateTime.now().subtract(const Duration(hours: 3)),
+        reportContent:
+            'Completed the user authentication module with OAuth 2.0 integration. Wrote comprehensive unit tests achieving 95% code coverage. Collaborated with QA team to resolve 12 critical bugs. Performance metrics improved by 40% after database optimization.',
+        isApproved: false,
+      ),
+      WeeklyReportDosen(
+        id: 'report-ark-11',
+        weekNumber: 11,
+        title: 'Database Optimization',
+        submittedBy: 'Arkananta Rizky',
+        submittedAt: DateTime.now().subtract(const Duration(hours: 26)),
+        reportContent:
+            'Analyzed database query performance and identified N+1 problems. Implemented query optimization using indexing and caching strategies. Reduced average response time from 500ms to 150ms.',
+        isApproved: true,
+        lecturerFeedback: 'Excellent work on database optimization!',
+      ),
+    ];
+
+    // Weekly reports for Sarah Safitri
+    final sarahReports = [
+      WeeklyReportDosen(
+        id: 'report-sarah-8',
+        weekNumber: 8,
+        title: 'Design System Implementation',
+        submittedBy: 'Sarah Safitri',
+        submittedAt: DateTime.now().subtract(const Duration(hours: 5)),
+        reportContent:
+            'Created comprehensive design system documentation with 50+ components. Established color palette guidelines and typography standards. Conducted design review sessions with stakeholders and gathered feedback for iteration. Started implementing component library in React.',
+        isApproved: false,
+      ),
+      WeeklyReportDosen(
+        id: 'report-sarah-7',
+        weekNumber: 7,
+        title: 'User Research Analysis',
+        submittedBy: 'Sarah Safitri',
+        submittedAt: DateTime.now().subtract(const Duration(hours: 30)),
+        reportContent:
+            'Conducted 15 user interviews for the mobile app redesign project. Analyzed interview transcripts and created affinity map. Identified 8 key user pain points and created wireframes addressing these issues.',
+        isApproved: true,
+        lecturerFeedback: 'Great insights from user research!',
+      ),
+    ];
+
+    // Recent reports for dashboard display
+    recentDosenReports.addAll([
+      WeeklyReportDosen(
+        id: 'report-budi-11',
+        weekNumber: 11,
+        title: 'Development Sprint',
+        submittedBy: 'Budi Doremi',
+        submittedAt: DateTime.now().subtract(const Duration(hours: 2)),
+        reportContent:
+            'Completed backend API development for payment processing module. Integrated Stripe API and implemented webhook handlers. Wrote extensive documentation for API endpoints. Started performance testing with load simulations.',
+        isApproved: false,
+      ),
+      WeeklyReportDosen(
+        id: 'report-anita-10',
+        weekNumber: 10,
+        title: 'User Testing Result',
+        submittedBy: 'Anita W.',
+        submittedAt: DateTime.now().subtract(const Duration(hours: 5)),
+        reportContent:
+            'Conducted usability testing with 20 participants on the new feature. Task success rate was 89% with average task completion time of 2.3 minutes. Identified 5 usability issues and created prioritized action items for design improvements. All issues have been logged in the product backlog.',
+        isApproved: false,
+      ),
+    ]);
+
+    // Initialize MahasiswaBimbingan list
+    mahasiswaBimbingan.addAll([
+      MahasiswaBimbingan(
+        id: 'mhs-ark',
+        name: 'Arkananta Rizky',
+        internshipPosition: 'Software Engineer @ Gojek',
+        avatarUrl: null,
+        currentWeek: 12,
+        totalWeeks: 16,
+        progressPercent: 0.85,
+        weeklyReports: arkanantaReports,
+      ),
+      MahasiswaBimbingan(
+        id: 'mhs-sarah',
+        name: 'Sarah Safitri',
+        internshipPosition: 'UI Designer @ Traveloka',
+        avatarUrl: null,
+        currentWeek: 8,
+        totalWeeks: 12,
+        progressPercent: 0.60,
+        weeklyReports: sarahReports,
+      ),
+      MahasiswaBimbingan(
+        id: 'mhs-budi',
+        name: 'Budi Doremi',
+        internshipPosition: 'Backend Developer @ Tokopedia',
+        avatarUrl: null,
+        currentWeek: 11,
+        totalWeeks: 14,
+        progressPercent: 0.75,
+        weeklyReports: [
+          WeeklyReportDosen(
+            id: 'report-budi-10',
+            weekNumber: 10,
+            title: 'API Documentation',
+            submittedBy: 'Budi Doremi',
+            submittedAt: DateTime.now().subtract(const Duration(hours: 48)),
+            reportContent:
+                'Created comprehensive API documentation using OpenAPI spec. Documented 25+ endpoints with request/response examples. Created postman collection for testing.',
+            isApproved: true,
+            lecturerFeedback: 'Well-documented API endpoints!',
+          ),
+        ],
+      ),
+      MahasiswaBimbingan(
+        id: 'mhs-anita',
+        name: 'Anita W.',
+        internshipPosition: 'Product Manager @ Bukalapak',
+        avatarUrl: null,
+        currentWeek: 10,
+        totalWeeks: 13,
+        progressPercent: 0.70,
+        weeklyReports: [
+          WeeklyReportDosen(
+            id: 'report-anita-9',
+            weekNumber: 9,
+            title: 'Market Analysis',
+            submittedBy: 'Anita W.',
+            submittedAt: DateTime.now().subtract(const Duration(hours: 72)),
+            reportContent:
+                'Analyzed competitive landscape and identified market opportunities. Created product strategy document with 3-year roadmap. Presented findings to stakeholders.',
+            isApproved: true,
+            lecturerFeedback: 'Comprehensive market analysis!',
+          ),
+        ],
+      ),
+    ]);
+  }
+
+  void approveDosenReport({
+    required String studentId,
+    required String reportId,
+    required String feedback,
+  }) {
+    // Find the student and report
+    for (var student in mahasiswaBimbingan) {
+      if (student.id == studentId) {
+        final reportIndex =
+            student.weeklyReports.indexWhere((r) => r.id == reportId);
+        if (reportIndex != -1) {
+          final report = student.weeklyReports[reportIndex];
+          student.weeklyReports[reportIndex] = report.copyWith(
+            isApproved: true,
+            lecturerFeedback: feedback,
+          );
+
+          // Decrement total approval needed
+          dosenStats = dosenStats.copyWith(
+            totalApprovalNeeded: dosenStats.totalApprovalNeeded - 1,
+          );
+
+          notifyListeners();
+          return;
+        }
+      }
+    }
+  }
+
+  void rejectDosenReport({
+    required String studentId,
+    required String reportId,
+    required String reason,
+  }) {
+    // Find the student and report - mark for revision
+    for (var student in mahasiswaBimbingan) {
+      if (student.id == studentId) {
+        final reportIndex =
+            student.weeklyReports.indexWhere((r) => r.id == reportId);
+        if (reportIndex != -1) {
+          final report = student.weeklyReports[reportIndex];
+          student.weeklyReports[reportIndex] = report.copyWith(
+            lecturerFeedback: 'Please revise: $reason',
+          );
+
+          notifyListeners();
+          return;
+        }
+      }
+    }
   }
 }
 

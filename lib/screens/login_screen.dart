@@ -4,6 +4,7 @@ import '../theme/app_theme.dart';
 import '../models/nexus_app_state.dart';
 import 'dashboard_mahasiswa.dart';
 import 'admin/admin_dashboard_screen.dart';
+import 'dosen/dosen_dashboard_screen.dart';
 import '../services/api_service.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -19,7 +20,6 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
-  bool _loginAsAdmin = false;
   bool _isLoading = false;
 
   @override
@@ -148,75 +148,99 @@ class _LoginScreenState extends State<LoginScreen> {
                         child: const Text('Forgot Password?'),
                       ),
                     ),
-                    const SizedBox(height: 4),
-                    // TODO: Replace this demo toggle with real auth + role check
-                    CheckboxListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: const Text('Login as Admin (demo)'),
-                      value: _loginAsAdmin,
-                      onChanged: (v) =>
-                          setState(() => _loginAsAdmin = v ?? false),
-                    ),
+                    const SizedBox(height: 16),
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
                         onPressed: _isLoading
                             ? null
                             : () async {
-                                // 1. Nyalakan efek putaran loading
                                 setState(() => _isLoading = true);
 
-                                final emailOrNim = _emailController.text;
-                                final password = _passwordController.text;
+                                final emailOrNim = _emailController.text.trim();
+                                final password = _passwordController.text.trim();
 
-                                // 2. Tembak API Backend buatanmu!
+                                // Validasi input
+                                if (emailOrNim.isEmpty || password.isEmpty) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        'Harap isi email/NIM dan password',
+                                      ),
+                                      backgroundColor: Colors.orange,
+                                    ),
+                                  );
+                                  setState(() => _isLoading = false);
+                                  return;
+                                }
+
+                                // Tembak API Backend
                                 final response = await ApiService.login(
                                   emailOrNim,
                                   password,
                                 );
 
-                                // 3. Matikan efek loading
                                 setState(() => _isLoading = false);
 
-                                // 4. Cek apakah Laravel membalas dengan memberikan 'token'
+                                if (!mounted) return;
+
+                                // Cek apakah berhasil mendapat token
                                 if (response.containsKey('token')) {
                                   final state = NexusScope.of(context);
 
-                                  // Ambil role asli dari database
-                                  final role = response['role'] == 'admin'
-                                      ? UserRole.admin
-                                      : UserRole.student;
+                                  // Ambil role dari database
+                                  final roleStr = response['role'] ?? 'mahasiswa';
+                                  UserRole role;
+
+                                  if (roleStr == 'admin') {
+                                    role = UserRole.admin;
+                                  } else if (roleStr == 'dosen') {
+                                    role = UserRole.dosen;
+                                  } else {
+                                    role = UserRole.student;
+                                  }
+
                                   state.setUserRole(role);
 
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('Login Berhasil!'),
-                                    ),
-                                  );
+                                  if (mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('Login Berhasil!'),
+                                      ),
+                                    );
 
-                                  // Arahkan ke dasbor yang tepat
-                                  if (role == UserRole.admin) {
-                                    Navigator.pushReplacementNamed(
-                                      context,
-                                      AdminDashboardScreen.routeName,
-                                    );
-                                  } else {
-                                    Navigator.pushReplacementNamed(
-                                      context,
-                                      DashboardMahasiswa.routeName,
-                                    );
+                                    // Arahkan ke dashboard yang sesuai
+                                    if (role == UserRole.admin) {
+                                      Navigator.pushReplacementNamed(
+                                        context,
+                                        AdminDashboardScreen.routeName,
+                                      );
+                                    } else if (role == UserRole.dosen) {
+                                      Navigator.pushReplacementNamed(
+                                        context,
+                                        DosenDashboardScreen.routeName,
+                                      );
+                                    } else {
+                                      Navigator.pushReplacementNamed(
+                                        context,
+                                        DashboardMahasiswa.routeName,
+                                      );
+                                    }
                                   }
                                 } else {
-                                  // 5. Tampilkan pesan error dari Laravel (misal: NIM/Password salah)
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(
-                                        response['message'] ??
-                                            'Gagal terhubung ke server',
+                                  // Tampilkan error message
+                                  if (mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                          response['message'] ??
+                                              'Gagal terhubung ke server. Harap pastikan backend Laravel berjalan di http://127.0.0.1:8000',
+                                        ),
+                                        backgroundColor: Colors.red.shade400,
+                                        duration: const Duration(seconds: 4),
                                       ),
-                                      backgroundColor: Colors.red.shade400,
-                                    ),
-                                  );
+                                    );
+                                  }
                                 }
                               },
                         child: _isLoading
@@ -240,16 +264,20 @@ class _LoginScreenState extends State<LoginScreen> {
                         crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
                           Text(
-                            'Don\'t have an account? ',
+                            'Gunakan akun ',
                             style: Theme.of(context).textTheme.bodyMedium,
                           ),
                           Text(
-                            'Register now',
+                            'Amikom',
                             style: Theme.of(context).textTheme.bodyMedium
                                 ?.copyWith(
                                   color: AppColors.primary,
                                   fontWeight: FontWeight.w600,
                                 ),
+                          ),
+                          Text(
+                            ' untuk login',
+                            style: Theme.of(context).textTheme.bodyMedium,
                           ),
                         ],
                       ),
