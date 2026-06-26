@@ -1,0 +1,12 @@
+### 1. Uji Coba Penolakan Mahasiswa
+PUT http://127.0.0.1:8000/api/pendaftaran/1/status
+Content-Type: application/json
+Accept: application/json
+
+{
+  "status": "ditolak"
+}
+
+### 2. Cek Kembalian Kuota Lowongan (Pembuktian)
+GET http://127.0.0.1:8000/api/lowongan/1
+Accept: application/json

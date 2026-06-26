@@ -21,6 +21,9 @@ Route::post('/pendaftaran', [PendaftaranController::class, 'store']);
 Route::put('/pendaftaran/{id}/status', [PendaftaranController::class, 'updateStatus']);
 
 Route::get('/logbook', [LogbookController::class, 'index']);
+Route::post('/logbook', [LogbookController::class, 'store']);
+Route::put('/logbook/{id}/status', [LogbookController::class, 'updateStatus']);
+
 Route::get('/mitra', [MitraController::class, 'index']);
 
 Route::post('/register', [AuthController::class, 'register']);
