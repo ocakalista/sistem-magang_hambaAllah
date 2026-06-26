@@ -11,12 +11,14 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('logbook', function (Blueprint $table) {
-            $table->id('id_logbook');
-            $table->unsignedBigInteger('id_pendaftaran');
-            $table->text('isi_laporan');
-            $table->date('tanggal_submit');
-            $table->text('evaluasi_dosen')->nullable(); // nullable berarti dosen belum tentu langsung menilai
+        Schema::create('lowongans', function (Blueprint $table) {
+            $table->id();
+            $table->string('company_name');
+            $table->string('company_category');
+            $table->string('position');
+            $table->text('description');
+            $table->text('requirements');
+            $table->string('quota');
             $table->timestamps();
         });
     }
@@ -26,6 +28,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('logbook');
+        Schema::dropIfExists('lowongans');
     }
 };

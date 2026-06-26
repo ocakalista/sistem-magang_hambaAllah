@@ -9,23 +9,36 @@ class LowonganController extends Controller
 {
     public function index()
     {
-        $data = Lowongan::all();
-
-        return response()->json([
-            'status' => 'sukses',
-            'pesan' => 'Berhasil mengambil data lowongan',
-            'data' => \App\Models\Pendaftaran::all()
-        ]);
+        // Mengembalikan semua daftar lowongan
+        return response()->json(Lowongan::all(), 200);
     }
+
     public function store(Request $request)
     {
-        $data = Lowongan::create($request->all());
-
-        return response()->json([
-            'status' => 'sukses',
-            'pesan' => 'Berhasil menambahkan lowongan',
-            'data' => $data
+        $validated = $request->validate([
+            'id_mitra' => 'required',
+            'judul_posisi' => 'required|string',
+            'kuota' => 'required|integer',
+            'batas_waktu' => 'required|date',
+            'status_approval' => 'nullable|string',
         ]);
+        
+        $lowongan = Lowongan::create($validated);
+        
+        return response()->json([
+            'message' => 'Lowongan berhasil ditambahkan', 
+            'data' => $lowongan
+        ], 201);
     }
 
+    public function show($id)
+    {
+        $lowongan = Lowongan::find($id);
+        
+        if (!$lowongan) {
+            return response()->json(['message' => 'Lowongan tidak ditemukan'], 404);
+        }
+        
+        return response()->json($lowongan, 200);
+    }
 }

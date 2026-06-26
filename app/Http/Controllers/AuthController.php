@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Hash;
 
 class AuthController extends Controller
 {
-    // 1. Fungsi Pendaftaran Mahasiswa (Register)
+    // 1. Fungsi Pendaftaran (Register)
     public function register(Request $request)
     {
         // Validasi data yang dikirim dari Frontend
@@ -22,8 +22,7 @@ class AuthController extends Controller
         $user = User::create([
             'name' => $request->name,
             'email_or_nim' => $request->email_or_nim,
-            'password' => Hash::make($request->password), // Password wajib dienkripsi
-            // Catatan: role 'mahasiswa' otomatis terisi karena setelan default di Migration
+            'password' => Hash::make($request->password), 
         ]);
 
         // Terbitkan Tiket/Token
@@ -39,39 +38,27 @@ class AuthController extends Controller
     // 2. Fungsi Masuk (Login)
     public function login(Request $request)
     {
-        // Validasi inputan
         $request->validate([
-            'email_or_nim' => 'required|string',
-            'password' => 'required|string',
+            'email_or_nim' => 'required',
+            'password' => 'required',
         ]);
+        
+    // Cari user berdasarkan Email atau NIM
+    $user = User::where('email_or_nim', $request->email_or_nim)->first();
 
-        // Cari user di database berdasarkan Email atau NIM
-        $user = User::where('email_or_nim', $request->email_or_nim)->first();
-
-        // Cek apakah user ketemu DAN password-nya cocok
-        if (!$user || !Hash::check($request->password, $user->password)) {
-            return response()->json([
-                'message' => 'Email/NIM atau Password salah!'
-            ], 401);
-        }
-
-        // Pengecekan ekstra jika Frontend mengirimkan centang "Login as Admin"
-        if ($request->has('is_admin') && $request->is_admin == true) {
-            if ($user->role !== 'admin') {
-                return response()->json([
-                    'message' => 'Akses ditolak. Anda bukan Admin!'
-                ], 403);
-            }
-        }
-
-        // Terbitkan Tiket/Token
-        $token = $user->createToken('nexus_token')->plainTextToken;
-
-        return response()->json([
-            'message' => 'Login berhasil',
-            'role' => $user->role,
-            'data' => $user,
-            'token' => $token
-        ], 200);
+    // Cek apakah user ada dan passwordnya benar
+    if (!$user || !Hash::check($request->password, $user->password)) {
+        return response()->json(['message' => 'Email/NIM atau Password salah!'], 401);
     }
+
+    // Buat token
+    $token = $user->createToken('auth_token')->plainTextToken;
+
+    // KEMBALIKAN TOKEN DAN ROLE KE FLUTTER
+    return response()->json([
+        'message' => 'Login success',
+        'token' => $token,
+        'role' => $user->role
+    ], 200);
+}
 }

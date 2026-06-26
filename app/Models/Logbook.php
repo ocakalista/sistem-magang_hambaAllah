@@ -2,11 +2,20 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Logbook extends Model
 {
-    protected $table      = 'logbook';
+    use HasFactory;
+
+    protected $table = 'logbook';
     protected $primaryKey = 'id_logbook';
-    protected $guarded = [];
+    protected $fillable = [
+        'id_pendaftaran',
+        'minggu_ke',
+        'tanggal',
+        'deskripsi_kegiatan',
+        'status_validasi'
+    ];
 }

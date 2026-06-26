@@ -13,7 +13,13 @@ Route::get('/user', function (Request $request) {
 })->middleware('auth:sanctum');
 
 Route::post('/lowongan', [LowonganController::class, 'store']);
+Route::get('/lowongan', [LowonganController::class, 'index']);
+Route::get('/lowongan/{id}', [LowonganController::class, 'show']);
+
 Route::get('/pendaftaran', [PendaftaranController::class, 'index']);
+Route::post('/pendaftaran', [PendaftaranController::class, 'store']);
+Route::put('/pendaftaran/{id}/status', [PendaftaranController::class, 'updateStatus']);
+
 Route::get('/logbook', [LogbookController::class, 'index']);
 Route::get('/mitra', [MitraController::class, 'index']);
 
