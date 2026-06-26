@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
 import '../models/nexus_app_state.dart';
-import 'dashboard_mahasiswa.dart';
+import 'mahasiswa/dashboard_mahasiswa.dart';
 import 'admin/admin_dashboard_screen.dart';
 import 'dosen/dosen_dashboard_screen.dart';
 import '../services/api_service.dart';
@@ -134,9 +134,10 @@ class _LoginScreenState extends State<LoginScreen> {
                                 ? Icons.visibility_off_outlined
                                 : Icons.visibility_outlined,
                           ),
-                          onPressed: () => setState(
-                            () => _obscurePassword = !_obscurePassword,
-                          ),
+                          onPressed:
+                              () => setState(
+                                () => _obscurePassword = !_obscurePassword,
+                              ),
                         ),
                       ),
                     ),
@@ -152,107 +153,116 @@ class _LoginScreenState extends State<LoginScreen> {
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: _isLoading
-                            ? null
-                            : () async {
-                                setState(() => _isLoading = true);
+                        onPressed:
+                            _isLoading
+                                ? null
+                                : () async {
+                                  setState(() => _isLoading = true);
 
-                                final emailOrNim = _emailController.text.trim();
-                                final password = _passwordController.text.trim();
+                                  final emailOrNim =
+                                      _emailController.text.trim();
+                                  final password =
+                                      _passwordController.text.trim();
 
-                                // Validasi input
-                                if (emailOrNim.isEmpty || password.isEmpty) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text(
-                                        'Harap isi email/NIM dan password',
-                                      ),
-                                      backgroundColor: Colors.orange,
-                                    ),
-                                  );
-                                  setState(() => _isLoading = false);
-                                  return;
-                                }
-
-                                // Tembak API Backend
-                                final response = await ApiService.login(
-                                  emailOrNim,
-                                  password,
-                                );
-
-                                setState(() => _isLoading = false);
-
-                                if (!mounted) return;
-
-                                // Cek apakah berhasil mendapat token
-                                if (response.containsKey('token')) {
-                                  final state = NexusScope.of(context);
-
-                                  // Ambil role dari database
-                                  final roleStr = response['role'] ?? 'mahasiswa';
-                                  UserRole role;
-
-                                  if (roleStr == 'admin') {
-                                    role = UserRole.admin;
-                                  } else if (roleStr == 'dosen') {
-                                    role = UserRole.dosen;
-                                  } else {
-                                    role = UserRole.student;
-                                  }
-
-                                  state.setUserRole(role);
-
-                                  if (mounted) {
+                                  // Validasi input
+                                  if (emailOrNim.isEmpty || password.isEmpty) {
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       const SnackBar(
-                                        content: Text('Login Berhasil!'),
+                                        content: Text(
+                                          'Harap isi email/NIM dan password',
+                                        ),
+                                        backgroundColor: Colors.orange,
                                       ),
                                     );
+                                    setState(() => _isLoading = false);
+                                    return;
+                                  }
 
-                                    // Arahkan ke dashboard yang sesuai
-                                    if (role == UserRole.admin) {
-                                      Navigator.pushReplacementNamed(
-                                        context,
-                                        AdminDashboardScreen.routeName,
-                                      );
-                                    } else if (role == UserRole.dosen) {
-                                      Navigator.pushReplacementNamed(
-                                        context,
-                                        DosenDashboardScreen.routeName,
-                                      );
+                                  // Tembak API Backend
+                                  final response = await ApiService.login(
+                                    emailOrNim,
+                                    password,
+                                  );
+
+                                  setState(() => _isLoading = false);
+
+                                  if (!mounted) return;
+
+                                  // Cek apakah berhasil mendapat token
+                                  if (response.containsKey('token')) {
+                                    final state = NexusScope.of(context);
+
+                                    // Ambil role dari database
+                                    final roleStr =
+                                        response['role'] ?? 'mahasiswa';
+                                    UserRole role;
+
+                                    if (roleStr == 'admin') {
+                                      role = UserRole.admin;
+                                    } else if (roleStr == 'dosen') {
+                                      role = UserRole.dosen;
                                     } else {
-                                      Navigator.pushReplacementNamed(
+                                      role = UserRole.student;
+                                    }
+
+                                    state.setUserRole(role);
+
+                                    if (mounted) {
+                                      ScaffoldMessenger.of(
                                         context,
-                                        DashboardMahasiswa.routeName,
+                                      ).showSnackBar(
+                                        const SnackBar(
+                                          content: Text('Login Berhasil!'),
+                                        ),
+                                      );
+
+                                      // Arahkan ke dashboard yang sesuai
+                                      if (role == UserRole.admin) {
+                                        Navigator.pushReplacementNamed(
+                                          context,
+                                          AdminDashboardScreen.routeName,
+                                        );
+                                      } else if (role == UserRole.dosen) {
+                                        Navigator.pushReplacementNamed(
+                                          context,
+                                          DosenDashboardScreen.routeName,
+                                        );
+                                      } else {
+                                        Navigator.pushReplacementNamed(
+                                          context,
+                                          DashboardMahasiswa.routeName,
+                                        );
+                                      }
+                                    }
+                                  } else {
+                                    // Tampilkan error message
+                                    if (mounted) {
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                            response['message'] ??
+                                                'Gagal terhubung ke server. Harap pastikan backend Laravel berjalan di http://127.0.0.1:8000',
+                                          ),
+                                          backgroundColor: Colors.red.shade400,
+                                          duration: const Duration(seconds: 4),
+                                        ),
                                       );
                                     }
                                   }
-                                } else {
-                                  // Tampilkan error message
-                                  if (mounted) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text(
-                                          response['message'] ??
-                                              'Gagal terhubung ke server. Harap pastikan backend Laravel berjalan di http://127.0.0.1:8000',
-                                        ),
-                                        backgroundColor: Colors.red.shade400,
-                                        duration: const Duration(seconds: 4),
-                                      ),
-                                    );
-                                  }
-                                }
-                              },
-                        child: _isLoading
-                            ? const SizedBox(
-                                height: 20,
-                                width: 20,
-                                child: CircularProgressIndicator(
-                                  color: Colors.white,
-                                  strokeWidth: 2.5,
-                                ),
-                              )
-                            : const Text('LOGIN TO NEXUS →'),
+                                },
+                        child:
+                            _isLoading
+                                ? const SizedBox(
+                                  height: 20,
+                                  width: 20,
+                                  child: CircularProgressIndicator(
+                                    color: Colors.white,
+                                    strokeWidth: 2.5,
+                                  ),
+                                )
+                                : const Text('LOGIN TO NEXUS →'),
                       ),
                     ),
                     const SizedBox(height: 18),
@@ -269,11 +279,12 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                           Text(
                             'Amikom',
-                            style: Theme.of(context).textTheme.bodyMedium
-                                ?.copyWith(
-                                  color: AppColors.primary,
-                                  fontWeight: FontWeight.w600,
-                                ),
+                            style: Theme.of(
+                              context,
+                            ).textTheme.bodyMedium?.copyWith(
+                              color: AppColors.primary,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                           Text(
                             ' untuk login',

@@ -1,9 +1,13 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart' as http;
 
 class ApiService {
-  // Ini adalah alamat server Laravel lokalmu
-  static const String baseUrl = "http://127.0.0.1:8000/api";
+  // Gunakan 10.0.2.2 untuk Android emulator, 127.0.0.1 untuk platform lain.
+  static final String baseUrl =
+      Platform.isAndroid
+          ? "http://10.0.2.2:8000/api"
+          : "http://127.0.0.1:8000/api";
 
   // Fungsi untuk menembak API Login
   static Future<Map<String, dynamic>> login(

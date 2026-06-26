@@ -5,6 +5,7 @@ import '../../models/nexus_app_state.dart';
 import '../../theme/app_theme.dart';
 import '../notifications_screen.dart';
 import '../../widgets/dosen_bottom_nav.dart';
+import 'profile_screen.dart';
 import 'students_screen.dart';
 import 'weekly_report_detail_screen.dart';
 
@@ -35,38 +36,42 @@ class _DosenDashboardScreenState extends State<DosenDashboardScreen> {
     }
   }
 
-  void _showApprovalDialog(MahasiswaBimbingan student,
-      WeeklyReportDosen latestReport) {
+  void _showApprovalDialog(
+    MahasiswaBimbingan student,
+    WeeklyReportDosen latestReport,
+  ) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Approve Weekly Report'),
-        content: Text(
-            'Approve this week\'s report for ${student.name}?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              final state = NexusScope.of(context);
-              state.approveDosenReport(
-                studentId: student.id,
-                reportId: latestReport.id,
-                feedback: 'Good work this week',
-              );
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Approve Weekly Report'),
+            content: Text('Approve this week\'s report for ${student.name}?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  final state = NexusScope.of(context);
+                  state.approveDosenReport(
+                    studentId: student.id,
+                    reportId: latestReport.id,
+                    feedback: 'Good work this week',
+                  );
 
-              Navigator.pop(context);
-              setState(() {});
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Report approved successfully')),
-              );
-            },
-            child: const Text('Approve'),
+                  Navigator.pop(context);
+                  setState(() {});
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Report approved successfully'),
+                    ),
+                  );
+                },
+                child: const Text('Approve'),
+              ),
+            ],
           ),
-        ],
-      ),
     );
   }
 
@@ -74,9 +79,10 @@ class _DosenDashboardScreenState extends State<DosenDashboardScreen> {
   Widget build(BuildContext context) {
     final state = NexusScope.of(context);
     final dosenStats = state.dosenStats;
-    final pendingApprovals = state.mahasiswaBimbingan
-        .where((student) => student.getLatestUnapprovedReport() != null)
-        .toList();
+    final pendingApprovals =
+        state.mahasiswaBimbingan
+            .where((student) => student.getLatestUnapprovedReport() != null)
+            .toList();
     final recentReports = state.recentDosenReports;
 
     return Scaffold(
@@ -128,9 +134,9 @@ class _DosenDashboardScreenState extends State<DosenDashboardScreen> {
               const SizedBox(height: 4),
               Text(
                 'Monitoring ${state.mahasiswaBimbingan.length} active internship students.',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: AppColors.neutral,
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyMedium?.copyWith(color: AppColors.neutral),
               ),
               const SizedBox(height: 20),
 
@@ -140,10 +146,7 @@ class _DosenDashboardScreenState extends State<DosenDashboardScreen> {
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [
-                      AppColors.primary,
-                      AppColors.secondary,
-                    ],
+                    colors: [AppColors.primary, AppColors.secondary],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
@@ -157,13 +160,12 @@ class _DosenDashboardScreenState extends State<DosenDashboardScreen> {
                       children: [
                         Text(
                           'Total Approval Needed',
-                          style: Theme.of(context)
-                              .textTheme
-                              .labelMedium
-                              ?.copyWith(
-                                color: AppColors.white,
-                                fontWeight: FontWeight.w600,
-                              ),
+                          style: Theme.of(
+                            context,
+                          ).textTheme.labelMedium?.copyWith(
+                            color: AppColors.white,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                         const Icon(
                           Icons.assignment_rounded,
@@ -175,30 +177,31 @@ class _DosenDashboardScreenState extends State<DosenDashboardScreen> {
                     const SizedBox(height: 20),
                     Text(
                       '${dosenStats.totalApprovalNeeded.toString().padLeft(2, '0')}',
-                      style: Theme.of(context)
-                          .textTheme
-                          .headlineLarge
-                          ?.copyWith(
-                            color: AppColors.white,
-                            fontSize: 48,
-                            fontWeight: FontWeight.w800,
-                          ),
+                      style: Theme.of(
+                        context,
+                      ).textTheme.headlineLarge?.copyWith(
+                        color: AppColors.white,
+                        fontSize: 48,
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
                     const SizedBox(height: 12),
                     Row(
                       children: [
-                        const Icon(Icons.trending_up_rounded,
-                            color: AppColors.white, size: 16),
+                        const Icon(
+                          Icons.trending_up_rounded,
+                          color: AppColors.white,
+                          size: 16,
+                        ),
                         const SizedBox(width: 4),
                         Text(
                           '+${dosenStats.approvalChangeFromYesterday} from yesterday',
-                          style: Theme.of(context)
-                              .textTheme
-                              .labelSmall
-                              ?.copyWith(
-                                color: AppColors.white,
-                                fontWeight: FontWeight.w500,
-                              ),
+                          style: Theme.of(
+                            context,
+                          ).textTheme.labelSmall?.copyWith(
+                            color: AppColors.white,
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
                       ],
                     ),
@@ -242,24 +245,22 @@ class _DosenDashboardScreenState extends State<DosenDashboardScreen> {
                           const SizedBox(height: 12),
                           Text(
                             'Completed',
-                            style: Theme.of(context)
-                                .textTheme
-                                .labelSmall
-                                ?.copyWith(
-                                  color: AppColors.neutral,
-                                  fontWeight: FontWeight.w500,
-                                ),
+                            style: Theme.of(
+                              context,
+                            ).textTheme.labelSmall?.copyWith(
+                              color: AppColors.neutral,
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
                           const SizedBox(height: 4),
                           Text(
                             '${dosenStats.completedInternships}',
-                            style: Theme.of(context)
-                                .textTheme
-                                .headlineMedium
-                                ?.copyWith(
-                                  fontWeight: FontWeight.w800,
-                                  fontSize: 24,
-                                ),
+                            style: Theme.of(
+                              context,
+                            ).textTheme.headlineMedium?.copyWith(
+                              fontWeight: FontWeight.w800,
+                              fontSize: 24,
+                            ),
                           ),
                         ],
                       ),
@@ -298,24 +299,22 @@ class _DosenDashboardScreenState extends State<DosenDashboardScreen> {
                           const SizedBox(height: 12),
                           Text(
                             'Ongoing',
-                            style: Theme.of(context)
-                                .textTheme
-                                .labelSmall
-                                ?.copyWith(
-                                  color: AppColors.neutral,
-                                  fontWeight: FontWeight.w500,
-                                ),
+                            style: Theme.of(
+                              context,
+                            ).textTheme.labelSmall?.copyWith(
+                              color: AppColors.neutral,
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
                           const SizedBox(height: 4),
                           Text(
                             '${dosenStats.ongoingInternships}',
-                            style: Theme.of(context)
-                                .textTheme
-                                .headlineMedium
-                                ?.copyWith(
-                                  fontWeight: FontWeight.w800,
-                                  fontSize: 24,
-                                ),
+                            style: Theme.of(
+                              context,
+                            ).textTheme.headlineMedium?.copyWith(
+                              fontWeight: FontWeight.w800,
+                              fontSize: 24,
+                            ),
                           ),
                         ],
                       ),
@@ -339,8 +338,7 @@ class _DosenDashboardScreenState extends State<DosenDashboardScreen> {
                     onTap: () => setState(() => _selectedIndex = 1),
                     child: Text(
                       'View All',
-                      style:
-                          Theme.of(context).textTheme.labelMedium?.copyWith(
+                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
                         color: AppColors.primary,
                         fontWeight: FontWeight.w600,
                       ),
@@ -407,21 +405,18 @@ class _DosenDashboardScreenState extends State<DosenDashboardScreen> {
                                   children: [
                                     Text(
                                       student.name,
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .titleSmall
-                                          ?.copyWith(
-                                            fontWeight: FontWeight.w700,
-                                          ),
+                                      style: Theme.of(
+                                        context,
+                                      ).textTheme.titleSmall?.copyWith(
+                                        fontWeight: FontWeight.w700,
+                                      ),
                                     ),
                                     Text(
                                       student.internshipPosition,
                                       style: Theme.of(context)
                                           .textTheme
                                           .labelSmall
-                                          ?.copyWith(
-                                            color: AppColors.neutral,
-                                          ),
+                                          ?.copyWith(color: AppColors.neutral),
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                     ),
@@ -434,19 +429,19 @@ class _DosenDashboardScreenState extends State<DosenDashboardScreen> {
                                   vertical: 4,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: AppColors.primary
-                                      .withValues(alpha: 0.12),
+                                  color: AppColors.primary.withValues(
+                                    alpha: 0.12,
+                                  ),
                                   borderRadius: BorderRadius.circular(6),
                                 ),
                                 child: Text(
                                   'Week ${student.currentWeek}',
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .labelSmall
-                                      ?.copyWith(
-                                        color: AppColors.primary,
-                                        fontWeight: FontWeight.w600,
-                                      ),
+                                  style: Theme.of(
+                                    context,
+                                  ).textTheme.labelSmall?.copyWith(
+                                    color: AppColors.primary,
+                                    fontWeight: FontWeight.w600,
+                                  ),
                                 ),
                               ),
                             ],
@@ -457,21 +452,13 @@ class _DosenDashboardScreenState extends State<DosenDashboardScreen> {
                             children: [
                               Text(
                                 'Internship Progress',
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .labelSmall
-                                    ?.copyWith(
-                                      color: AppColors.neutral,
-                                    ),
+                                style: Theme.of(context).textTheme.labelSmall
+                                    ?.copyWith(color: AppColors.neutral),
                               ),
                               Text(
                                 '${(student.progressPercent * 100).toStringAsFixed(0)}%',
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .labelMedium
-                                    ?.copyWith(
-                                      fontWeight: FontWeight.w700,
-                                    ),
+                                style: Theme.of(context).textTheme.labelMedium
+                                    ?.copyWith(fontWeight: FontWeight.w700),
                               ),
                             ],
                           ),
@@ -508,8 +495,11 @@ class _DosenDashboardScreenState extends State<DosenDashboardScreen> {
                               const SizedBox(width: 8),
                               Expanded(
                                 child: ElevatedButton(
-                                  onPressed: () =>
-                                      _showApprovalDialog(student, latestReport),
+                                  onPressed:
+                                      () => _showApprovalDialog(
+                                        student,
+                                        latestReport,
+                                      ),
                                   child: const Text('Approve'),
                                 ),
                               ),
@@ -525,9 +515,9 @@ class _DosenDashboardScreenState extends State<DosenDashboardScreen> {
               // Recent Weekly Reports Section
               Text(
                 'Recent Weekly Reports',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 12),
               if (recentReports.isEmpty)
@@ -559,18 +549,19 @@ class _DosenDashboardScreenState extends State<DosenDashboardScreen> {
                     }
 
                     return GestureDetector(
-                      onTap: reportStudent != null
-                          ? () {
-                              Navigator.pushNamed(
-                                context,
-                                WeeklyReportDetailScreen.routeName,
-                                arguments: {
-                                  'report': report,
-                                  'student': reportStudent,
-                                },
-                              );
-                            }
-                          : null,
+                      onTap:
+                          reportStudent != null
+                              ? () {
+                                Navigator.pushNamed(
+                                  context,
+                                  WeeklyReportDetailScreen.routeName,
+                                  arguments: {
+                                    'report': report,
+                                    'student': reportStudent,
+                                  },
+                                );
+                              }
+                              : null,
                       child: Container(
                         margin: const EdgeInsets.only(bottom: 12),
                         padding: const EdgeInsets.all(14),
@@ -598,8 +589,9 @@ class _DosenDashboardScreenState extends State<DosenDashboardScreen> {
                             Container(
                               padding: const EdgeInsets.all(8),
                               decoration: BoxDecoration(
-                                color: AppColors.primary
-                                    .withValues(alpha: 0.12),
+                                color: AppColors.primary.withValues(
+                                  alpha: 0.12,
+                                ),
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: const Icon(
@@ -618,9 +610,7 @@ class _DosenDashboardScreenState extends State<DosenDashboardScreen> {
                                     style: Theme.of(context)
                                         .textTheme
                                         .titleSmall
-                                        ?.copyWith(
-                                          fontWeight: FontWeight.w700,
-                                        ),
+                                        ?.copyWith(fontWeight: FontWeight.w700),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                   ),
@@ -629,15 +619,15 @@ class _DosenDashboardScreenState extends State<DosenDashboardScreen> {
                                     style: Theme.of(context)
                                         .textTheme
                                         .labelSmall
-                                        ?.copyWith(
-                                          color: AppColors.neutral,
-                                        ),
+                                        ?.copyWith(color: AppColors.neutral),
                                   ),
                                 ],
                               ),
                             ),
-                            const Icon(Icons.chevron_right_rounded,
-                                color: AppColors.neutral),
+                            const Icon(
+                              Icons.chevron_right_rounded,
+                              color: AppColors.neutral,
+                            ),
                           ],
                         ),
                       ),
@@ -651,26 +641,30 @@ class _DosenDashboardScreenState extends State<DosenDashboardScreen> {
       bottomNavigationBar: DosenBottomNav(
         selectedIndex: _selectedIndex,
         onDestinationSelected: (index) {
-          setState(() => _selectedIndex = index);
+          if (index == 0) {
+            setState(() => _selectedIndex = 0);
+            return;
+          }
 
-          switch (index) {
-            case 0:
-              // Home - already here
-              break;
-            case 1:
-              // Students
-              _navigateToStudents();
-              break;
-            case 2:
-              // Alerts
-              Navigator.pushNamed(context, NotificationsScreen.routeName);
-              break;
-            case 3:
-              // Profile - placeholder
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Profile coming soon')),
-              );
-              break;
+          if (index == 1) {
+            _navigateToStudents();
+            return;
+          }
+
+          if (index == 2) {
+            Navigator.pushNamed(
+              context,
+              NotificationsScreen.routeName,
+            ).then((_) => setState(() => _selectedIndex = 0));
+            return;
+          }
+
+          if (index == 3) {
+            Navigator.pushNamed(
+              context,
+              DosenProfileScreen.routeName,
+            ).then((_) => setState(() => _selectedIndex = 0));
+            return;
           }
         },
       ),
@@ -680,11 +674,7 @@ class _DosenDashboardScreenState extends State<DosenDashboardScreen> {
   void _navigateToStudents() {
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (context) => Scaffold(
-          body: StudentsScreen(),
-        ),
-      ),
+      MaterialPageRoute(builder: (context) => Scaffold(body: StudentsScreen())),
     ).then((_) => setState(() => _selectedIndex = 0));
   }
 }

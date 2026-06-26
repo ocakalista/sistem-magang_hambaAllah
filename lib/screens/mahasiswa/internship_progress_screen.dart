@@ -1,13 +1,13 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
-import '../models/application_model.dart';
-import '../models/nexus_app_state.dart';
-import '../theme/app_theme.dart';
+import '../../models/application_model.dart';
+import '../../models/nexus_app_state.dart';
+import '../../theme/app_theme.dart';
 import 'dashboard_mahasiswa.dart';
 import 'application_status_screen.dart';
-import 'notifications_screen.dart';
-import '../widgets/bottom_nav.dart';
+import '../notifications_screen.dart';
+import '../../widgets/bottom_nav.dart';
 
 class InternshipProgressScreen extends StatefulWidget {
   const InternshipProgressScreen({super.key, this.application});

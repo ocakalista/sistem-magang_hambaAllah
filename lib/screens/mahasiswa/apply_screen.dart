@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
-import '../models/application_model.dart';
-import '../models/nexus_app_state.dart';
-import '../theme/app_theme.dart';
+import '../../models/application_model.dart';
+import '../../models/nexus_app_state.dart';
+import '../../theme/app_theme.dart';
 import 'application_status_screen.dart';
 
 class ApplyScreen extends StatefulWidget {
@@ -55,17 +55,19 @@ class _ApplyScreenState extends State<ApplyScreen> {
     super.dispose();
   }
 
+  bool get _uploadsReady {
+    return _cvFileName != null &&
+        (_portfolioSelection != null ||
+            _portfolioController.text.trim().isNotEmpty) &&
+        _motivationController.text.trim().length >= 120;
+  }
+
   bool get _canSubmit {
     final detailsValid =
         _fullNameController.text.trim().isNotEmpty &&
         _phoneController.text.trim().isNotEmpty &&
         _semesterController.text.trim().isNotEmpty;
-    final uploadsReady =
-        _cvFileName != null &&
-        (_portfolioSelection != null ||
-            _portfolioController.text.trim().isNotEmpty) &&
-        _motivationController.text.trim().length >= 120;
-    return detailsValid && uploadsReady;
+    return detailsValid && _uploadsReady;
   }
 
   @override
@@ -192,6 +194,16 @@ class _ApplyScreenState extends State<ApplyScreen> {
                                     !(_detailsFormKey.currentState
                                             ?.validate() ??
                                         false)) {
+                                  return;
+                                }
+                                if (_currentStep == 1 && !_uploadsReady) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        'Please complete your CV, portfolio, and motivation letter before continuing.',
+                                      ),
+                                    ),
+                                  );
                                   return;
                                 }
                                 _pageController.nextPage(

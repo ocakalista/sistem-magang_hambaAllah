@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 
-import '../models/application_model.dart';
-import '../models/nexus_app_state.dart';
+import '../../models/application_model.dart';
+import '../../models/nexus_app_state.dart';
 import 'application_status_screen.dart';
 import 'internship_detail_screen.dart';
 import 'internship_progress_screen.dart';
-import '../theme/app_theme.dart';
+import 'profile_screen.dart';
+import '../../theme/app_theme.dart';
 
 class DashboardMahasiswa extends StatefulWidget {
   static const routeName = '/dashboard';
@@ -272,6 +273,14 @@ class _DashboardMahasiswaState extends State<DashboardMahasiswa> {
                     ? InternshipProgressScreen(application: application)
                     : ApplicationStatusScreen(application: application);
             Navigator.push(context, MaterialPageRoute(builder: (_) => route));
+            return;
+          }
+
+          if (index == 3) {
+            Navigator.pushNamed(
+              context,
+              DashboardMahasiswaProfileScreen.routeName,
+            );
             return;
           }
 

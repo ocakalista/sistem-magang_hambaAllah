@@ -5,9 +5,9 @@ import '../models/nexus_app_state.dart';
 import '../models/notification_model.dart';
 import '../theme/app_theme.dart';
 import '../widgets/bottom_nav.dart';
-import 'application_status_screen.dart';
-import 'dashboard_mahasiswa.dart';
-import 'internship_progress_screen.dart';
+import 'mahasiswa/application_status_screen.dart';
+import 'mahasiswa/dashboard_mahasiswa.dart';
+import 'mahasiswa/internship_progress_screen.dart';
 
 enum _NotificationFilter { all, updates, approvals }
 
@@ -117,11 +117,12 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                               ...newNotifications.map(
                                 (notification) => _NotificationCard(
                                   notification: notification,
-                                  onTap: () => _handleNotificationTap(
-                                    context,
-                                    state,
-                                    notification,
-                                  ),
+                                  onTap:
+                                      () => _handleNotificationTap(
+                                        context,
+                                        state,
+                                        notification,
+                                      ),
                                 ),
                               ),
                               const SizedBox(height: 12),
@@ -136,11 +137,12 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                 (notification) => _NotificationCard(
                                   notification: notification,
                                   mutedIconStyle: true,
-                                  onTap: () => _handleNotificationTap(
-                                    context,
-                                    state,
-                                    notification,
-                                  ),
+                                  onTap:
+                                      () => _handleNotificationTap(
+                                        context,
+                                        state,
+                                        notification,
+                                      ),
                                 ),
                               ),
                             ],
@@ -165,13 +167,15 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       case _NotificationFilter.updates:
         return items
             .where(
-              (notification) => notification.category == NotificationCategory.update,
+              (notification) =>
+                  notification.category == NotificationCategory.update,
             )
             .toList();
       case _NotificationFilter.approvals:
         return items
             .where(
-              (notification) => notification.category == NotificationCategory.approval,
+              (notification) =>
+                  notification.category == NotificationCategory.approval,
             )
             .toList();
     }
@@ -335,7 +339,8 @@ class _NotificationCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isUnread = !notification.isRead && notification.group == 'New Notifications';
+    final isUnread =
+        !notification.isRead && notification.group == 'New Notifications';
     final cardBackground = isUnread ? const Color(0xFFF8F4FF) : Colors.white;
     final iconBackground =
         mutedIconStyle
@@ -401,17 +406,15 @@ class _NotificationCard extends StatelessWidget {
                           Expanded(
                             child: Text(
                               notification.title,
-                              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.w800,
-                              ),
+                              style: Theme.of(context).textTheme.titleMedium
+                                  ?.copyWith(fontWeight: FontWeight.w800),
                             ),
                           ),
                           const SizedBox(width: 10),
                           Text(
                             _formatRelativeTime(notification.timestamp),
-                            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                              color: AppColors.neutral,
-                            ),
+                            style: Theme.of(context).textTheme.labelSmall
+                                ?.copyWith(color: AppColors.neutral),
                           ),
                         ],
                       ),
@@ -425,7 +428,8 @@ class _NotificationCard extends StatelessWidget {
                           height: 1.45,
                         ),
                       ),
-                      if (notification.priority == NotificationPriority.high) ...[
+                      if (notification.priority ==
+                          NotificationPriority.high) ...[
                         const SizedBox(height: 10),
                         Container(
                           padding: const EdgeInsets.symmetric(
@@ -438,12 +442,13 @@ class _NotificationCard extends StatelessWidget {
                           ),
                           child: Text(
                             'HIGH PRIORITY',
-                            style:
-                                Theme.of(context).textTheme.labelSmall?.copyWith(
-                                      color: AppColors.primary,
-                                      fontWeight: FontWeight.w800,
-                                      letterSpacing: 0.3,
-                                    ),
+                            style: Theme.of(
+                              context,
+                            ).textTheme.labelSmall?.copyWith(
+                              color: AppColors.primary,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 0.3,
+                            ),
                           ),
                         ),
                       ],

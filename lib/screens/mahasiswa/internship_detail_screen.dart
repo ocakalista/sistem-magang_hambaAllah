@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
-import '../models/application_model.dart';
-import '../models/nexus_app_state.dart';
-import '../theme/app_theme.dart';
+import '../../models/application_model.dart';
+import '../../models/nexus_app_state.dart';
+import '../../theme/app_theme.dart';
 import 'apply_screen.dart';
 
 class InternshipDetailScreen extends StatelessWidget {
