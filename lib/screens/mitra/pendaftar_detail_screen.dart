@@ -46,7 +46,7 @@ class _PendaftarDetailScreenState extends State<PendaftarDetailScreen> {
         ),
       ),
       body: SafeArea(
-        child: Padding(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.all(20),
           child: Column(
             children: [
@@ -278,36 +278,30 @@ class _PendaftarDetailScreenState extends State<PendaftarDetailScreen> {
   }
 
   Widget _buildMotivationSection(BuildContext context) {
-    return Expanded(
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(18),
-        decoration: BoxDecoration(
-          color: AppColors.white,
-          borderRadius: BorderRadius.circular(24),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Motivation Letter',
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-            ),
-            const SizedBox(height: 12),
-            Expanded(
-              child: SingleChildScrollView(
-                child: Text(
-                  'Saya tertarik untuk bergabung sebagai intern di posisi ini karena saya ingin mengembangkan keterampilan fullstack development dan berkontribusi pada proyek produk yang berdampak. Saya memiliki pengalaman membuat aplikasi mobile dan web, serta senang bekerja dalam tim untuk mencapai target produk.',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodyMedium?.copyWith(color: AppColors.neutral),
-                ),
-              ),
-            ),
-          ],
-        ),
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Motivation Letter',
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Saya tertarik untuk bergabung sebagai intern di posisi ini karena saya ingin mengembangkan keterampilan fullstack development dan berkontribusi pada proyek produk yang berdampak. Saya memiliki pengalaman membuat aplikasi mobile dan web, serta senang bekerja dalam tim untuk mencapai target produk.',
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: AppColors.neutral),
+          ),
+        ],
       ),
     );
   }
