@@ -9,8 +9,19 @@ class LowonganController extends Controller
 {
     public function index()
     {
-        // Mengembalikan semua daftar lowongan
-        return response()->json(Lowongan::all(), 200);
+        $lowongan = Lowongan::where('kuota', '>', 0)->get();
+
+        if ($lowongan->isEmpty()) {
+            return response()->json([
+                'message' => 'Belum ada lowongan magang yang tersedia saat ini.',
+                'data' => []
+            ], 200);
+        }
+
+        return response()->json([
+            'message' => 'Berhasil mengambil katalog lowongan',
+            'data' => $lowongan
+        ], 200);
     }
 
     public function store(Request $request)

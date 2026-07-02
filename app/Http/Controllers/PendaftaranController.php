@@ -17,46 +17,48 @@ class PendaftaranController extends Controller
     // Proses mendaftar magang (termasuk Sistem Validasi Kuota)
     public function store(Request $request)
     {
-        $request->validate([
-            'id_mahasiswa' => 'required',
-            'id_lowongan' => 'required',
-            'berkas_cv' => 'nullable|string', 
-        ]);
+    $request->validate([
+        'id_lowongan' => 'required|exists:lowongan,id_lowongan',
+        'id_mahasiswa' => 'required|exists:mahasiswa,id_mahasiswa', 
+        'berkas_cv' => 'required|file|mimes:pdf,doc,docx|max:2048'
+    ]);
 
-        $lowongan = Lowongan::find($request->id_lowongan);
-
-        if (!$lowongan) {
-            return response()->json(['message' => 'Lowongan tidak ditemukan'], 404);
-        }
-
-        if ($lowongan->kuota <= 0) {
-            return response()->json(['message' => 'Mohon maaf, kuota magang ini sudah penuh.'], 400);
-        }
-
-        $sudahDaftar = Pendaftaran::where('id_mahasiswa', $request->id_mahasiswa)
-        ->where('id_lowongan', $request->id_lowongan)
-        ->exists();
-        
-        if ($sudahDaftar) {
-            return response()->json(['message' => 'Anda sudah mendaftar pada lowongan ini sebelumnya.'], 400);
-        }
-
-        $pendaftaran = Pendaftaran::create([
-            'id_mahasiswa' => $request->id_mahasiswa,
-            'id_lowongan' => $request->id_lowongan,
-            'berkas_cv' => $request->berkas_cv,
-            'status' => 'pending' // Status awal selalu pending
-        ]);
-
-        $lowongan->decrement('kuota');
-
-        return response()->json([
-            'message' => 'Pendaftaran berhasil dikirim!',
-            'data' => $pendaftaran
-        ], 201);
+    $sudahDaftar = Pendaftaran::where('id_mahasiswa', $request->id_mahasiswa)
+                              ->where('id_lowongan', $request->id_lowongan)
+                              ->first();
+    if ($sudahDaftar) {
+        return response()->json(['message' => 'Gagal! Anda sudah mendaftar di lowongan ini.'], 400);
     }
 
-    public function updateStatus(Request $request, $id)
+    $lowongan = \App\Models\Lowongan::find($request->id_lowongan);
+    if ($lowongan->kuota < 1) {
+        return response()->json(['message' => 'Maaf, kuota lowongan ini sudah penuh.'], 400);
+    }
+    $lowongan->kuota -= 1;
+    $lowongan->save();
+
+    $pathCv = null;
+    if ($request->hasFile('berkas_cv')) {
+        $file = $request->file('berkas_cv');
+        $namaFile = time() . '_' . preg_replace('/\s+/', '_', $file->getClientOriginalName());
+        $pathCv = $file->storeAs('berkas_cv', $namaFile, 'public');
+    }
+
+    $pendaftaran = new \App\Models\Pendaftaran();
+    $pendaftaran->id_mahasiswa = $request->id_mahasiswa;
+    $pendaftaran->id_lowongan = $request->id_lowongan;
+    $pendaftaran->berkas_cv = $pathCv; // Yang disimpan ke database hanya path-nya
+    $pendaftaran->status = 'pending';
+    $pendaftaran->save();
+
+    return response()->json([
+        'message' => 'Berhasil mendaftar! CV sukses diunggah dan kuota telah dipotong.',
+        'data' => $pendaftaran,
+        'file_url' => asset('storage/' . $pathCv) // Link URL langsung untuk melihat CV
+    ], 201);
+    }
+
+    public function updateStatus(Request $request, string $id)
     {
         $request->validate([
             'status' => 'required|in:diterima,ditolak,selesai'
@@ -83,4 +85,39 @@ class PendaftaranController extends Controller
             'data' => $pendaftaran
         ], 200);
     }
+
+    public function getPelamar(string $id_lowongan)
+    {
+        $pelamar = \Illuminate\Support\Facades\DB::table('pendaftaran')
+            ->join('mahasiswa', 'pendaftaran.id_mahasiswa', '=', 'mahasiswa.id_mahasiswa')
+            ->select(
+                'pendaftaran.id_pendaftaran',
+                'pendaftaran.status',
+                'pendaftaran.berkas_cv',
+                'pendaftaran.created_at as tanggal_daftar',
+                'mahasiswa.id_mahasiswa as nim',
+                'mahasiswa.nama as nama_mahasiswa',
+                'mahasiswa.jurusan'
+            )
+            ->where('pendaftaran.id_lowongan', $id_lowongan)
+            ->get();
+
+        if ($pelamar->isEmpty()) {
+            return response()->json([
+                'message' => 'Belum ada pelamar untuk lowongan ini.',
+                'data' => []
+            ], 200);
+        }
+
+        $pelamar->transform(function ($item) {
+            $item->url_cv = asset('storage/' . $item->berkas_cv);
+            return $item;
+        });
+
+        return response()->json([
+            'message' => 'Berhasil mengambil daftar pelamar',
+            'data' => $pelamar
+        ], 200);
+    }
 }
+

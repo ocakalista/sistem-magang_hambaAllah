@@ -8,17 +8,15 @@ use App\Models\Pendaftaran;
 
 class LogbookController extends Controller
 {
-    // 1. Mahasiswa mengisi logbook mingguan
     public function store(Request $request)
     {
         $request->validate([
-            'id_pendaftaran' => 'required|exists:pendaftarans,id',
+            'id_pendaftaran' => 'required|exists:pendaftaran,id_pendaftaran',
             'minggu_ke'      => 'required|integer',
             'tanggal'        => 'required|date',
-            'kegiatan'       => 'required|string'
+            'deskripsi_kegiatan' => 'required|string' 
         ]);
 
-        // Pastikan mahasiswa status pendaftarannya sudah "diterima" sebelum bisa ngisi logbook
         $pendaftaran = Pendaftaran::find($request->id_pendaftaran);
         if ($pendaftaran->status != 'diterima') {
             return response()->json([
@@ -30,8 +28,8 @@ class LogbookController extends Controller
         $logbook->id_pendaftaran = $request->id_pendaftaran;
         $logbook->minggu_ke      = $request->minggu_ke;
         $logbook->tanggal        = $request->tanggal;
-        $logbook->kegiatan       = $request->kegiatan;
-        $logbook->status         = 'menunggu'; // Status default saat baru dikirim
+        $logbook->deskripsi_kegiatan = $request->deskripsi_kegiatan; 
+        $logbook->status_validasi = 'pending'; 
         $logbook->save();
 
         return response()->json([
@@ -40,11 +38,10 @@ class LogbookController extends Controller
         ], 201);
     }
 
-    // 2. Mitra/Dosen memvalidasi logbook (disetujui/revisi)
     public function updateStatus(Request $request, $id)
     {
         $request->validate([
-            'status' => 'required|in:disetujui,revisi'
+            'status_validasi' => 'required|in:disetujui,revisi'
         ]);
 
         $logbook = Logbook::find($id);
@@ -53,11 +50,11 @@ class LogbookController extends Controller
             return response()->json(['message' => 'Data logbook tidak ditemukan'], 404);
         }
 
-        $logbook->status = $request->status;
+        $logbook->status_validasi = $request->status_validasi;
         $logbook->save();
 
         return response()->json([
-            'message' => 'Status logbook berhasil diubah menjadi ' . $request->status,
+            'message' => 'Status logbook berhasil diubah menjadi ' . $request->status_validasi,
             'data'    => $logbook
         ], 200);
     }
