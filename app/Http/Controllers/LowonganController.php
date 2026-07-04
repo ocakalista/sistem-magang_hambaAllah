@@ -4,12 +4,13 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Lowongan;
+use Illuminate\Support\Facades\DB;
 
 class LowonganController extends Controller
 {
     public function index()
     {
-        $lowongan = Lowongan::where('kuota', '>', 0)->get();
+        $lowongan = DB::table('lowongan')->where('kuota', '>', 0)->get();
 
         if ($lowongan->isEmpty()) {
             return response()->json([
@@ -26,16 +27,26 @@ class LowonganController extends Controller
 
     public function store(Request $request)
     {
+        // Satpam mengecek semua data yang dikirim Flutter
         $validated = $request->validate([
             'id_mitra' => 'required',
             'judul_posisi' => 'required|string',
+            'deskripsi' => 'nullable|string',
+            'persyaratan' => 'nullable|string',
+            'kategori' => 'nullable|string',
+            'lokasi' => 'nullable|string',
+            'tipe_kerja' => 'nullable|string',
+            'tipe_kontrak' => 'nullable|string',
+            'benefit' => 'nullable|string',
             'kuota' => 'required|integer',
             'batas_waktu' => 'required|date',
             'status_approval' => 'nullable|string',
         ]);
         
+        // Simpan semua datanya ke laci database
         $lowongan = Lowongan::create($validated);
         
+        // Kasih tahu Flutter kalau sudah sukses
         return response()->json([
             'message' => 'Lowongan berhasil ditambahkan', 
             'data' => $lowongan

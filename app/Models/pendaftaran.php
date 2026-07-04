@@ -14,7 +14,10 @@ class Pendaftaran extends Model
     protected $fillable = [
         'id_mahasiswa',
         'id_lowongan',
+        'motivasi',
         'berkas_cv',
-        'status'
+        'portofolio',
+        'status',
+        'laporan_akhir',
     ];
 }

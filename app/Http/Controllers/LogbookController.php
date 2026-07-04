@@ -3,11 +3,33 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use App\Models\Logbook;
 use App\Models\Pendaftaran;
 
 class LogbookController extends Controller
 {
+    // 1. FITUR BARU: Menampilkan riwayat logbook (Khusus Mahasiswa yang sedang login)
+    public function index()
+    {
+        // Ambil NIM mahasiswa dari token loginnya
+        $nim = Auth::user()->email_or_nim;
+
+        // Cari catatan logbook yang terhubung dengan pendaftarannya
+        $logbook = DB::table('logbook')
+            ->join('pendaftaran', 'logbook.id_pendaftaran', '=', 'pendaftaran.id_pendaftaran')
+            ->where('pendaftaran.id_mahasiswa', $nim)
+            ->select('logbook.*')
+            ->get();
+
+        return response()->json([
+            'message' => 'Berhasil mengambil riwayat logbook',
+            'data' => $logbook
+        ], 200);
+    }
+
+    // 2. FITUR ASLI ABANG: Menyimpan logbook baru
     public function store(Request $request)
     {
         $request->validate([
@@ -38,6 +60,7 @@ class LogbookController extends Controller
         ], 201);
     }
 
+    // 3. FITUR ASLI ABANG: Dosen mengubah status logbook
     public function updateStatus(Request $request, $id)
     {
         $request->validate([
@@ -56,6 +79,30 @@ class LogbookController extends Controller
         return response()->json([
             'message' => 'Status logbook berhasil diubah menjadi ' . $request->status_validasi,
             'data'    => $logbook
+        ], 200);
+    }
+
+    // 4. FITUR BARU: Dosen & Mitra melihat isi logbook mahasiswa tertentu
+    public function getLogbookByPendaftaran($id_pendaftaran)
+    {
+        // Kita cari semua logbook milik pendaftaran ini, diurutkan dari minggu pertama
+        $logbook = DB::table('logbook')
+            ->where('id_pendaftaran', $id_pendaftaran)
+            ->orderBy('minggu_ke', 'asc') 
+            ->get();
+
+        // Kalau mahasiswanya malas dan belum isi sama sekali
+        if ($logbook->isEmpty()) {
+            return response()->json([
+                'message' => 'Mahasiswa ini belum mengisi logbook sama sekali.',
+                'data' => []
+            ], 200);
+        }
+
+        // Kalau ada datanya, kirim ke HP Dosen/Mitra
+        return response()->json([
+            'message' => 'Berhasil mengambil data logbook',
+            'data' => $logbook
         ], 200);
     }
 }

@@ -16,6 +16,13 @@ class Lowongan extends Model
     protected $fillable = [
         'id_mitra',
         'judul_posisi',
+        'deskripsi',
+        'persyaratan',
+        'kategori',
+        'lokasi',
+        'tipe_kerja',
+        'tipe_kontrak',
+        'benefit',
         'kuota',
         'batas_waktu',
         'status_approval'
