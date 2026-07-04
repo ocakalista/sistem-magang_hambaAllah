@@ -1,11 +1,18 @@
 import 'package:flutter/material.dart';
 
+import '../services/api_service.dart';
 import 'admin_model.dart';
 import 'application_model.dart';
 import 'mitra_model.dart';
 
 class MitraProvider extends ChangeNotifier {
   MitraProvider();
+
+  final MitraInfo info = const MitraInfo(
+    idMitra: 'mitra-001',
+    idUser: 'user-001',
+    companyName: 'PT Amikom Mitra Sejahtera',
+  );
 
   MitraStats stats = const MitraStats(
     totalLowongan: 12,
@@ -42,6 +49,9 @@ class MitraProvider extends ChangeNotifier {
     ),
   ];
 
+  bool isLoadingLowongan = false;
+  String? lowonganError;
+
   InsightMingguan insight = const InsightMingguan(
     insightText:
         'Interaksi postingan Anda meningkat 24% dibandingkan minggu lalu. Posisi UI/UX Designer paling banyak diminati.',
@@ -49,7 +59,7 @@ class MitraProvider extends ChangeNotifier {
     capacityTotal: 100,
   );
 
-  final List<LowonganMitra> lowonganList = [
+  List<LowonganMitra> lowonganList = [
     LowonganMitra(
       id: 'm-l-1',
       position: 'Frontend Developer Intern',
@@ -71,6 +81,29 @@ class MitraProvider extends ChangeNotifier {
       deadline: DateTime.now().add(const Duration(days: 16)),
     ),
   ];
+
+  Future<void> loadLowongan(String? token) async {
+    isLoadingLowongan = true;
+    lowonganError = null;
+    notifyListeners();
+
+    if (token == null || token.isEmpty) {
+      lowonganError = 'Token tidak tersedia. Silakan login ulang.';
+      isLoadingLowongan = false;
+      notifyListeners();
+      return;
+    }
+
+    try {
+      final fetched = await ApiService.fetchMitraLowongan(token);
+      lowonganList = fetched;
+      stats = stats.copyWith(totalLowongan: fetched.length);
+    } catch (e) {
+      lowonganError = e.toString();
+    }
+    isLoadingLowongan = false;
+    notifyListeners();
+  }
 
   void tambahLowongan(LowonganMitra lowongan) {
     final pendingLowongan = LowonganMitra(

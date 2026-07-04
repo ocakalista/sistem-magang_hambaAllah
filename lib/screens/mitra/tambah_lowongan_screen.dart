@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../models/admin_model.dart';
 import '../../models/mitra_model.dart';
 import '../../models/mitra_provider.dart';
+import '../../models/nexus_app_state.dart';
 import '../../theme/app_theme.dart';
 
 class TambahLowonganScreen extends StatefulWidget {
@@ -530,6 +531,15 @@ class _TambahLowonganScreenState extends State<TambahLowonganScreen> {
     );
 
     state.tambahLowongan(lowongan);
+    NexusScope.of(context).addPendingLowongan(
+      PendingLowongan(
+        id: 'req-${DateTime.now().millisecondsSinceEpoch}',
+        companyName: _namaPerusahaanController.text.trim(),
+        companyCategory: _selectedKategori ?? 'Other',
+        requestDescription:
+            '${_judulController.text.trim()} — ${_lokasiController.text.trim()}\nKuota: $_kuota \n${_deskripsiController.text.trim()}',
+      ),
+    );
 
     showDialog<void>(
       context: context,

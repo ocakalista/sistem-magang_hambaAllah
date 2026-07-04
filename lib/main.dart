@@ -49,7 +49,7 @@ class _NexusAppState extends State<NexusApp> {
           // - Admin routes: /admin (requires UserRole.admin)
           // - Dosen routes: /dosen (requires UserRole.dosen), /dosen/weekly-report-detail
           // - Student routes: /dashboard (requires UserRole.student)
-          // - Mitra routes: /mitra/dashboard (requires role == "mitra")
+          // - Mitra routes: /mitra/dashboard, /mitra/kelola-lowongan, /mitra/tambah-lowongan, /mitra/profile (requires UserRole.mitra)
           // Currently protected via RoleGuard wrapper, but consider moving to onGenerateRoute for centralized control
           routes: {
             SplashScreen.routeName: (_) => const SplashScreen(),
@@ -87,11 +87,26 @@ class _NexusAppState extends State<NexusApp> {
             DashboardMahasiswaProfileScreen.routeName:
                 (_) => const DashboardMahasiswaProfileScreen(),
             DosenProfileScreen.routeName: (_) => const DosenProfileScreen(),
-            MitraDashboardScreen.routeName: (_) => const MitraDashboardScreen(),
+            MitraDashboardScreen.routeName:
+                (_) => const RoleGuard(
+                  requiredRole: UserRole.mitra,
+                  child: MitraDashboardScreen(),
+                ),
             MitraKelolaLowonganScreen.routeName:
-                (_) => const MitraKelolaLowonganScreen(),
-            TambahLowonganScreen.routeName: (_) => const TambahLowonganScreen(),
-            MitraProfileScreen.routeName: (_) => const MitraProfileScreen(),
+                (_) => const RoleGuard(
+                  requiredRole: UserRole.mitra,
+                  child: MitraKelolaLowonganScreen(),
+                ),
+            TambahLowonganScreen.routeName:
+                (_) => const RoleGuard(
+                  requiredRole: UserRole.mitra,
+                  child: TambahLowonganScreen(),
+                ),
+            MitraProfileScreen.routeName:
+                (_) => const RoleGuard(
+                  requiredRole: UserRole.mitra,
+                  child: MitraProfileScreen(),
+                ),
           },
         ),
       ),

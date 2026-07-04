@@ -4,9 +4,10 @@ import 'application_model.dart';
 import 'admin_model.dart';
 import 'dosen_model.dart';
 import 'notification_model.dart';
+import '../services/api_service.dart';
 import '../theme/app_theme.dart';
 
-enum UserRole { student, admin, dosen }
+enum UserRole { student, admin, dosen, mitra }
 
 class NexusAppState extends ChangeNotifier {
   NexusAppState() {
@@ -17,6 +18,7 @@ class NexusAppState extends ChangeNotifier {
 
   Application? _currentApplication;
   UserRole currentUserRole = UserRole.student;
+  String? authToken;
   final Set<String> _savedInternshipIds = <String>{};
   final List<AppNotification> _notifications = <AppNotification>[];
   late PlatformStats adminStats;
@@ -184,6 +186,11 @@ class NexusAppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  void setAuthToken(String? token) {
+    authToken = token;
+    notifyListeners();
+  }
+
   void _syncCompletedReportNotifications(Application application) {
     for (final report in application.weeklyReports) {
       if (report.status == 'completed' &&
@@ -261,23 +268,71 @@ class NexusAppState extends ChangeNotifier {
     ]);
   }
 
-  int get pendingLowonganCount => pendingLowongan.length;
+  int get pendingLowonganCount =>
+      pendingLowongan
+          .where((item) => item.status == LowonganApprovalStatus.pending)
+          .length;
 
-  void approveLowongan(String id) {
-    final index = pendingLowongan.indexWhere((p) => p.id == id);
-    if (index == -1) return;
-    pendingLowongan[index].status = LowonganApprovalStatus.approved;
-    pendingLowongan.removeAt(index);
+  void addPendingLowongan(PendingLowongan request) {
+    pendingLowongan.insert(0, request);
     notifyListeners();
   }
 
-  void rejectLowongan(String id, String reason) {
+  Future<void> loadAdminLowongan() async {
+    final token = authToken;
+    if (token == null) {
+      return;
+    }
+
+    try {
+      final fetched = await ApiService.fetchAdminLowongan(token);
+      pendingLowongan
+        ..clear()
+        ..addAll(fetched);
+      notifyListeners();
+    } catch (_) {
+      // Keep existing local demo data when backend fetch fails.
+    }
+  }
+
+  Future<void> approveLowongan(String id) async {
+    final token = authToken;
     final index = pendingLowongan.indexWhere((p) => p.id == id);
     if (index == -1) return;
-    pendingLowongan[index].status = LowonganApprovalStatus.rejected;
-    // In a real app we'd persist the reason; here we just remove from pending list
-    pendingLowongan.removeAt(index);
+
+    final previousStatus = pendingLowongan[index].status;
+    pendingLowongan[index].status = LowonganApprovalStatus.pending;
     notifyListeners();
+
+    try {
+      await ApiService.approveLowongan(token, id);
+      pendingLowongan[index].status = LowonganApprovalStatus.approved;
+      notifyListeners();
+    } catch (e) {
+      pendingLowongan[index].status = previousStatus;
+      notifyListeners();
+      rethrow;
+    }
+  }
+
+  Future<void> rejectLowongan(String id, String reason) async {
+    final token = authToken;
+    final index = pendingLowongan.indexWhere((p) => p.id == id);
+    if (index == -1) return;
+
+    final previousStatus = pendingLowongan[index].status;
+    pendingLowongan[index].status = LowonganApprovalStatus.pending;
+    notifyListeners();
+
+    try {
+      await ApiService.rejectLowongan(token, id, reason);
+      pendingLowongan[index].status = LowonganApprovalStatus.rejected;
+      notifyListeners();
+    } catch (e) {
+      pendingLowongan[index].status = previousStatus;
+      notifyListeners();
+      rethrow;
+    }
   }
 
   void _addNotification(AppNotification notification) {
@@ -512,8 +567,9 @@ class NexusAppState extends ChangeNotifier {
     // Find the student and report
     for (var student in mahasiswaBimbingan) {
       if (student.id == studentId) {
-        final reportIndex =
-            student.weeklyReports.indexWhere((r) => r.id == reportId);
+        final reportIndex = student.weeklyReports.indexWhere(
+          (r) => r.id == reportId,
+        );
         if (reportIndex != -1) {
           final report = student.weeklyReports[reportIndex];
           student.weeklyReports[reportIndex] = report.copyWith(
@@ -541,8 +597,9 @@ class NexusAppState extends ChangeNotifier {
     // Find the student and report - mark for revision
     for (var student in mahasiswaBimbingan) {
       if (student.id == studentId) {
-        final reportIndex =
-            student.weeklyReports.indexWhere((r) => r.id == reportId);
+        final reportIndex = student.weeklyReports.indexWhere(
+          (r) => r.id == reportId,
+        );
         if (reportIndex != -1) {
           final report = student.weeklyReports[reportIndex];
           student.weeklyReports[reportIndex] = report.copyWith(

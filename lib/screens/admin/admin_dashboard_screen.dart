@@ -19,6 +19,17 @@ class AdminDashboardScreen extends StatefulWidget {
 
 class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   int _selectedIndex = 0;
+  bool _hasLoadedLowongan = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_hasLoadedLowongan) {
+      _hasLoadedLowongan = true;
+      final state = NexusScope.of(context);
+      state.loadAdminLowongan();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -26,7 +37,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
     final stats = state.adminStats;
     final students = state.studentEnrollments;
-    final pending = state.pendingLowongan;
+    final pending =
+        state.pendingLowongan
+            .where((item) => item.status == LowonganApprovalStatus.pending)
+            .toList();
     final distribution = state.internshipDistribution;
 
     return Scaffold(
@@ -208,20 +222,36 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 ...pending.map(
                   (p) => _PendingCard(
                     pending: p,
-                    onApprove: () {
-                      state.approveLowongan(p.id);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Lowongan approved')),
-                      );
+                    onApprove: () async {
+                      try {
+                        await state.approveLowongan(p.id);
+                        if (!context.mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Lowongan approved')),
+                        );
+                      } catch (e) {
+                        if (!context.mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Approve gagal: $e')),
+                        );
+                      }
                     },
                     onReject: () async {
                       final reason = await _showRejectDialog(context);
                       if (!context.mounted) return;
                       if (reason != null && reason.isNotEmpty) {
-                        state.rejectLowongan(p.id, reason);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Lowongan rejected')),
-                        );
+                        try {
+                          await state.rejectLowongan(p.id, reason);
+                          if (!context.mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Lowongan rejected')),
+                          );
+                        } catch (e) {
+                          if (!context.mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Reject gagal: $e')),
+                          );
+                        }
                       }
                     },
                   ),

@@ -5,9 +5,16 @@ import '../models/nexus_app_state.dart';
 import '../models/notification_model.dart';
 import '../theme/app_theme.dart';
 import '../widgets/bottom_nav.dart';
+import 'admin/admin_dashboard_screen.dart';
+import 'dosen/dosen_dashboard_screen.dart';
+import 'dosen/profile_screen.dart';
 import 'mahasiswa/application_status_screen.dart';
 import 'mahasiswa/dashboard_mahasiswa.dart';
+import 'mahasiswa/profile_screen.dart';
 import 'mahasiswa/internship_progress_screen.dart';
+import 'mitra/kelola_lowongan_screen.dart';
+import 'mitra/mitra_dashboard_screen.dart';
+import 'mitra/profile_screen.dart';
 
 enum _NotificationFilter { all, updates, approvals }
 
@@ -205,11 +212,37 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   }
 
   void _handleNav(BuildContext context, NexusAppState state, int index) {
+    final role = state.currentUserRole;
     switch (index) {
       case 0:
-        Navigator.pushReplacementNamed(context, DashboardMahasiswa.routeName);
+        if (role == UserRole.admin) {
+          Navigator.pushReplacementNamed(
+            context,
+            AdminDashboardScreen.routeName,
+          );
+        } else if (role == UserRole.dosen) {
+          Navigator.pushReplacementNamed(
+            context,
+            DosenDashboardScreen.routeName,
+          );
+        } else if (role == UserRole.mitra) {
+          Navigator.pushReplacementNamed(
+            context,
+            MitraDashboardScreen.routeName,
+          );
+        } else {
+          Navigator.pushReplacementNamed(context, DashboardMahasiswa.routeName);
+        }
         break;
       case 1:
+        if (role == UserRole.mitra) {
+          Navigator.pushReplacementNamed(
+            context,
+            MitraKelolaLowonganScreen.routeName,
+          );
+          return;
+        }
+
         final application = state.currentApplication;
         if (application == null) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -231,6 +264,16 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       case 2:
         break;
       case 3:
+        if (role == UserRole.dosen) {
+          Navigator.pushReplacementNamed(context, DosenProfileScreen.routeName);
+        } else if (role == UserRole.mitra) {
+          Navigator.pushReplacementNamed(context, MitraProfileScreen.routeName);
+        } else if (role == UserRole.student) {
+          Navigator.pushReplacementNamed(
+            context,
+            DashboardMahasiswaProfileScreen.routeName,
+          );
+        }
         break;
     }
   }

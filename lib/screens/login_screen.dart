@@ -5,6 +5,7 @@ import '../models/nexus_app_state.dart';
 import 'mahasiswa/dashboard_mahasiswa.dart';
 import 'admin/admin_dashboard_screen.dart';
 import 'dosen/dosen_dashboard_screen.dart';
+import 'mitra/mitra_dashboard_screen.dart';
 import '../services/api_service.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -201,10 +202,15 @@ class _LoginScreenState extends State<LoginScreen> {
                                       role = UserRole.admin;
                                     } else if (roleStr == 'dosen') {
                                       role = UserRole.dosen;
+                                    } else if (roleStr == 'mitra') {
+                                      role = UserRole.mitra;
                                     } else {
                                       role = UserRole.student;
                                     }
 
+                                    state.setAuthToken(
+                                      response['token'] as String?,
+                                    );
                                     state.setUserRole(role);
 
                                     if (mounted) {
@@ -226,6 +232,11 @@ class _LoginScreenState extends State<LoginScreen> {
                                         Navigator.pushReplacementNamed(
                                           context,
                                           DosenDashboardScreen.routeName,
+                                        );
+                                      } else if (role == UserRole.mitra) {
+                                        Navigator.pushReplacementNamed(
+                                          context,
+                                          MitraDashboardScreen.routeName,
                                         );
                                       } else {
                                         Navigator.pushReplacementNamed(

@@ -67,6 +67,18 @@ class InsightMingguan {
   });
 }
 
+class MitraInfo {
+  final String idMitra;
+  final String idUser;
+  final String companyName;
+
+  const MitraInfo({
+    required this.idMitra,
+    required this.idUser,
+    required this.companyName,
+  });
+}
+
 class LowonganMitra {
   final String id;
   final String position;
@@ -97,6 +109,57 @@ class LowonganMitra {
     required this.approvalStatus,
     required this.deadline,
   });
+
+  factory LowonganMitra.fromJson(Map<String, dynamic> json) {
+    final approvalString =
+        json['approval_status'] ?? json['approvalStatus'] ?? 'pending';
+    final deadlineRaw =
+        json['deadline'] ?? json['tanggal_berakhir'] ?? json['end_date'];
+
+    return LowonganMitra(
+      id: json['id']?.toString() ?? '',
+      position: json['position'] ?? json['title'] ?? '',
+      category: json['category'] ?? json['kategori'] ?? '',
+      location: json['location'] ?? json['lokasi'] ?? '',
+      tags: _normalizeStringList(json['tags'] ?? json['tag_list'] ?? []),
+      period: json['period'] ?? json['periode'] ?? '',
+      quota: int.tryParse(json['quota']?.toString() ?? '') ?? 0,
+      applicantCount:
+          int.tryParse(json['applicant_count']?.toString() ?? '') ??
+          int.tryParse(json['applicantCount']?.toString() ?? '') ??
+          0,
+      description: json['description'] ?? json['deskripsi'] ?? '',
+      requirements: _normalizeStringList(
+        json['requirements'] ?? json['persyaratan'] ?? [],
+      ),
+      benefits: _normalizeStringList(
+        json['benefits'] ?? json['keuntungan'] ?? [],
+      ),
+      approvalStatus: LowonganApprovalStatus.values.firstWhere(
+        (status) =>
+            status.name.toLowerCase() ==
+            approvalString.toString().toLowerCase(),
+        orElse: () => LowonganApprovalStatus.pending,
+      ),
+      deadline:
+          DateTime.tryParse(deadlineRaw?.toString() ?? '') ??
+          DateTime.now().add(const Duration(days: 30)),
+    );
+  }
+
+  static List<String> _normalizeStringList(dynamic value) {
+    if (value is List) {
+      return value.map((item) => item.toString()).toList();
+    }
+    if (value is String) {
+      return value
+          .split(',')
+          .map((item) => item.trim())
+          .where((item) => item.isNotEmpty)
+          .toList();
+    }
+    return <String>[];
+  }
 }
 
 extension ApplicationStatusMitraBadge on ApplicationStatus {
