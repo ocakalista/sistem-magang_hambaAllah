@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:io';
 import 'package:http/http.dart' as http;
 
 import '../models/admin_model.dart';
@@ -7,10 +6,11 @@ import '../models/mitra_model.dart';
 
 class ApiService {
   // Gunakan 10.0.2.2 untuk Android emulator, 127.0.0.1 untuk platform lain.
-  static final String baseUrl =
-      Platform.isAndroid
-          ? "http://10.0.2.2:8000/api"
-          : "http://127.0.0.1:8000/api";
+  // Set base API URL. Use your Railway deployment as default.
+  // If you still need to run against a local emulator use the localUrl instead.
+  static final String productionUrl =
+      'https://sistem-maganghambaallah-production.up.railway.app/api';
+  static final String baseUrl = productionUrl;
 
   // Fungsi untuk menembak API Login
   static Future<Map<String, dynamic>> login(
