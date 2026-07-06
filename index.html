@@ -24,49 +24,121 @@
         :root {
             --primary: #4f46e5;       /* Royal Indigo */
             --primary-dark: #3730a3;  /* Dark Indigo */
-            --primary-light: #e0e7ff; /* Light Indigo */
+            --primary-light: rgba(79, 70, 229, 0.1); /* Light Indigo */
             --dark: #0f172a;          /* Slate Dark */
             --gray-text: #475569;     /* Slate Gray */
             --light-bg: #f8fafc;      /* Light Gray */
             --accent: #f59e0b;        /* Amber */
+            --card-bg: #ffffff;
+            --border-color: #e2e8f0;
+            --body-bg: #ffffff;
+            --phone-screen-bg: #f8fafc;
+            --phone-card-bg: #ffffff;
+            --phone-text: #0f172a;
+            
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+
+        [data-theme="dark"] {
+            --dark: #f8fafc;
+            --gray-text: #94a3b8;
+            --light-bg: #0f172a;
+            --card-bg: #1e293b;
+            --border-color: #334155;
+            --body-bg: #0b0f19;
+            --phone-screen-bg: #1e293b;
+            --phone-card-bg: #0f172a;
+            --phone-text: #f8fafc;
+            --primary-light: rgba(99, 102, 241, 0.25);
         }
 
         body {
             color: var(--dark);
-            background-color: #ffffff;
+            background-color: var(--body-bg);
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(79, 70, 229, 0.04) 0px, transparent 50%),
+                radial-gradient(at 100% 0%, rgba(245, 158, 11, 0.02) 0px, transparent 50%);
+            background-attachment: fixed;
             line-height: 1.7;
+            transition: background-color 0.3s, color 0.3s, border-color 0.3s;
+        }
+
+        [data-theme="dark"] body {
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.08) 0px, transparent 50%),
+                radial-gradient(at 100% 0%, rgba(245, 158, 11, 0.04) 0px, transparent 50%);
         }
 
         /* --- NAVBAR --- */
         header {
-            background-color: rgba(255, 255, 255, 0.92);
+            background-color: rgba(255, 255, 255, 0.8);
             backdrop-filter: blur(12px);
             -webkit-backdrop-filter: blur(12px);
             padding: 20px 8%;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            border-bottom: 1px solid #e2e8f0;
+            border-bottom: 1px solid var(--border-color);
             position: sticky;
             top: 0;
             z-index: 1000;
+            transition: background-color 0.3s, border-color 0.3s, padding 0.3s, box-shadow 0.3s;
+        }
+
+        [data-theme="dark"] header {
+            background-color: rgba(11, 15, 25, 0.8);
+        }
+
+        header.scrolled {
+            box-shadow: var(--shadow-md);
+            padding: 14px 8%;
         }
 
         .logo {
-            font-size: 20px;
+            font-size: 22px;
             font-weight: 800;
             letter-spacing: -0.5px;
             color: var(--dark);
             text-decoration: none;
+            transition: color 0.3s;
         }
 
         .logo span {
             color: var(--primary);
         }
 
+        /* Nav Controls */
+        .nav-controls {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .theme-toggle-btn {
+            background: none;
+            border: 1px solid var(--border-color);
+            padding: 8px;
+            border-radius: 50%;
+            color: var(--dark);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+        }
+
+        .theme-toggle-btn:hover {
+            background-color: var(--light-bg);
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: scale(1.05);
+        }
+
         /* --- HERO SECTION --- */
         .hero {
-            background: linear-gradient(180deg, #f5f3ff 0%, #ffffff 100%);
+            background: transparent;
             padding: 80px 8% 120px 8%;
             display: grid;
             grid-template-columns: 1.1fr 0.9fr;
@@ -86,22 +158,33 @@
             font-size: 13px;
             font-weight: 600;
             display: inline-flex;
+            align-items: center;
+            gap: 6px;
             margin-bottom: 24px;
+            transition: background-color 0.3s, color 0.3s;
         }
 
         .hero h1 {
-            font-size: 46px;
+            font-size: 48px;
             font-weight: 800;
             line-height: 1.2;
             letter-spacing: -1.5px;
             margin-bottom: 20px;
             color: var(--dark);
+            transition: color 0.3s;
+        }
+
+        .hero h1 span {
+            background: linear-gradient(135deg, var(--primary) 0%, #a855f7 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
         }
 
         .hero p {
             font-size: 18px;
             color: var(--gray-text);
             margin-bottom: 36px;
+            transition: color 0.3s;
         }
 
         .cta-group {
@@ -120,30 +203,34 @@
             font-size: 15px;
             font-weight: 600;
             text-decoration: none;
-            transition: all 0.2s;
+            transition: all 0.25s ease;
             cursor: pointer;
+            border: none;
+            outline: none;
         }
 
         .btn-primary {
             background-color: var(--primary);
             color: white;
-            box-shadow: 0 4px 20px rgba(79, 70, 229, 0.3);
+            box-shadow: 0 4px 20px rgba(79, 70, 229, 0.25);
         }
 
         .btn-primary:hover {
             background-color: var(--primary-dark);
             transform: translateY(-2px);
+            box-shadow: 0 6px 24px rgba(79, 70, 229, 0.35);
         }
 
         .btn-secondary {
             background-color: transparent;
             color: var(--gray-text);
-            border: 1px solid #e2e8f0;
+            border: 1px solid var(--border-color);
         }
 
         .btn-secondary:hover {
             background-color: var(--light-bg);
-            border-color: #cbd5e1;
+            border-color: var(--gray-text);
+            color: var(--dark);
         }
 
         /* --- MOBILE UI MOCKUP --- */
@@ -161,11 +248,16 @@
             position: absolute;
             width: 380px;
             height: 380px;
-            background: radial-gradient(circle, rgba(79,70,229,0.15) 0%, rgba(255,255,255,0) 70%);
+            background: radial-gradient(circle, rgba(79,70,229,0.12) 0%, rgba(255,255,255,0) 70%);
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
             z-index: 1;
+            transition: background 0.3s;
+        }
+
+        [data-theme="dark"] .phone-bg-glow {
+            background: radial-gradient(circle, rgba(99, 102, 241, 0.2) 0%, rgba(11, 15, 25, 0) 70%);
         }
 
         .phone-mockup {
@@ -174,10 +266,17 @@
             background-color: #0f172a;
             border-radius: 40px;
             border: 12px solid #0f172a;
-            box-shadow: 0 30px 60px -15px rgba(15, 23, 42, 0.25);
+            box-shadow: var(--shadow-lg);
             position: relative;
             overflow: hidden;
             z-index: 2;
+            transition: border-color 0.3s, background-color 0.3s, box-shadow 0.3s;
+        }
+
+        [data-theme="dark"] .phone-mockup {
+            border-color: #1e293b;
+            background-color: #1e293b;
+            box-shadow: 0 30px 60px -15px rgba(0, 0, 0, 0.5);
         }
 
         .phone-notch {
@@ -190,29 +289,65 @@
             background-color: #0f172a;
             border-radius: 20px;
             z-index: 10;
+            transition: background-color 0.3s;
+        }
+
+        [data-theme="dark"] .phone-notch {
+            background-color: #1e293b;
         }
 
         .phone-screen {
             width: 100%;
             height: 100%;
-            background-color: #f8fafc;
+            background-color: var(--phone-screen-bg);
             border-radius: 28px;
             padding: 42px 14px 14px 14px;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
+            color: var(--phone-text);
+            position: relative;
+            overflow: hidden;
+            transition: background-color 0.3s, color 0.3s;
         }
 
-        .phone-top-ui {
+        .phone-content-area {
+            flex-grow: 1;
+            overflow-y: auto;
+            margin-bottom: 10px;
+            padding-right: 2px;
+        }
+
+        .phone-content-area::-webkit-scrollbar {
+            display: none;
+        }
+
+        .phone-content-area {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        .phone-screen-content {
+            display: none;
+            animation: phoneFadeIn 0.3s ease;
+        }
+
+        .phone-screen-content.active {
             display: flex;
             flex-direction: column;
             gap: 12px;
+        }
+
+        @keyframes phoneFadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
         .phone-app-bar {
             display: flex;
             justify-content: space-between;
             align-items: center;
+            margin-bottom: 8px;
         }
 
         .phone-user-greet {
@@ -225,25 +360,45 @@
             font-weight: 700;
         }
 
+        .phone-search-container {
+            position: relative;
+            margin-bottom: 8px;
+        }
+
         .phone-search-bar {
-            background-color: #fff;
-            border: 1px solid #e2e8f0;
+            width: 100%;
+            background-color: var(--phone-card-bg);
+            border: 1px solid var(--border-color);
             padding: 8px 12px;
             border-radius: 10px;
             font-size: 11px;
-            color: #94a3b8;
+            color: var(--gray-text);
+            outline: none;
+            transition: all 0.2s;
+        }
+
+        .phone-search-bar:focus {
+            border-color: var(--primary);
         }
 
         .phone-card {
-            background: white;
+            background: var(--phone-card-bg);
             padding: 12px;
             border-radius: 12px;
-            border: 1px solid #edf2f7;
+            border: 1px solid var(--border-color);
             display: flex;
             flex-direction: column;
             gap: 2px;
+            cursor: pointer;
+            transition: all 0.2s;
         }
         
+        .phone-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-sm);
+            border-color: var(--primary);
+        }
+
         .phone-card-title {
             font-size: 11px;
             font-weight: 700;
@@ -256,7 +411,7 @@
 
         .phone-badge {
             align-self: flex-start;
-            background: #f0fdf4;
+            background: rgba(22, 163, 74, 0.1);
             color: #16a34a;
             font-size: 8px;
             font-weight: 600;
@@ -265,18 +420,78 @@
             margin-top: 4px;
         }
 
-        .phone-bottom-nav {
-            background: white;
-            border-top: 1px solid #e2e8f0;
-            margin: 0 -14px -14px -14px;
-            padding: 10px 20px;
+        .phone-badge.orange {
+            background: rgba(245, 158, 11, 0.1);
+            color: #d97706;
+        }
+
+        .phone-badge.blue {
+            background: rgba(59, 130, 246, 0.1);
+            color: #2563eb;
+        }
+
+        /* Phone Popup inside Mockup */
+        .phone-popup {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: var(--phone-card-bg);
+            border-top: 1px solid var(--border-color);
+            border-top-left-radius: 20px;
+            border-top-right-radius: 20px;
+            padding: 16px;
+            box-shadow: 0 -5px 15px rgba(0,0,0,0.08);
+            transform: translateY(100%);
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 20;
+        }
+
+        .phone-popup.active {
+            transform: translateY(0);
+        }
+
+        .phone-popup-header {
             display: flex;
             justify-content: space-between;
-            font-size: 15px;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .phone-popup-close {
+            background: none;
+            border: none;
+            font-size: 16px;
+            cursor: pointer;
+            color: var(--gray-text);
+        }
+
+        .phone-bottom-nav {
+            background: var(--phone-card-bg);
+            border-top: 1px solid var(--border-color);
+            margin: 0 -14px -14px -14px;
+            padding: 12px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 10;
+            transition: background-color 0.3s, border-color 0.3s;
+        }
+
+        .phone-nav-item {
+            cursor: pointer;
+            font-size: 16px;
+            transition: transform 0.2s, opacity 0.2s;
+            opacity: 0.5;
+        }
+
+        .phone-nav-item.active {
+            opacity: 1;
+            transform: scale(1.15);
         }
 
         /* --- FEATURES & INSTALL SECTION OPTIMIZATION --- */
-        .features, .install-section {
+        .features, .install-section, .faq-section {
             scroll-margin-top: 90px;
         }
 
@@ -284,14 +499,18 @@
         .features {
             padding: 100px 8%;
             text-align: center;
-            background-color: #ffffff;
+            background-color: var(--body-bg);
+            border-top: 1px solid var(--border-color);
+            transition: background-color 0.3s, border-color 0.3s;
         }
 
         .section-title {
-            font-size: 34px;
+            font-size: 36px;
             font-weight: 800;
             letter-spacing: -1px;
             margin-bottom: 16px;
+            color: var(--dark);
+            transition: color 0.3s;
         }
 
         .section-desc {
@@ -299,59 +518,168 @@
             max-width: 580px;
             margin: 0 auto 60px auto;
             font-size: 16px;
+            transition: color 0.3s;
         }
 
-        .features-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-            gap: 24px;
+        /* --- ACTOR TAB SYSTEM --- */
+        .actor-tabs {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 40px;
+            flex-wrap: wrap;
         }
 
-        .feature-card {
+        .actor-tab {
             background-color: var(--light-bg);
-            padding: 35px 25px;
-            border-radius: 16px;
+            border: 1px solid var(--border-color);
+            padding: 12px 24px;
+            border-radius: 99px;
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--gray-text);
+            cursor: pointer;
+            transition: all 0.25s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .actor-tab:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        .actor-tab.active {
+            background-color: var(--primary);
+            border-color: var(--primary);
+            color: white;
+            box-shadow: 0 4px 15px rgba(79, 70, 229, 0.2);
+        }
+
+        .actor-tab-icon {
+            font-size: 18px;
+        }
+
+        .actor-content-box {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 24px;
+            padding: 40px;
+            max-width: 950px;
+            margin: 0 auto;
+            box-shadow: var(--shadow-md);
+            transition: background-color 0.3s, border-color 0.3s, box-shadow 0.3s;
+        }
+
+        .actor-content {
+            display: none;
+            grid-template-columns: 1.2fr 0.8fr;
+            gap: 40px;
+            align-items: center;
             text-align: left;
-            transition: all 0.2s ease;
-            border: 1px solid transparent;
+            animation: tabFadeIn 0.4s ease;
         }
 
-        .feature-card:hover {
-            transform: translateY(-4px);
-            background-color: #ffffff;
-            border-color: #e2e8f0;
-            box-shadow: 0 20px 40px -15px rgba(0,0,0,0.05);
+        .actor-content.active {
+            display: grid;
         }
 
-        .feature-icon {
+        @keyframes tabFadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .actor-details h3 {
             font-size: 24px;
-            width: 48px;
-            height: 48px;
-            background-color: white;
+            font-weight: 800;
+            margin-bottom: 12px;
+            color: var(--dark);
+        }
+
+        .actor-details p {
+            color: var(--gray-text);
+            margin-bottom: 24px;
+            font-size: 15px;
+        }
+
+        .actor-features-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .actor-features-list li {
+            font-size: 14px;
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+            color: var(--dark);
+        }
+
+        .actor-features-list li span {
+            font-size: 18px;
+            line-height: 1;
+            margin-top: 2px;
+        }
+
+        .actor-preview {
+            background: linear-gradient(135deg, var(--primary-light) 0%, rgba(99, 102, 241, 0.02) 100%);
+            border-radius: 20px;
+            height: 240px;
             display: flex;
             align-items: center;
             justify-content: center;
+            border: 1px dashed var(--border-color);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .preview-card-group {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            width: 80%;
+        }
+
+        .preview-mini-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            padding: 16px;
             border-radius: 12px;
-            margin-bottom: 20px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.02);
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            box-shadow: var(--shadow-sm);
+            transition: all 0.3s;
         }
 
-        .feature-card h3 {
-            font-size: 18px;
-            font-weight: 700;
-            margin-bottom: 10px;
+        .preview-mini-card.highlighted {
+            border-color: var(--primary);
+            background: linear-gradient(135deg, var(--card-bg) 0%, rgba(99, 102, 241, 0.03) 100%);
         }
 
-        .feature-card p {
-            font-size: 14px;
+        .preview-mini-title {
+            font-size: 11px;
             color: var(--gray-text);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+        }
+
+        .preview-mini-value {
+            font-size: 18px;
+            font-weight: 800;
+            color: var(--dark);
         }
 
         /* --- INSTALLATION GUIDE SECTION --- */
         .install-section {
             background-color: var(--light-bg);
             padding: 100px 8%;
-            border-top: 1px solid #f1f5f9;
+            border-top: 1px solid var(--border-color);
+            transition: background-color 0.3s, border-color 0.3s;
         }
 
         .steps-grid {
@@ -362,10 +690,17 @@
         }
 
         .step-card {
-            background: white;
+            background: var(--card-bg);
             padding: 30px;
             border-radius: 16px;
-            border: 1px solid #e2e8f0;
+            border: 1px solid var(--border-color);
+            transition: all 0.3s;
+        }
+
+        .step-card:hover {
+            transform: translateY(-4px);
+            border-color: var(--primary);
+            box-shadow: var(--shadow-md);
         }
 
         .step-number {
@@ -380,12 +715,14 @@
             justify-content: center;
             border-radius: 50%;
             margin-bottom: 16px;
+            transition: background-color 0.3s, color 0.3s;
         }
 
         .step-card h3 {
             font-size: 16px;
             font-weight: 700;
             margin-bottom: 8px;
+            color: var(--dark);
         }
 
         .step-card p {
@@ -395,30 +732,127 @@
 
         .warning-box {
             margin-top: 40px;
-            background-color: #fffbeb;
-            border: 1px solid #fef3c7;
+            background-color: rgba(245, 158, 11, 0.1);
+            border: 1px solid rgba(245, 158, 11, 0.2);
             padding: 20px;
             border-radius: 16px;
             font-size: 14px;
-            color: #92400e;
+            color: #d97706;
             max-width: 700px;
             margin-left: auto;
             margin-right: auto;
             display: flex;
             gap: 12px;
             text-align: left;
+            transition: all 0.3s;
+        }
+
+        [data-theme="dark"] .warning-box {
+            color: #fbbf24;
+        }
+
+        /* --- FAQ SECTION --- */
+        .faq-section {
+            padding: 100px 8%;
+            background-color: var(--body-bg);
+            border-top: 1px solid var(--border-color);
+            transition: background-color 0.3s, border-color 0.3s;
+        }
+
+        .faq-container {
+            max-width: 800px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .faq-item {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            overflow: hidden;
+            transition: all 0.3s;
+        }
+
+        .faq-item:hover {
+            border-color: var(--primary);
+        }
+
+        .faq-question {
+            width: 100%;
+            padding: 20px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: none;
+            border: none;
+            text-align: left;
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--dark);
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .faq-question:hover {
+            color: var(--primary);
+        }
+
+        .faq-icon {
+            font-size: 18px;
+            font-weight: 500;
+            transition: transform 0.3s ease;
+            color: var(--primary);
+        }
+
+        .faq-answer {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s cubic-bezier(0, 1, 0, 1);
+            padding: 0 24px;
+        }
+
+        .faq-item.active .faq-answer {
+            max-height: 1000px;
+            transition: max-height 0.4s cubic-bezier(1, 0, 1, 0);
+            padding-bottom: 20px;
+        }
+
+        .faq-item.active .faq-icon {
+            transform: rotate(45deg);
+        }
+
+        .faq-answer p {
+            font-size: 14px;
+            color: var(--gray-text);
+            line-height: 1.6;
+        }
+
+        .faq-answer code {
+            background-color: var(--light-bg);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 13px;
         }
 
         /* --- FOOTER --- */
         footer {
-            background-color: var(--dark);
+            background-color: #0b0f19;
             color: #ffffff;
             padding: 50px 8% 40px 8%;
             text-align: center;
+            border-top: 1px solid var(--border-color);
+            transition: background-color 0.3s, border-color 0.3s;
+        }
+
+        [data-theme="dark"] footer {
+            background-color: #070a12;
         }
 
         .footer-brand {
-            font-size: 20px;
+            font-size: 22px;
             font-weight: 800;
             margin-bottom: 8px;
         }
@@ -440,10 +874,30 @@
             color: #64748b;
         }
 
+        /* --- ANIMATIONS & TRANSITIONS --- */
+        .reveal {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: opacity 0.8s ease, transform 0.8s ease;
+        }
+
+        .reveal.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
         /* --- RESPONSIVE BREAKPOINTS --- */
         @media (max-width: 968px) {
             header { 
                 padding: 16px 5%; 
+            }
+            header.scrolled {
+                padding: 12px 5%;
             }
             .hero {
                 grid-template-columns: 1fr;
@@ -455,7 +909,18 @@
             .cta-group { justify-content: center; }
             .phone-container { display: none; }
             .features { padding: 80px 5%; }
+            .actor-content {
+                grid-template-columns: 1fr;
+                gap: 30px;
+            }
+            .actor-preview {
+                height: 180px;
+            }
+            .actor-content-box {
+                padding: 24px;
+            }
             .install-section { padding: 80px 5%; }
+            .faq-section { padding: 80px 5%; }
         }
     </style>
 </head>
@@ -463,62 +928,198 @@
 
     <header>
         <a href="#" class="logo">Magang<span>Amikom</span></a>
+        <div class="nav-controls">
+            <button id="theme-toggle" class="theme-toggle-btn" aria-label="Toggle Theme">
+                <!-- Sun Icon -->
+                <svg class="sun-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="5"></circle>
+                    <line x1="12" y1="1" x2="12" y2="3"></line>
+                    <line x1="12" y1="21" x2="12" y2="23"></line>
+                    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                    <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                    <line x1="1" y1="12" x2="3" y2="12"></line>
+                    <line x1="21" y1="12" x2="23" y2="12"></line>
+                    <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                    <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                </svg>
+                <!-- Moon Icon -->
+                <svg class="moon-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: none;">
+                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                </svg>
+            </button>
+        </div>
     </header>
 
     <section class="hero">
-        <div class="hero-content">
+        <div class="hero-content reveal">
             <div class="hero-tag">
                 📱 Android Application Package
             </div>
-            <h1>Cari & Kelola Magang Jadi Lebih Mudah</h1>
+            <h1>Cari & Kelola Magang Jadi Lebih <span>Mudah</span></h1>
             <p>Platform terintegrasi khusus mahasiswa Universitas AMIKOM Yogyakarta untuk menemukan lowongan aktif, memantau berkas lamaran, validasi perusahaan, hingga pencatatan nilai terpadu.</p>
             
             <div class="cta-group">
-                <a href="https://drive.google.com/drive/folders/1jYaBq9OUONRYaRKtE06QaUaMJ4itwVWA?usp=sharing" target="_blank" class="btn btn-primary">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                        <polyline points="7 10 12 15 17 10"></polyline>
-                        <line x1="12" y1="15" x2="12" y2="3"></line>
-                    </svg>
-                    Unduh Aplikasi (.APK)
+                <a href="LINK_GOOGLE_DRIVE_APK_KAMU" target="_blank" class="btn btn-primary" id="download-btn">
+                    <span class="btn-content" style="display:flex; align-items:center; gap:10px;">
+                        <svg class="download-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="7 10 12 15 17 10"></polyline>
+                            <line x1="12" y1="15" x2="12" y2="3"></line>
+                        </svg>
+                        <span>Unduh Aplikasi (.APK)</span>
+                    </span>
+                    <span class="btn-loader" style="display:none; align-items:center; gap:10px;">
+                        <svg class="spinner-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="animation: spin 1s linear infinite;">
+                            <line x1="12" y1="2" x2="12" y2="6"></line>
+                            <line x1="12" y1="18" x2="12" y2="22"></line>
+                            <line x1="4.93" y1="4.93" x2="7.76" y2="7.76"></line>
+                            <line x1="16.24" y1="16.24" x2="19.07" y2="19.07"></line>
+                            <line x1="2" y1="12" x2="6" y2="12"></line>
+                            <line x1="18" y1="12" x2="22" y2="12"></line>
+                            <line x1="4.93" y1="19.78" x2="7.76" y2="16.93"></line>
+                            <line x1="16.24" y1="7.76" x2="19.07" y2="4.93"></line>
+                        </svg>
+                        <span>Mengunduh... (<span id="download-progress">0%</span>)</span>
+                    </span>
                 </a>
                 <a href="#CaraInstall" class="btn btn-secondary">Cara Install</a>
             </div>
         </div>
         
-        <div class="hero-image">
+        <div class="hero-image reveal">
             <div class="phone-container">
                 <div class="phone-bg-glow"></div>
                 <div class="phone-mockup">
                     <div class="phone-notch"></div>
                     <div class="phone-screen">
-                        <div class="phone-top-ui">
-                            <div class="phone-app-bar">
-                                <div>
-                                    <div class="phone-user-greet">Selamat Datang,</div>
-                                    <div class="phone-user-name">Mahasiswa Amikom 👋</div>
+                        <!-- Content Area -->
+                        <div class="phone-content-area">
+                            <!-- HOME SCREEN -->
+                            <div class="phone-screen-content active" id="phone-home">
+                                <div class="phone-app-bar">
+                                    <div>
+                                        <div class="phone-user-greet">Selamat Datang,</div>
+                                        <div class="phone-user-name">Mahasiswa Amikom 👋</div>
+                                    </div>
+                                    <div style="font-size: 14px; cursor: pointer;">🔔</div>
                                 </div>
-                                <div style="font-size: 14px;">🔔</div>
+                                <div class="phone-search-container">
+                                    <input type="text" class="phone-search-bar" id="phone-search-input" placeholder="🔍 Cari bidang magang...">
+                                </div>
+                                
+                                <div class="phone-jobs-list" id="phone-jobs-list">
+                                    <div class="phone-card" onclick="showPhoneJob('UI/UX Designer Intern', 'Hamba Allah Tech', 'Yogyakarta (Hybrid)', 'Merancang antarmuka mobile apps MagangAmikom berbasis user-centered design.')">
+                                        <div class="phone-card-title">UI/UX Designer Intern</div>
+                                        <div class="phone-card-company">Hamba Allah Tech</div>
+                                        <span class="phone-badge">Kuota Tersedia</span>
+                                    </div>
+                                    <div class="phone-card" onclick="showPhoneJob('Mobile Developer', 'Amikom Center', 'Yogyakarta (Onsite)', 'Mengembangkan aplikasi android menggunakan Kotlin atau Flutter.')">
+                                        <div class="phone-card-title">Mobile Developer</div>
+                                        <div class="phone-card-company">Amikom Center</div>
+                                        <span class="phone-badge">Kuota Tersedia</span>
+                                    </div>
+                                    <div class="phone-card" onclick="showPhoneJob('Backend Engineer', 'Jogja Digital Valley', 'Remote', 'Membangun API RESTful menggunakan Node.js dan MongoDB.')">
+                                        <div class="phone-card-title">Backend Engineer</div>
+                                        <div class="phone-card-company">Jogja Digital Valley</div>
+                                        <span class="phone-badge">Kuota Tersedia</span>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="phone-search-bar">🔍 Cari bidang magang...</div>
-                            
-                            <div class="phone-card">
-                                <div class="phone-card-title">UI/UX Designer Intern</div>
-                                <div class="phone-card-company">Hamba Allah Tech</div>
-                                <span class="phone-badge">Kuota Tersedia</span>
+
+                            <!-- JOBS SCREEN -->
+                            <div class="phone-screen-content" id="phone-jobs">
+                                <div class="phone-app-bar">
+                                    <div class="phone-user-name">Perusahaan Mitra</div>
+                                </div>
+                                <div style="display:flex; flex-direction:column; gap:8px;">
+                                    <div class="phone-card" style="cursor: default;">
+                                        <div class="phone-card-title" style="display:flex; align-items:center; gap:4px;">Hamba Allah Tech ✅</div>
+                                        <div class="phone-card-company">Bandung & Sleman</div>
+                                        <span class="phone-badge blue">Mitra Valid</span>
+                                    </div>
+                                    <div class="phone-card" style="cursor: default;">
+                                        <div class="phone-card-title" style="display:flex; align-items:center; gap:4px;">Amikom Center ✅</div>
+                                        <div class="phone-card-company">Sleman, Yogyakarta</div>
+                                        <span class="phone-badge blue">Mitra Valid</span>
+                                    </div>
+                                    <div class="phone-card" style="cursor: default;">
+                                        <div class="phone-card-title" style="display:flex; align-items:center; gap:4px;">Jogja Digital Valley ✅</div>
+                                        <div class="phone-card-company">Yogyakarta</div>
+                                        <span class="phone-badge blue">Mitra Valid</span>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="phone-card">
-                                <div class="phone-card-title">Mobile Developer</div>
-                                <div class="phone-card-company">Amikom Center</div>
-                                <span class="phone-badge">Kuota Tersedia</span>
+
+                            <!-- LOGBOOK SCREEN -->
+                            <div class="phone-screen-content" id="phone-logbook">
+                                <div class="phone-app-bar">
+                                    <div class="phone-user-name">Logbook Mingguan</div>
+                                </div>
+                                <div style="display:flex; flex-direction:column; gap:10px;">
+                                    <div class="phone-card" style="padding: 10px; font-size: 10px; cursor: default;">
+                                        <div style="font-weight: 700;">Minggu 1: Research & Wireframe</div>
+                                        <div style="color: var(--gray-text); margin-top:2px;">Membuat wireframe layout lowongan magang.</div>
+                                        <div style="color:#16a34a; font-weight:600; margin-top:4px; font-size:8px;">Disetujui Dosen Pembimbing</div>
+                                    </div>
+                                    
+                                    <div class="phone-card" style="padding: 10px; font-size: 10px; cursor: default;">
+                                        <div style="font-weight: 700;">Minggu 2: High Fidelity Design</div>
+                                        <div style="color: var(--gray-text); margin-top:2px;">Membuat UI mockups dan prototyping.</div>
+                                        <div style="color:#d97706; font-weight:600; margin-top:4px; font-size:8px;">Menunggu Persetujuan</div>
+                                    </div>
+
+                                    <div id="phone-new-logbooks"></div>
+
+                                    <button class="btn btn-primary" onclick="triggerAddLogbook()" style="padding: 8px; font-size: 11px; border-radius: 8px; width: 100%; box-shadow: none; margin-top: 5px;">
+                                        + Isi Logbook Baru
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- PROFILE SCREEN -->
+                            <div class="phone-screen-content" id="phone-profile">
+                                <div class="phone-app-bar">
+                                    <div class="phone-user-name">Profil Saya</div>
+                                </div>
+                                <div style="display:flex; flex-direction:column; gap:12px; align-items:center; text-align:center; padding: 10px 0;">
+                                    <div style="width:50px; height:50px; background:var(--primary-light); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:20px; color:var(--primary); font-weight:bold;">
+                                        AW
+                                    </div>
+                                    <div>
+                                        <div style="font-size:12px; font-weight:700;">Andi Wijaya</div>
+                                        <div style="font-size:9px; color:var(--gray-text);">22.11.9999 — S1 Informatika</div>
+                                    </div>
+                                </div>
+                                
+                                <div style="display:flex; flex-direction:column; gap:8px;">
+                                    <div style="font-size:10px; font-weight:700; color:var(--gray-text); text-align:left;">Status Lamaran:</div>
+                                    <div class="phone-card" style="padding: 8px; cursor: default;" id="initial-profile-card">
+                                        <div class="phone-card-title" style="font-size: 10px;">UI/UX Designer Intern</div>
+                                        <div class="phone-card-company" style="font-size: 8px;">Hamba Allah Tech</div>
+                                        <span class="phone-badge" style="font-size: 7px; padding: 0px 4px;">Diterima</span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
+
+                        <!-- Phone Popup details -->
+                        <div class="phone-popup" id="phone-job-popup">
+                            <div class="phone-popup-header">
+                                <span class="phone-badge" id="popup-badge">Kuota Tersedia</span>
+                                <button class="phone-popup-close" onclick="closePhonePopup()">✕</button>
+                            </div>
+                            <div id="popup-job-title" style="font-size: 13px; font-weight: 800; margin-bottom: 2px; text-align: left;">Job Title</div>
+                            <div id="popup-job-company" style="font-size: 10px; color: var(--gray-text); margin-bottom: 8px; text-align: left;">Company Name</div>
+                            <div id="popup-job-desc" style="font-size: 9px; line-height: 1.4; color: var(--gray-text); margin-bottom: 12px; text-align: left;">Job description.</div>
+                            <button class="btn btn-primary" onclick="applyJobSim()" style="padding: 8px; font-size: 11px; border-radius: 8px; width: 100%; box-shadow: none;">Lamar Sekarang</button>
+                        </div>
                         
+                        <!-- Navigation bar -->
                         <div class="phone-bottom-nav">
-                            <span style="color: var(--primary);">🏠</span>
-                            <span style="color: #94a3b8;">💼</span>
-                            <span style="color: #94a3b8;">📝</span>
-                            <span style="color: #94a3b8;">👤</span>
+                            <span class="phone-nav-item active" onclick="switchPhoneScreen('phone-home', this)">🏠</span>
+                            <span class="phone-nav-item" onclick="switchPhoneScreen('phone-jobs', this)">💼</span>
+                            <span class="phone-nav-item" onclick="switchPhoneScreen('phone-logbook', this)">📝</span>
+                            <span class="phone-nav-item" onclick="switchPhoneScreen('phone-profile', this)">👤</span>
                         </div>
                     </div>
                 </div>
@@ -527,40 +1128,139 @@
     </section>
 
     <section class="features" id="Fitur">
-        <h2 class="section-title">Akses Khusus 4 Aktor Utama</h2>
-        <p class="section-desc">Sistem terdistribusi secara transparan untuk memenuhi seluruh kebutuhan operasional magang kampus.</p>
+        <div class="reveal">
+            <h2 class="section-title">Akses Khusus 4 Aktor Utama</h2>
+            <p class="section-desc">Sistem terdistribusi secara transparan untuk memenuhi seluruh kebutuhan operasional magang kampus.</p>
+        </div>
         
-        <div class="features-grid">
-            <div class="feature-card">
-                <div class="feature-icon">🎓</div>
-                <h3>Mahasiswa</h3>
-                <p>Eksplorasi lowongan mitra valid, ajukan lamaran online, pantau status seleksi, dan isi logbook mingguan.</p>
+        <!-- Tab Headers -->
+        <div class="actor-tabs reveal">
+            <button class="actor-tab active" onclick="switchActorTab('mahasiswa')">
+                <span class="actor-tab-icon">🎓</span> Mahasiswa
+            </button>
+            <button class="actor-tab" onclick="switchActorTab('dosen')">
+                <span class="actor-tab-icon">👨‍🏫</span> Dosen
+            </button>
+            <button class="actor-tab" onclick="switchActorTab('mitra')">
+                <span class="actor-tab-icon">🏢</span> Mitra Perusahaan
+            </button>
+            <button class="actor-tab" onclick="switchActorTab('admin')">
+                <span class="actor-tab-icon">⚙️</span> Admin
+            </button>
+        </div>
+
+        <!-- Tab Contents -->
+        <div class="actor-content-box reveal">
+            <!-- Mahasiswa Content -->
+            <div class="actor-content active" id="actor-mahasiswa">
+                <div class="actor-details">
+                    <h3>Peran Mahasiswa</h3>
+                    <p>Mahasiswa dapat mencari dan mengelola seluruh rangkaian kegiatan magang langsung dari aplikasi secara mandiri.</p>
+                    <ul class="actor-features-list">
+                        <li><span>🔍</span> <strong>Eksplorasi Lowongan:</strong> Cari lowongan magang yang tervalidasi dari mitra terpercaya.</li>
+                        <li><span>📄</span> <strong>Pendaftaran Mudah:</strong> Unggah berkas persyaratan dan daftar dengan sekali klik.</li>
+                        <li><span>📝</span> <strong>Logbook Digital:</strong> Isi logbook mingguan untuk laporan progress ke dosen pembimbing.</li>
+                        <li><span>📊</span> <strong>Pantau Status:</strong> Dapatkan notifikasi waktu nyata jika lamaran Anda diterima atau ditolak.</li>
+                    </ul>
+                </div>
+                <div class="actor-preview">
+                    <div class="preview-card-group">
+                        <div class="preview-mini-card">
+                            <span class="preview-mini-title">Total Lamaran</span>
+                            <span class="preview-mini-value">3 Lowongan</span>
+                        </div>
+                        <div class="preview-mini-card highlighted">
+                            <span class="preview-mini-title">Status Akhir</span>
+                            <span class="preview-mini-value">Diterima 🎉</span>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div class="feature-card">
-                <div class="feature-icon">👨‍🏫</div>
-                <h3>Dosen</h3>
-                <p>Memonitor aktivitas logbook harian/mingguan mahasiswa bimbingan secara daring tanpa perlu berkas fisik.</p>
+
+            <!-- Dosen Content -->
+            <div class="actor-content" id="actor-dosen">
+                <div class="actor-details">
+                    <h3>Peran Dosen Pembimbing</h3>
+                    <p>Memudahkan dosen pembimbing lapangan untuk melakukan pengawasan dan bimbingan berkala.</p>
+                    <ul class="actor-features-list">
+                        <li><span>📱</span> <strong>Monitoring Online:</strong> Pantau progress logbook harian/mingguan mahasiswa secara real-time.</li>
+                        <li><span>✍️</span> <strong>Penilaian Cepat:</strong> Berikan feedback langsung pada logbook tanpa kertas fisik.</li>
+                        <li><span>📞</span> <strong>Bimbingan Terjadwal:</strong> Jadwalkan agenda diskusi kelompok atau individu lewat tautan meeting.</li>
+                    </ul>
+                </div>
+                <div class="actor-preview">
+                    <div class="preview-card-group">
+                        <div class="preview-mini-card">
+                            <span class="preview-mini-title">Mahasiswa Bimbingan</span>
+                            <span class="preview-mini-value">8 Mahasiswa</span>
+                        </div>
+                        <div class="preview-mini-card">
+                            <span class="preview-mini-title">Persetujuan Logbook</span>
+                            <span class="preview-mini-value" style="color:var(--accent);">4 Perlu Review</span>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div class="feature-card">
-                <div class="feature-icon">🏢</div>
-                <h3>Mitra Perusahaan</h3>
-                <p>Membuka lowongan baru, mengelola profile instansi, serta menyeleksi dan memberikan nilai akhir magang pelamar.</p>
+
+            <!-- Mitra Content -->
+            <div class="actor-content" id="actor-mitra">
+                <div class="actor-details">
+                    <h3>Peran Mitra Perusahaan</h3>
+                    <p>Menghubungkan industri dengan talenta terbaik dari Universitas AMIKOM Yogyakarta secara efisien.</p>
+                    <ul class="actor-features-list">
+                        <li><span>🏢</span> <strong>Unggah Lowongan:</strong> Posting lowongan magang dengan detail kualifikasi & kuota.</li>
+                        <li><span>👥</span> <strong>Seleksi Pelamar:</strong> Review berkas CV & portfolio serta jadwalkan interview.</li>
+                        <li><span>⭐</span> <strong>Input Nilai Akhir:</strong> Berikan evaluasi kinerja mahasiswa magang di akhir periode.</li>
+                    </ul>
+                </div>
+                <div class="actor-preview">
+                    <div class="preview-card-group">
+                        <div class="preview-mini-card">
+                            <span class="preview-mini-title">Pelamar Baru</span>
+                            <span class="preview-mini-value">12 Pendaftar</span>
+                        </div>
+                        <div class="preview-mini-card">
+                            <span class="preview-mini-title">Lowongan Aktif</span>
+                            <span class="preview-mini-value">2 Posisi</span>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div class="feature-card">
-                <div class="feature-icon">⚙️</div>
-                <h3>Admin</h3>
-                <p>Mengelola database pengguna, memvalidasi berkas pendaftaran mitra baru, serta mengonfigurasi kuota dan sistem.</p>
+
+            <!-- Admin Content -->
+            <div class="actor-content" id="actor-admin">
+                <div class="actor-details">
+                    <h3>Peran Admin Kampus</h3>
+                    <p>Pusat kendali operasional magang untuk menjamin standarisasi dan validitas seluruh data.</p>
+                    <ul class="actor-features-list">
+                        <li><span>🛡️</span> <strong>Verifikasi Perusahaan:</strong> Validasi kredibilitas perusahaan mitra baru sebelum tayang.</li>
+                        <li><span>📁</span> <strong>Manajemen Database:</strong> Kelola data mahasiswa, dosen, dan rekap nilai akhir.</li>
+                        <li><span>📈</span> <strong>Laporan Statistik:</strong> Unduh laporan sebaran mahasiswa magang untuk akreditasi.</li>
+                    </ul>
+                </div>
+                <div class="actor-preview">
+                    <div class="preview-card-group">
+                        <div class="preview-mini-card">
+                            <span class="preview-mini-title">Total Mitra Valid</span>
+                            <span class="preview-mini-value">45 Instansi</span>
+                        </div>
+                        <div class="preview-mini-card">
+                            <span class="preview-mini-title">Konfigurasi Kuota</span>
+                            <span class="preview-mini-value" style="color:var(--primary);">Aktif</span>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </section>
 
     <section class="install-section" id="CaraInstall">
-        <div style="text-align: center;">
+        <div style="text-align: center;" class="reveal">
             <h2 class="section-title">Langkah Mudah Instalasi APK</h2>
             <p class="section-desc">Ikuti langkah berikut agar aplikasi terpasang sempurna karena file diunduh di luar Google Play Store.</p>
         </div>
         
-        <div class="steps-grid">
+        <div class="steps-grid reveal">
             <div class="step-card">
                 <div class="step-number">1</div>
                 <h3>Unduh Berkas</h3>
@@ -583,10 +1283,59 @@
             </div>
         </div>
 
-        <div class="warning-box">
+        <div class="warning-box reveal">
             <span style="font-size: 20px;">⚠️</span>
             <div>
                 <strong>Catatan Keamanan:</strong> Notifikasi pencegahan instalasi luar market resmi merupakan fitur standar bawaan Android. Berkas APK ini aman, bebas malware, dan dibuat murni untuk pemenuhan tugas akademik tim.
+            </div>
+        </div>
+    </section>
+
+    <section class="faq-section" id="FAQ">
+        <div style="text-align: center;" class="reveal">
+            <h2 class="section-title">Pertanyaan Sering Diajukan</h2>
+            <p class="section-desc">Temukan jawaban cepat atas pertanyaan umum seputar pemasangan dan penggunaan aplikasi MagangAmikom.</p>
+        </div>
+        
+        <div class="faq-container reveal">
+            <div class="faq-item">
+                <button class="faq-question" onclick="toggleFaq(this)">
+                    <span>Apakah aplikasi ini aman digunakan?</span>
+                    <span class="faq-icon">＋</span>
+                </button>
+                <div class="faq-answer">
+                    <p>Sangat aman. Notifikasi peringatan saat instalasi adalah hal yang wajar ketika Anda memasang aplikasi berkas <code>.apk</code> di luar Google Play Store. Aplikasi ini dikembangkan secara internal untuk keperluan akademik mahasiswa Universitas AMIKOM Yogyakarta tanpa pelacakan data pribadi berbahaya.</p>
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <button class="faq-question" onclick="toggleFaq(this)">
+                    <span>Siapa saja yang dapat menggunakan aplikasi ini?</span>
+                    <span class="faq-icon">＋</span>
+                </button>
+                <div class="faq-answer">
+                    <p>Aplikasi ini dirancang khusus untuk mahasiswa aktif Universitas AMIKOM Yogyakarta, dosen pembimbing akademik, serta mitra industri luar yang telah divalidasi oleh admin sistem pendaftaran magang.</p>
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <button class="faq-question" onclick="toggleFaq(this)">
+                    <span>Bagaimana cara perusahaan mendaftar sebagai mitra?</span>
+                    <span class="faq-icon">＋</span>
+                </button>
+                <div class="faq-answer">
+                    <p>Mitra baru dapat mendaftar melalui admin dengan mengirimkan profil legal instansi. Setelah melalui tahap validasi dan disetujui, perusahaan akan mendapatkan akun khusus untuk mengunggah lowongan magang aktif.</p>
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <button class="faq-question" onclick="toggleFaq(this)">
+                    <span>Mengapa status lamaran magang saya tidak berubah?</span>
+                    <span class="faq-icon">＋</span>
+                </button>
+                <div class="faq-answer">
+                    <p>Perubahan status lamaran sepenuhnya berada di bawah otoritas seleksi mitra perusahaan terkait. Silakan cek berkala melalui tab Profile di mockup atau hubungi kontak admin jika melebihi batas waktu 14 hari kerja.</p>
+                </div>
             </div>
         </div>
     </section>
@@ -598,6 +1347,251 @@
             &copy; 2026 S1 Informatika — Universitas AMIKOM Yogyakarta. All rights reserved.
         </div>
     </footer>
+
+    <script>
+        // --- 1. DARK MODE TOGGLE ---
+        const themeToggleBtn = document.getElementById('theme-toggle');
+        const sunIcon = themeToggleBtn.querySelector('.sun-icon');
+        const moonIcon = themeToggleBtn.querySelector('.moon-icon');
+        
+        // Check local storage or system preference
+        const currentTheme = localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        
+        if (currentTheme === 'dark') {
+            document.documentElement.setAttribute('data-theme', 'dark');
+            sunIcon.style.display = 'none';
+            moonIcon.style.display = 'block';
+        } else {
+            document.documentElement.setAttribute('data-theme', 'light');
+            sunIcon.style.display = 'block';
+            moonIcon.style.display = 'none';
+        }
+
+        themeToggleBtn.addEventListener('click', () => {
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            let newTheme = 'light';
+            
+            if (currentTheme === 'light') {
+                newTheme = 'dark';
+                sunIcon.style.display = 'none';
+                moonIcon.style.display = 'block';
+            } else {
+                sunIcon.style.display = 'block';
+                moonIcon.style.display = 'none';
+            }
+            
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+        });
+
+        // --- 2. HEADER SCROLL EFFECT ---
+        window.addEventListener('scroll', () => {
+            const header = document.querySelector('header');
+            if (window.scrollY > 20) {
+                header.classList.add('scrolled');
+            } else {
+                header.classList.remove('scrolled');
+            }
+        });
+
+        // --- 3. INTERACTIVE MOCKUP PHONE FUNCTIONS ---
+        function switchPhoneScreen(screenId, tabElement) {
+            // Hide all screens
+            const screens = document.querySelectorAll('.phone-screen-content');
+            screens.forEach(screen => screen.classList.remove('active'));
+            
+            // Show target screen
+            document.getElementById(screenId).classList.add('active');
+            
+            // Update active state of bottom nav
+            const navItems = document.querySelectorAll('.phone-nav-item');
+            navItems.forEach(item => item.classList.remove('active'));
+            tabElement.classList.add('active');
+            
+            // Close any popup
+            closePhonePopup();
+        }
+
+        // Search within mockup
+        const searchInput = document.getElementById('phone-search-input');
+        if (searchInput) {
+            searchInput.addEventListener('input', (e) => {
+                const query = e.target.value.toLowerCase();
+                const cards = document.querySelectorAll('#phone-jobs-list .phone-card');
+                
+                cards.forEach(card => {
+                    const title = card.querySelector('.phone-card-title').innerText.toLowerCase();
+                    const company = card.querySelector('.phone-card-company').innerText.toLowerCase();
+                    
+                    if (title.includes(query) || company.includes(query)) {
+                        card.style.display = 'flex';
+                    } else {
+                        card.style.display = 'none';
+                    }
+                });
+            });
+        }
+
+        // Job details popup in phone
+        function showPhoneJob(title, company, location, desc) {
+            document.getElementById('popup-job-title').innerText = title;
+            document.getElementById('popup-job-company').innerText = `${company} • ${location}`;
+            document.getElementById('popup-job-desc').innerText = desc;
+            document.getElementById('phone-job-popup').classList.add('active');
+        }
+
+        function closePhonePopup() {
+            document.getElementById('phone-job-popup').classList.remove('active');
+        }
+
+        function applyJobSim() {
+            closePhonePopup();
+            alert('Simulasi: Berkas lamaran Anda berhasil dikirim ke perusahaan!');
+            
+            // Change status in Profile screen automatically
+            const profileContent = document.getElementById('phone-profile');
+            const statusContainer = profileContent.querySelector('div:last-child');
+            
+            const jobTitle = document.getElementById('popup-job-title').innerText;
+            const companyName = document.getElementById('popup-job-company').innerText.split(' • ')[0];
+            
+            // Add to applied lists
+            const newCard = document.createElement('div');
+            newCard.className = 'phone-card';
+            newCard.style.padding = '8px';
+            newCard.style.marginTop = '6px';
+            newCard.style.cursor = 'default';
+            newCard.innerHTML = `
+                <div class="phone-card-title" style="font-size: 10px;">${jobTitle}</div>
+                <div class="phone-card-company" style="font-size: 8px;">${companyName}</div>
+                <span class="phone-badge orange" style="font-size: 7px; padding: 0px 4px;">Dalam Proses</span>
+            `;
+            
+            statusContainer.appendChild(newCard);
+            
+            // Switch to profile screen automatically to show the user
+            const profileTab = document.querySelectorAll('.phone-nav-item')[3];
+            switchPhoneScreen('phone-profile', profileTab);
+        }
+
+        // Add custom logbook entry
+        function triggerAddLogbook() {
+            const logbookContainer = document.getElementById('phone-new-logbooks');
+            const weekNumber = document.querySelectorAll('#phone-logbook .phone-card').length + 1;
+            
+            const newEntry = document.createElement('div');
+            newEntry.className = 'phone-card';
+            newEntry.style.padding = '10px';
+            newEntry.style.fontSize = '10px';
+            newEntry.style.marginTop = '8px';
+            newEntry.style.cursor = 'default';
+            newEntry.innerHTML = `
+                <div style="font-weight: 700;">Minggu ${weekNumber}: Laporan Mingguan</div>
+                <div style="color: var(--gray-text); margin-top:2px;">Mengimplementasikan feedback pembimbing lapangan.</div>
+                <div style="color:#d97706; font-weight:600; margin-top:4px; font-size:8px;">Menunggu Persetujuan</div>
+            `;
+            logbookContainer.appendChild(newEntry);
+            
+            alert(`Simulasi: Logbook Minggu ${weekNumber} berhasil diisi!`);
+        }
+
+        // --- 4. ROLE SWITCHER TAB LOGIC ---
+        function switchActorTab(actorId) {
+            // Remove active class from all tabs
+            const tabs = document.querySelectorAll('.actor-tab');
+            tabs.forEach(tab => tab.classList.remove('active'));
+            
+            // Remove active class from all contents
+            const contents = document.querySelectorAll('.actor-content');
+            contents.forEach(content => content.classList.remove('active'));
+            
+            // Add active class to selected tab and content
+            const activeTab = Array.from(tabs).find(tab => tab.getAttribute('onclick').includes(actorId));
+            if (activeTab) activeTab.classList.add('active');
+            
+            const activeContent = document.getElementById(`actor-${actorId}`);
+            if (activeContent) activeContent.classList.add('active');
+        }
+
+        // --- 5. FAQ ACCORDION LOGIC ---
+        function toggleFaq(button) {
+            const faqItem = button.parentElement;
+            const isActive = faqItem.classList.contains('active');
+            
+            // Close all items
+            const allItems = document.querySelectorAll('.faq-item');
+            allItems.forEach(item => {
+                item.classList.remove('active');
+                item.querySelector('.faq-answer').style.maxHeight = null;
+            });
+            
+            // If it wasn't active, open it
+            if (!isActive) {
+                faqItem.classList.add('active');
+                const answer = faqItem.querySelector('.faq-answer');
+                answer.style.maxHeight = answer.scrollHeight + 'px';
+            }
+        }
+
+        // --- 6. SCROLL ANIMATIONS USING INTERSECTION OBSERVER ---
+        const revealElements = document.querySelectorAll('.reveal');
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('active');
+                }
+            });
+        }, {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        });
+
+        revealElements.forEach(el => observer.observe(el));
+
+        // --- 7. DYNAMIC DOWNLOAD PROGRESS ANIMATION ---
+        const downloadBtn = document.getElementById('download-btn');
+        if (downloadBtn) {
+            downloadBtn.addEventListener('click', (e) => {
+                // If it's already downloading, ignore double click
+                if (downloadBtn.classList.contains('downloading')) {
+                    e.preventDefault();
+                    return;
+                }
+                
+                e.preventDefault(); // Stop immediate navigation
+                
+                const content = downloadBtn.querySelector('.btn-content');
+                const loader = downloadBtn.querySelector('.btn-loader');
+                const progressSpan = document.getElementById('download-progress');
+                const originalHref = downloadBtn.getAttribute('href');
+                
+                downloadBtn.classList.add('downloading');
+                content.style.display = 'none';
+                loader.style.display = 'flex';
+                
+                let progress = 0;
+                const interval = setInterval(() => {
+                    progress += 10;
+                    progressSpan.innerText = `${progress}%`;
+                    
+                    if (progress >= 100) {
+                        clearInterval(interval);
+                        
+                        // Small success state delay
+                        setTimeout(() => {
+                            // Reset state
+                            downloadBtn.classList.remove('downloading');
+                            content.style.display = 'flex';
+                            loader.style.display = 'none';
+                            
+                            // Open link
+                            window.open(originalHref, '_blank');
+                        }, 500);
+                    }
+                }, 150); // total 1.5 seconds loading simulation
+            });
+        }
+    </script>
 
 </body>
 </html>
