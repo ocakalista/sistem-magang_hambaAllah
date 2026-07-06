@@ -9,7 +9,6 @@ return new class extends Migration
     public function up()
     {
         Schema::table('lowongan', function (Blueprint $table) {
-            // Kita tambahkan kolom deskripsi di sini
             $table->text('deskripsi')->nullable()->after('judul_posisi');
         });
     }

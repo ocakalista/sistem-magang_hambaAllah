@@ -10,9 +10,10 @@ return new class extends Migration
     {
         Schema::create('pendaftaran', function (Blueprint $table) {
             $table->id('id_pendaftaran');
-            $table->unsignedBigInteger('id_mahasiswa');
+            $table->string('id_mahasiswa');
             $table->unsignedBigInteger('id_lowongan');
-            $table->string('berkas_cv')->nullable(); // Link Google Drive atau nama file
+            $table->string('berkas_cv')->nullable();
+            $table->text('motivasi')->nullable();
             $table->enum('status', ['pending', 'diterima', 'ditolak', 'selesai'])->default('pending');
             $table->timestamps();
         });

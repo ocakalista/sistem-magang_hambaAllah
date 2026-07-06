@@ -10,11 +10,12 @@ return new class extends Migration
     {
         Schema::create('logbook', function (Blueprint $table) {
             $table->id('id_logbook');
-            $table->unsignedBigInteger('id_pendaftaran');
+            $table->string('id_pendaftaran');
             $table->integer('minggu_ke');
             $table->date('tanggal');
             $table->text('deskripsi_kegiatan');
             $table->enum('status_validasi', ['pending', 'disetujui', 'revisi'])->default('pending');
+            $table->text('feedback_dosen')->nullable();
             $table->timestamps();
         });
     }

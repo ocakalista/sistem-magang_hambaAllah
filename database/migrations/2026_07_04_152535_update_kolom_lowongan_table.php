@@ -9,7 +9,6 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('lowongan', function (Blueprint $table) {
-            // Pasang satpam: Kalau belum ada kolomnya, baru kita buatkan
             if (!Schema::hasColumn('lowongan', 'deskripsi')) {
                 $table->text('deskripsi')->nullable()->after('judul_posisi');
             }

@@ -8,7 +8,6 @@ return new class extends Migration
 {
     public function up(): void
     {
-        // Pasang satpam untuk membuat laci 'laporan_akhir' jika belum ada
         if (!Schema::hasColumn('pendaftaran', 'laporan_akhir')) {
             Schema::table('pendaftaran', function (Blueprint $table) {
                 $table->string('laporan_akhir')->nullable()->after('status');

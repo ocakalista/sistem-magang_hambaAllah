@@ -8,7 +8,6 @@ return new class extends Migration
 {
    public function up()
     {
-        // Kita pasang satpam pengecek di sini
         if (!Schema::hasColumn('pendaftaran', 'portofolio')) {
             Schema::table('pendaftaran', function (Blueprint $table) {
                 $table->string('portofolio')->nullable()->after('berkas_cv');

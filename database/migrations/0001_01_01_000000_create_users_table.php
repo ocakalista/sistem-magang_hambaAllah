@@ -21,8 +21,8 @@ return new class extends Migration
             $table->string('phone')->nullable();
             $table->string('semester')->nullable();
             
-            $table->enum('role', ['admin', 'mahasiswa'])->default('mahasiswa');
-           
+            $table->string('role')->default('mahasiswa');   
+
             $table->enum('konsentrasi', ['multimedia', 'jaringan', 'pemrograman'])->nullable();
 
             $table->rememberToken();
