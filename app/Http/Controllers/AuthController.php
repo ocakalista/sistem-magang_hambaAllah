@@ -11,27 +11,26 @@ class AuthController extends Controller
     // 1. Fungsi Pendaftaran (Register)
     public function register(Request $request)
     {
-        // Validasi data yang dikirim dari Frontend
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'email_or_nim' => 'required|string|unique:users,email_or_nim',
-            'password' => 'required|string|min:6',
+        $validated = $request->validate([
+            'name'              => 'required|string|max:255',
+            'email_or_nim'      => 'required|string|unique:users,email_or_nim',
+            'password'          => 'required|string|min:6',
+            'role'              => 'sometimes|string|in:admin,mahasiswa,mitra,dosen',
         ]);
 
-        // Simpan ke database
         $user = User::create([
-            'name' => $request->name,
-            'email_or_nim' => $request->email_or_nim,
-            'password' => Hash::make($request->password), 
+            'name'       => $validated['name'],
+            'email_or_nim' => $validated['email_or_nim'],
+            'password'   => Hash::make($validated['password']),
+            'role'       => $validated['role'] ?? 'mahasiswa',
         ]);
 
-        // Terbitkan Tiket/Token
         $token = $user->createToken('nexus_token')->plainTextToken;
 
         return response()->json([
             'message' => 'Registrasi berhasil',
-            'data' => $user,
-            'token' => $token
+            'data'    => $user,
+            'token'   => $token,
         ], 201);
     }
 
@@ -40,25 +39,32 @@ class AuthController extends Controller
     {
         $request->validate([
             'email_or_nim' => 'required',
-            'password' => 'required',
+            'password'     => 'required',
         ]);
-        
-    // Cari user berdasarkan Email atau NIM
-    $user = User::where('email_or_nim', $request->email_or_nim)->first();
 
-    // Cek apakah user ada dan passwordnya benar
-    if (!$user || !Hash::check($request->password, $user->password)) {
-        return response()->json(['message' => 'Email/NIM atau Password salah!'], 401);
+        // Cari user berdasarkan Email atau NIM
+        $user = User::where('email_or_nim', $request->email_or_nim)->first();
+
+        // Cek apakah user ada dan passwordnya benar
+        if (!$user || !Hash::check($request->password, $user->password)) {
+            return response()->json(['message' => 'Email/NIM atau Password salah!'], 401);
+        }
+
+        // Buat token
+        $token = $user->createToken('auth_token')->plainTextToken;
+
+        // KEMBALIKAN TOKEN DAN ROLE KE FLUTTER
+        return response()->json([
+            'message' => 'Login success',
+            'token'   => $token,
+            'role'    => $user->role,
+        ], 200);
     }
 
-    // Buat token
-    $token = $user->createToken('auth_token')->plainTextToken;
-
-    // KEMBALIKAN TOKEN DAN ROLE KE FLUTTER
-    return response()->json([
-        'message' => 'Login success',
-        'token' => $token,
-        'role' => $user->role
-    ], 200);
-}
+    // 3. Logout
+    public function logout(Request $request)
+    {
+        $request->user()->currentAccessToken()->delete();
+        return response()->json(['message' => 'Logout berhasil']);
+    }
 }

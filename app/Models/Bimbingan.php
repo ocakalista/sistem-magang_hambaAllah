@@ -9,12 +9,20 @@ class Bimbingan extends Model
 {
     use HasFactory;
 
-    protected $table = 'bimbingan'; 
-
+    protected $table = 'bimbingan';
     protected $primaryKey = 'id_bimbingan';
-
     protected $fillable = [
         'id_pendaftaran',
-        'nidn'
+        'nidn',
     ];
+
+    public function pendaftaran()
+    {
+        return $this->belongsTo(Pendaftaran::class, 'id_pendaftaran');
+    }
+
+    public function dosen()
+    {
+        return $this->belongsTo(Dosen::class, 'nidn', 'nidn');
+    }
 }

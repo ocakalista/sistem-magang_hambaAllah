@@ -2,102 +2,170 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
+use App\Models\User;
 use App\Models\Lowongan;
+use App\Models\Pendaftaran;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
 
 class AdminController extends Controller
 {
-    // 1. FITUR BARU: Dashboard Rekapitulasi untuk Admin
-    public function dashboard()
-    {
-        // Admin menghitung semua data di database
-        $total_mahasiswa = DB::table('users')->where('role', 'mahasiswa')->count();
-        $total_mitra = DB::table('users')->where('role', 'mitra')->count();
-        $total_lowongan = DB::table('lowongan')->count();
-        $total_pendaftaran = DB::table('pendaftaran')->count();
-        $pendaftaran_diterima = DB::table('pendaftaran')->where('status', 'diterima')->count();
-
-        return response()->json([
-            'message' => 'Berhasil mengambil data dashboard admin',
-            'data' => [
-                'total_mahasiswa' => $total_mahasiswa,
-                'total_mitra' => $total_mitra,
-                'total_lowongan' => $total_lowongan,
-                'total_pendaftaran' => $total_pendaftaran,
-                'pendaftaran_diterima' => $pendaftaran_diterima,
-            ]
-        ], 200);
-    }
-
-    // 2. FITUR BARU: Admin memvalidasi (menyetujui/menolak) lowongan dari Mitra
+    // =========================================================================
+    // Legacy method for Flutter — validasiLowongan (PUT /admin/lowongan/{id}/validasi)
+    // =========================================================================
     public function validasiLowongan(Request $request, $id)
     {
-        $request->validate([
-            'status_approval' => 'required|in:pending,disetujui,ditolak'
+        $validated = $request->validate([
+            'status_approval' => 'required|in:pending,disetujui,ditolak',
         ]);
 
         $lowongan = Lowongan::find($id);
-
         if (!$lowongan) {
             return response()->json(['message' => 'Lowongan tidak ditemukan'], 404);
         }
 
-        $lowongan->status_approval = $request->status_approval;
+        $lowongan->status_approval = $validated['status_approval'];
         $lowongan->save();
 
         return response()->json([
-            'message' => 'Status lowongan berhasil diubah menjadi ' . $request->status_approval,
-            'data' => $lowongan
+            'message' => 'Status lowongan berhasil diubah menjadi ' . $validated['status_approval'],
+            'data'    => $lowongan,
         ], 200);
     }
 
-    // 3. FITUR MANAJEMEN PENGGUNA (CRUD ADMIN)
-    
-    // A. Melihat semua daftar pengguna
+    // =========================================================================
+    // User management (legacy — HEAD style)
+    // =========================================================================
     public function getUsers()
     {
-        $users = \App\Models\User::all();
+        $users = User::select('id', 'name', 'email_or_nim', 'phone', 'role')->get();
         return response()->json([
-            'message' => 'Berhasil mengambil data semua pengguna', 
-            'data' => $users
+            'message' => 'Berhasil mengambil data semua pengguna',
+            'data'    => $users,
         ], 200);
     }
 
-    // B. Admin menambah pengguna baru (Misal: Daftarkan Dosen / Mitra)
     public function storeUser(Request $request)
     {
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'email_or_nim' => 'required|string|unique:users,email_or_nim',
-            'password' => 'required|string|min:6',
-            'role' => 'required|in:admin,mahasiswa,mitra,dosen'
+        $validated = $request->validate([
+            'name'           => 'required|string|max:255',
+            'email_or_nim'   => 'required|string|unique:users,email_or_nim',
+            'password'       => 'required|string|min:6',
+            'role'           => 'required|in:admin,mahasiswa,mitra,dosen',
         ]);
 
-        $user = \App\Models\User::create([
-            'name' => $request->name,
-            'email_or_nim' => $request->email_or_nim,
-            'password' => \Illuminate\Support\Facades\Hash::make($request->password),
-            'role' => $request->role
+        $user = User::create([
+            'name'         => $validated['name'],
+            'email_or_nim' => $validated['email_or_nim'],
+            'password'     => Hash::make($validated['password']),
+            'role'         => $validated['role'],
         ]);
 
         return response()->json([
-            'message' => 'Pengguna baru berhasil ditambahkan', 
-            'data' => $user
+            'message' => 'Pengguna baru berhasil ditambahkan',
+            'data'    => $user,
         ], 201);
     }
 
-    // C. Admin menghapus pengguna
     public function destroyUser($id)
     {
-        $user = \App\Models\User::find($id);
-        
+        $user = User::find($id);
         if (!$user) {
             return response()->json(['message' => 'Pengguna tidak ditemukan'], 404);
         }
-        
+
         $user->delete();
-        
         return response()->json(['message' => 'Pengguna berhasil dihapus dari sistem'], 200);
+    }
+
+    // =========================================================================
+    // New methods for Flutter
+    // =========================================================================
+    /**
+     * GET /api/admin/profile
+     * Return current admin user data for Flutter.
+     */
+    public function profile(Request $request)
+    {
+        $user = $request->user();
+        return response()->json([
+            'data' => [
+                'name'       => $user->name,
+                'email'      => $user->email_or_nim,
+                'role'       => $user->role,
+                'username'   => $user->username,      // alias ke email_or_nim
+                'phone'      => $user->phone,
+                'created_at' => $user->created_at,
+                'updated_at' => $user->updated_at,
+            ],
+        ]);
+    }
+
+    /**
+     * GET /api/admin/users
+     * List semua user agar Flutter bisa filter berdasarkan role di client.
+     */
+    public function usersList()
+    {
+        $users = User::select('id', 'name', 'email_or_nim', 'phone', 'role')
+                     ->get();
+
+        return response()->json([
+            'data' => $users,
+        ]);
+    }
+
+    /**
+     * GET /api/admin/dashboard
+     * Stats: totalUsers, growth%, activeInternships, growth%.
+     */
+    public function dashboard()
+    {
+        $now       = now();
+        $sevenAgo  = now()->subDays(7);
+        $prior7    = now()->subDays(14);
+        $thirtyAgo = now()->subDays(30);
+        $prior30   = now()->subDays(60);
+
+        // ---- Total users & growth (7 hari) ----
+        $totalUsers      = User::count();
+        $newLast7         = User::where('created_at', '>=', $sevenAgo)->count();
+        $newPrior7        = User::whereBetween('created_at', [$prior7, $sevenAgo])->count();
+        $usersGrowth = $this->calcGrowthPercent($newLast7, $newPrior7);
+
+        // ---- Active internships & growth (30 hari) ----
+        $activeInternships = Pendaftaran::whereIn('status', ['diterima', 'selesai'])
+            ->whereHas('lowongan', function ($q) {
+                $q->where('batas_waktu', '>=', $now)
+                  ->where('status_approval', 'approved');
+            })->count();
+
+        $acceptedLast30  = Pendaftaran::where('status', 'diterima')
+            ->where('created_at', '>=', $thirtyAgo)->count();
+        $acceptedPrior30 = Pendaftaran::where('status', 'diterima')
+            ->whereBetween('created_at', [$prior30, $thirtyAgo])->count();
+        $internGrowth = $this->calcGrowthPercent($acceptedLast30, $acceptedPrior30);
+
+        return response()->json([
+            'data' => [
+                'totalUsers'                      => $totalUsers,
+                'totalUsersGrowthPercent'         => $usersGrowth,
+                'activeInternships'               => $activeInternships,
+                'activeInternshipsGrowthPercent'  => $internGrowth,
+            ],
+        ]);
+    }
+
+    /**
+     * Helper: hitung persentase pertumbuhan.
+     * Prior == 0 & current > 0 => +100%
+     * Both 0 => 0%
+     */
+    private function calcGrowthPercent(float $current, float $prior): float
+    {
+        if ($prior == 0) {
+            return $current > 0 ? 100.0 : 0.0;
+        }
+        return round((($current - $prior) / $prior) * 100, 1);
     }
 }

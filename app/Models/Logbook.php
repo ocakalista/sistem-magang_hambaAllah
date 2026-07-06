@@ -16,6 +16,16 @@ class Logbook extends Model
         'minggu_ke',
         'tanggal',
         'deskripsi_kegiatan',
-        'status_validasi'
+        'status_validasi',
     ];
+
+    protected $casts = [
+        'minggu_ke' => 'integer',
+        'tanggal' => 'date',
+    ];
+
+    public function pendaftaran()
+    {
+        return $this->belongsTo(Pendaftaran::class, 'id_pendaftaran');
+    }
 }
