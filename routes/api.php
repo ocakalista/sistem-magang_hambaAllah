@@ -1,15 +1,16 @@
 <?php
 
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\LowonganController;
-use App\Http\Controllers\PendaftaranController;
-use App\Http\Controllers\MitraController;
-use App\Http\Controllers\LogbookController;
+use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BimbinganController;
-use App\Http\Controllers\AdminController;
 use App\Http\Controllers\DosenBimbinganController;
+use App\Http\Controllers\LogbookController;
+use App\Http\Controllers\LowonganController;
+use App\Http\Controllers\MitraController;
+use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\PendaftaranController;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Route;
 
 /*
 |--------------------------------------------------------------------------
@@ -34,25 +35,28 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user', function (Request $request) {
         return $request->user();
     });
+    Route::get('/notifications', [NotificationController::class, 'index']);
+    Route::patch('/notifications/{id}/read', [NotificationController::class, 'markAsRead']);
+    Route::patch('/notifications/read-all', [NotificationController::class, 'markAllAsRead']);
 
     // -------- ADMIN --------
     Route::middleware('role:admin')->prefix('admin')->group(function () {
         // Approval lowongan (Flutter endpoints)
-        Route::get('lowongan',            [LowonganController::class, 'adminListPending']);
-        Route::post('lowongan/{id}/approve',  [LowonganController::class, 'approve']);
-        Route::post('lowongan/{id}/reject',   [LowonganController::class, 'reject']);
+        Route::get('lowongan', [LowonganController::class, 'adminListPending']);
+        Route::post('lowongan/{id}/approve', [LowonganController::class, 'approve']);
+        Route::post('lowongan/{id}/reject', [LowonganController::class, 'reject']);
 
         // Legacy validasi endpoint
         Route::put('lowongan/{id}/validasi', [AdminController::class, 'validasiLowongan']);
 
         // Profile & user management
-        Route::get('profile',              [AdminController::class, 'profile']);
-        Route::get('users',                [AdminController::class, 'usersList']);
-        Route::post('users',               [AdminController::class, 'storeUser']);
-        Route::delete('users/{id}',        [AdminController::class, 'destroyUser']);
+        Route::get('profile', [AdminController::class, 'profile']);
+        Route::get('users', [AdminController::class, 'usersList']);
+        Route::post('users', [AdminController::class, 'storeUser']);
+        Route::delete('users/{id}', [AdminController::class, 'destroyUser']);
 
         // Dashboard stats
-        Route::get('dashboard',            [AdminController::class, 'dashboard']);
+        Route::get('dashboard', [AdminController::class, 'dashboard']);
     });
 
     // Admin tetapkan dosen pembimbing

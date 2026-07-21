@@ -10,12 +10,15 @@ class Logbook extends Model
     use HasFactory;
 
     protected $table = 'logbook';
+
     protected $primaryKey = 'id_logbook';
+
     protected $fillable = [
         'id_pendaftaran',
         'minggu_ke',
         'tanggal',
         'deskripsi_kegiatan',
+        'berkas_lampiran',
         'status_validasi',
     ];
 

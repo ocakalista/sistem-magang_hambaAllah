@@ -3,10 +3,47 @@
 namespace App\Http\Controllers;
 
 use App\Models\Lowongan;
+use App\Models\User;
+use App\Notifications\ApiNotification;
 use Illuminate\Http\Request;
 
 class LowonganController extends Controller
 {
+    public function store(Request $request)
+    {
+        $validated = $request->validate([
+            'judul_posisi' => 'required|string|max:255',
+            'deskripsi' => 'required|string',
+            'persyaratan' => 'required|string',
+            'kategori' => 'required|string|max:100',
+            'lokasi' => 'required|string|max:255',
+            'tipe_kerja' => 'required|string|max:50',
+            'tipe_kontrak' => 'required|string|max:50',
+            'benefit' => 'nullable|string',
+            'kuota' => 'required|integer|min:1',
+            'batas_waktu' => 'required|date|after_or_equal:today',
+        ]);
+
+        $mitra = $request->user()->mitra;
+        if (! $mitra) {
+            return response()->json(['message' => 'Profil mitra tidak ditemukan.'], 422);
+        }
+
+        $lowongan = $mitra->lowongan()->create($validated + ['status_approval' => 'pending']);
+
+        User::where('role', 'admin')->each(fn (User $admin) => $admin->notify(new ApiNotification(
+            'lowongan_baru',
+            'Lowongan baru menunggu persetujuan',
+            $mitra->nama_perusahaan.' mengajukan lowongan '.$lowongan->judul_posisi.'.',
+            ['id_lowongan' => $lowongan->id_lowongan]
+        )));
+
+        return response()->json([
+            'message' => 'Lowongan berhasil dibuat dan menunggu persetujuan admin.',
+            'data' => $lowongan,
+        ], 201);
+    }
+
     // =========================================================
     // Public (no auth required)
     // =========================================================
@@ -21,13 +58,13 @@ class LowonganController extends Controller
         if ($lowongan->isEmpty()) {
             return response()->json([
                 'message' => 'Belum ada lowongan magang yang tersedia saat ini.',
-                'data'    => [],
+                'data' => [],
             ], 200);
         }
 
         return response()->json([
             'message' => 'Berhasil mengambil katalog lowongan',
-            'data'    => $lowongan,
+            'data' => $lowongan,
         ], 200);
     }
 
@@ -38,7 +75,7 @@ class LowonganController extends Controller
     {
         $lowongan = Lowongan::find($id);
 
-        if (!$lowongan) {
+        if (! $lowongan) {
             return response()->json(['message' => 'Lowongan tidak ditemukan'], 404);
         }
 
@@ -59,11 +96,11 @@ class LowonganController extends Controller
             ->get()
             ->map(function ($item) {
                 return [
-                    'id_lowongan'          => $item->id_lowongan,
-                    'company_name'         => $item->mitra->nama_perusahaan ?? null,
-                    'company_category'     => $item->kategori,
-                    'request_description'  => $item->deskripsi,
-                    'status_approval'      => $item->status_approval,
+                    'id_lowongan' => $item->id_lowongan,
+                    'company_name' => $item->mitra->nama_perusahaan ?? null,
+                    'company_category' => $item->kategori,
+                    'request_description' => $item->deskripsi,
+                    'status_approval' => $item->status_approval,
                 ];
             });
 
@@ -77,7 +114,7 @@ class LowonganController extends Controller
     {
         $lowongan = Lowongan::find($id);
 
-        if (!$lowongan) {
+        if (! $lowongan) {
             return response()->json(['message' => 'Lowongan tidak ditemukan'], 404);
         }
 
@@ -85,15 +122,17 @@ class LowonganController extends Controller
             return response()->json(['message' => 'Lowongan sudah di-approve sebelumnya.'], 400);
         }
 
-        // Jika sebelumnya rejected, kembalikan kuotanya ke semula (restore)
-        $wasRejected = $lowongan->status_approval === 'rejected';
-
         $lowongan->status_approval = 'approved';
         $lowongan->save();
+        $lowongan->mitra?->user?->notify(new ApiNotification(
+            'status_lowongan', 'Lowongan disetujui',
+            'Lowongan '.$lowongan->judul_posisi.' telah disetujui.',
+            ['id_lowongan' => $lowongan->id_lowongan, 'status' => 'approved']
+        ));
 
         return response()->json([
             'message' => 'Lowongan berhasil di-approve.',
-            'data'    => $lowongan,
+            'data' => $lowongan,
         ], 200);
     }
 
@@ -108,7 +147,7 @@ class LowonganController extends Controller
 
         $lowongan = Lowongan::find($id);
 
-        if (!$lowongan) {
+        if (! $lowongan) {
             return response()->json(['message' => 'Lowongan tidak ditemukan'], 404);
         }
 
@@ -118,6 +157,11 @@ class LowonganController extends Controller
 
         $lowongan->status_approval = 'rejected';
         $lowongan->save();
+        $lowongan->mitra?->user?->notify(new ApiNotification(
+            'status_lowongan', 'Lowongan ditolak',
+            $validated['reason'] ?: 'Lowongan '.$lowongan->judul_posisi.' ditolak.',
+            ['id_lowongan' => $lowongan->id_lowongan, 'status' => 'rejected']
+        ));
 
         // Restore kuota jika sebelumnya ada pelamar yang diterima
         // (karena kuota sudah dipotong saat approve/reject lowongan tidak mengembalikan otomatis)
@@ -126,7 +170,7 @@ class LowonganController extends Controller
 
         return response()->json([
             'message' => 'Lowongan berhasil di-reject.',
-            'data'    => $lowongan,
+            'data' => $lowongan,
         ], 200);
     }
 
@@ -142,10 +186,10 @@ class LowonganController extends Controller
         $user = $request->user();
         $mitra = $user->mitra;
 
-        if (!$mitra) {
+        if (! $mitra) {
             return response()->json([
                 'message' => 'Profil mitra tidak ditemukan untuk user ini.',
-                'data'    => [],
+                'data' => [],
             ], 404);
         }
 

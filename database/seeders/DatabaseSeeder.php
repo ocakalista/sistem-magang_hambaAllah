@@ -2,10 +2,10 @@
 
 namespace Database\Seeders;
 
+use Carbon\Carbon;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
-use Carbon\Carbon;
 
 class DatabaseSeeder extends Seeder
 {
@@ -16,33 +16,33 @@ class DatabaseSeeder extends Seeder
         DB::table('users')->insert([
             [
                 'name' => 'Asrul Gamink',
-                'email_or_nim' => '22.11.1234', 
+                'email_or_nim' => '22.11.1234',
                 'password' => Hash::make('password123'),
                 'role' => 'mahasiswa',
             ],
             [
                 'name' => 'RRQ',
-                'email_or_nim' => 'mitra.RRQ', 
+                'email_or_nim' => 'mitra.RRQ',
                 'password' => Hash::make('password123'),
                 'role' => 'mitra',
             ],
             [
                 'name' => 'Dr. Rina Saraswati, M.Kom.',
-                'email_or_nim' => 'dosen123', 
+                'email_or_nim' => 'dosen123',
                 'password' => Hash::make('password123'),
                 'role' => 'dosen',
             ],
             [
                 'name' => 'Admin Amikom',
-                'email_or_nim' => 'admin', 
+                'email_or_nim' => 'admin',
                 'password' => Hash::make('admin123'),
                 'role' => 'admin',
-            ]
+            ],
         ]);
 
         DB::table('lowongan')->insert([
             [
-                'id_mitra' => 2, 
+                'id_mitra' => 2,
                 'judul_posisi' => 'Backend Developer',
                 'kategori' => 'Programming',
                 'lokasi' => 'Remote',
@@ -51,10 +51,10 @@ class DatabaseSeeder extends Seeder
                 'benefit' => "Sertifikat\nMentoring\nUang Saku",
                 'kuota' => '3',
                 'batas_waktu' => clone $now->addDays(30),
-                'status_approval' => 'disetujui'
+                'status_approval' => 'approved',
             ],
             [
-                'id_mitra' => 2, 
+                'id_mitra' => 2,
                 'judul_posisi' => 'IoT Engineer Smart Greenhouse',
                 'kategori' => 'Networking',
                 'lokasi' => 'Sleman, DIY',
@@ -63,8 +63,8 @@ class DatabaseSeeder extends Seeder
                 'benefit' => "Akses alat industri\nKonversi SKS PPK Ormawa",
                 'kuota' => '5',
                 'batas_waktu' => clone $now->addDays(15),
-                'status_approval' => 'disetujui'
-            ]
+                'status_approval' => 'approved',
+            ],
         ]);
 
         DB::table('pendaftaran')->insert([
@@ -72,7 +72,7 @@ class DatabaseSeeder extends Seeder
             'id_lowongan' => 2,
             'motivasi' => 'Saya sangat tertarik dengan IoT dan Smart Farming untuk pertanian.',
             'berkas_cv' => 'berkas_cv_bintang.pdf',
-            'status' => 'diterima', 
+            'status' => 'diterima',
         ]);
 
         DB::table('logbook')->insert([
@@ -82,16 +82,16 @@ class DatabaseSeeder extends Seeder
                 'tanggal' => clone $now->subDays(7),
                 'deskripsi_kegiatan' => 'Melakukan perancangan arsitektur IoT dan memesan sensor suhu.',
                 'status_validasi' => 'disetujui',
-                'feedback_dosen' => 'Perencanaan yang bagus. Lanjutkan.'
+                'feedback_dosen' => 'Perencanaan yang bagus. Lanjutkan.',
             ],
             [
                 'id_pendaftaran' => 1,
                 'minggu_ke' => '2',
                 'tanggal' => clone $now->subDays(1),
                 'deskripsi_kegiatan' => 'Instalasi mikrokontroler dan pengujian pengiriman data.',
-                'status_validasi' => 'pending', 
-                'feedback_dosen' => null
-            ]
+                'status_validasi' => 'pending',
+                'feedback_dosen' => null,
+            ],
         ]);
     }
 }

@@ -10,12 +10,15 @@ class Pendaftaran extends Model
     use HasFactory;
 
     protected $table = 'pendaftaran';
+
     protected $primaryKey = 'id_pendaftaran';
+
     protected $fillable = [
         'id_mahasiswa',
         'id_lowongan',
         'berkas_cv',
         'portofolio',
+        'portfolio_link',
         'motivasi',
         'status',
         'laporan_akhir',

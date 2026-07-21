@@ -6,7 +6,9 @@ use App\Models\Lowongan;
 use App\Models\Mahasiswa;
 use App\Models\Pendaftaran;
 use App\Models\User;
+use App\Notifications\ApiNotification;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class PendaftaranController extends Controller
 {
@@ -22,7 +24,7 @@ class PendaftaranController extends Controller
 
         return response()->json([
             'message' => 'Berhasil mengambil riwayat pendaftaran Anda',
-            'data'    => $pendaftaran,
+            'data' => $pendaftaran,
         ], 200);
     }
 
@@ -34,23 +36,23 @@ class PendaftaranController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'id_lowongan'         => 'required|exists:lowongan,id_lowongan',
-            'nama_lengkap'        => 'required|string|max:255',
-            'no_telp'             => 'required|string|max:20',
-            'semester'            => 'required|integer|min:1|max:14',
-            'motivasi'            => 'required|string',
-            'berkas_cv'           => 'required|file|mimes:pdf,doc,docx|max:5120',
-            'berkas_portofolio'   => 'nullable|file|mimes:pdf,doc,docx|max:5120',
-            'portofolio_link'     => 'nullable|url',
+            'id_lowongan' => 'required|exists:lowongan,id_lowongan',
+            'nama_lengkap' => 'required|string|max:255',
+            'no_telp' => 'required|string|max:20',
+            'semester' => 'required|integer|min:1|max:14',
+            'motivasi' => 'required|string',
+            'berkas_cv' => 'required|file|mimes:pdf,doc,docx|max:5120',
+            'berkas_portofolio' => 'nullable|file|mimes:pdf,doc,docx|max:5120',
+            'portofolio_link' => 'nullable|url',
         ]);
 
         $user = $request->user();
-        $nim  = $user->email_or_nim;   // untuk mahasiswa, email_or_nim = NIM
+        $nim = $user->email_or_nim;   // untuk mahasiswa, email_or_nim = NIM
 
         // 1) Sinkronkan profile user dengan data dari form
         $user->update([
-            'name'     => $validated['nama_lengkap'],
-            'phone'    => $validated['no_telp'],
+            'name' => $validated['nama_lengkap'],
+            'phone' => $validated['no_telp'],
             'semester' => (string) $validated['semester'],
         ]);
 
@@ -59,7 +61,7 @@ class PendaftaranController extends Controller
             ['id_mahasiswa' => $nim],
             [
                 'id_user' => $user->id,
-                'nama'    => $validated['nama_lengkap'],
+                'nama' => $validated['nama_lengkap'],
                 'jurusan' => $user->konsentrasi,
             ],
         );
@@ -78,7 +80,7 @@ class PendaftaranController extends Controller
 
         // 4) Cek kuota
         $lowongan = Lowongan::find($validated['id_lowongan']);
-        if (!$lowongan || $lowongan->kuota < 1) {
+        if (! $lowongan || $lowongan->kuota < 1) {
             return response()->json([
                 'success' => false,
                 'message' => 'Maaf, kuota lowongan ini sudah penuh.',
@@ -89,7 +91,7 @@ class PendaftaranController extends Controller
         $cvPath = null;
         if ($request->hasFile('berkas_cv')) {
             $file = $request->file('berkas_cv');
-            $namaFile = time() . '_' . preg_replace('/\s+/', '_', $file->getClientOriginalName());
+            $namaFile = time().'_'.preg_replace('/\s+/', '_', $file->getClientOriginalName());
             $cvPath = $file->storeAs('berkas_cv', $namaFile, 'public');
         }
 
@@ -97,7 +99,7 @@ class PendaftaranController extends Controller
         $portofolioPath = null;
         if ($request->hasFile('berkas_portofolio')) {
             $pFile = $request->file('berkas_portofolio');
-            $pName = time() . '_' . preg_replace('/\s+/', '_', $pFile->getClientOriginalName());
+            $pName = time().'_'.preg_replace('/\s+/', '_', $pFile->getClientOriginalName());
             $portofolioPath = $pFile->storeAs('berkas_portofolio', $pName, 'public');
         }
 
@@ -105,19 +107,26 @@ class PendaftaranController extends Controller
         $lowongan->decrement('kuota');
 
         // 8) Simpan pendaftaran
-        $pendaftaran = new Pendaftaran();
+        $pendaftaran = new Pendaftaran;
         $pendaftaran->id_mahasiswa = $nim;
-        $pendaftaran->id_lowongan  = $validated['id_lowongan'];
-        $pendaftaran->berkas_cv    = $cvPath;
-        $pendaftaran->portofolio   = $portofolioPath;     // file upload, atau null
-        $pendaftaran->motivasi     = $validated['motivasi'];
-        $pendaftaran->status       = 'pending';
+        $pendaftaran->id_lowongan = $validated['id_lowongan'];
+        $pendaftaran->berkas_cv = $cvPath;
+        $pendaftaran->portofolio = $portofolioPath;
+        $pendaftaran->portfolio_link = $validated['portofolio_link'] ?? null;
+        $pendaftaran->motivasi = $validated['motivasi'];
+        $pendaftaran->status = 'pending';
         $pendaftaran->save();
+
+        $lowongan->mitra?->user?->notify(new ApiNotification(
+            'pelamar_baru', 'Pelamar baru',
+            $validated['nama_lengkap'].' melamar posisi '.$lowongan->judul_posisi.'.',
+            ['id_lowongan' => $lowongan->id_lowongan, 'id_pendaftaran' => $pendaftaran->id_pendaftaran]
+        ));
 
         return response()->json([
             'success' => true,
             'message' => 'Lamaran terkirim!',
-            'data'    => $pendaftaran,
+            'data' => $pendaftaran,
         ], 201);
     }
 
@@ -132,7 +141,7 @@ class PendaftaranController extends Controller
 
         $pendaftaran = Pendaftaran::find($id);
 
-        if (!$pendaftaran) {
+        if (! $pendaftaran) {
             return response()->json(['message' => 'Data pendaftaran tidak ditemukan'], 404);
         }
 
@@ -146,10 +155,15 @@ class PendaftaranController extends Controller
 
         $pendaftaran->status = $request->status;
         $pendaftaran->save();
+        $pendaftaran->mahasiswa?->user?->notify(new ApiNotification(
+            'status_pendaftaran', 'Status lamaran diperbarui',
+            'Status lamaran Anda menjadi '.$request->status.'.',
+            ['id_pendaftaran' => $pendaftaran->id_pendaftaran, 'status' => $request->status]
+        ));
 
         return response()->json([
-            'message' => 'Status pendaftaran berhasil diubah menjadi ' . $request->status,
-            'data'    => $pendaftaran,
+            'message' => 'Status pendaftaran berhasil diubah menjadi '.$request->status,
+            'data' => $pendaftaran,
         ], 200);
     }
 
@@ -158,12 +172,15 @@ class PendaftaranController extends Controller
      */
     public function getPelamar(string $id_lowongan)
     {
-        $pelamar = \Illuminate\Support\Facades\DB::table('pendaftaran')
+        $pelamar = DB::table('pendaftaran')
             ->join('mahasiswa', 'pendaftaran.id_mahasiswa', '=', 'mahasiswa.id_mahasiswa')
             ->select(
                 'pendaftaran.id_pendaftaran',
                 'pendaftaran.status',
                 'pendaftaran.berkas_cv',
+                'pendaftaran.motivasi',
+                'pendaftaran.portofolio',
+                'pendaftaran.portfolio_link',
                 'pendaftaran.created_at as tanggal_daftar',
                 'mahasiswa.id_mahasiswa as nim',
                 'mahasiswa.nama as nama_mahasiswa',
@@ -175,18 +192,24 @@ class PendaftaranController extends Controller
         if ($pelamar->isEmpty()) {
             return response()->json([
                 'message' => 'Belum ada pelamar untuk lowongan ini.',
-                'data'    => [],
+                'data' => [],
             ], 200);
         }
 
         $pelamar->transform(function ($item) {
-            $item->url_cv = $item->berkas_cv ? asset('storage/' . $item->berkas_cv) : null;
+            $item->url_cv = $item->berkas_cv ? asset('storage/'.$item->berkas_cv) : null;
+            $item->portfolio = [
+                'file_url' => $item->portofolio ? asset('storage/'.$item->portofolio) : null,
+                'link' => $item->portfolio_link,
+            ];
+            unset($item->berkas_cv, $item->portofolio, $item->portfolio_link);
+
             return $item;
         });
 
         return response()->json([
             'message' => 'Berhasil mengambil daftar pelamar',
-            'data'    => $pelamar,
+            'data' => $pelamar,
         ], 200);
     }
 
@@ -201,7 +224,7 @@ class PendaftaranController extends Controller
 
         $pendaftaran = Pendaftaran::find($id);
 
-        if (!$pendaftaran) {
+        if (! $pendaftaran) {
             return response()->json(['message' => 'Data pendaftaran tidak ditemukan'], 404);
         }
 
@@ -214,14 +237,14 @@ class PendaftaranController extends Controller
         }
 
         $file = $request->file('laporan_akhir');
-        $laporanPath = $file->storeAs('laporan_akhir', time() . '_' . $file->getClientOriginalName(), 'public');
+        $laporanPath = $file->storeAs('laporan_akhir', time().'_'.$file->getClientOriginalName(), 'public');
 
         $pendaftaran->laporan_akhir = $laporanPath;
         $pendaftaran->save();
 
         return response()->json([
             'message' => 'Laporan Akhir berhasil diunggah',
-            'data'    => $pendaftaran,
+            'data' => $pendaftaran,
         ], 200);
     }
 }
