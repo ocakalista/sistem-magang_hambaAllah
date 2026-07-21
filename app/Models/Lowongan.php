@@ -25,6 +25,31 @@ class Lowongan extends Model
         'benefit',
         'kuota',
         'batas_waktu',
-        'status_approval'
+        'status_approval',
     ];
+
+    protected $casts = [
+        'batas_waktu' => 'date',
+        'kuota' => 'integer',
+    ];
+
+    public function mitra()
+    {
+        return $this->belongsTo(Mitra::class, 'id_mitra');
+    }
+
+    public function pendaftaran()
+    {
+        return $this->hasMany(Pendaftaran::class, 'id_lowongan');
+    }
+
+    public function scopeApproved($query)
+    {
+        return $query->where('status_approval', 'approved');
+    }
+
+    public function scopePending($query)
+    {
+        return $query->where('status_approval', 'pending');
+    }
 }

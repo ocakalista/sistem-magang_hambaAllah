@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -30,5 +29,28 @@ class User extends Authenticatable
     protected $casts = [
         'email_verified_at' => 'datetime',
         'password' => 'hashed',
+        'role' => 'string',
     ];
+
+    // Alias untuk Flutter admin profile yang meminta field `username`
+    // (DB tidak punya kolom `username`, jadi kembalikan email_or_nim)
+    public function getUsernameAttribute(): ?string
+    {
+        return $this->email_or_nim;
+    }
+
+    public function mitra()
+    {
+        return $this->hasOne(Mitra::class, 'id_user');
+    }
+
+    public function mahasiswa()
+    {
+        return $this->hasOne(Mahasiswa::class, 'id_user');
+    }
+
+    public function dosen()
+    {
+        return $this->hasOne(Dosen::class, 'id_user');
+    }
 }
