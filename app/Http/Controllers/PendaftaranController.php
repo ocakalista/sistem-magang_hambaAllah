@@ -35,9 +35,9 @@ class PendaftaranController extends Controller
         $request->validate([
             'id_lowongan' => 'required',
             'motivasi' => 'required',
-            'berkas_cv' => 'required|file|mimes:pdf|max:5120',
+            'berkas_cv' => 'required|file|mimes:pdf,doc,docx,png,jpg,jpeg|max:20480',
             'portofolio_link' => 'nullable|string',
-            'portofolio_file' => 'nullable|file|mimes:pdf|max:5120',
+            'portofolio_file' => 'nullable|file|mimes:pdf,doc,docx,png,jpg,jpeg|max:20480',
         ]);
 
         // 2. CEK & AMBIL DATA LOWONGAN DULU 👇
@@ -46,8 +46,25 @@ class PendaftaranController extends Controller
         if (!$lowongan) {
             return response()->json(['message' => 'Lowongan tidak ditemukan'], 404);
         }
+
+        // Cek Kuota
         if ($lowongan->kuota < 1) {
             return response()->json(['message' => 'Maaf, kuota magang sudah penuh'], 400);
+        }
+
+        // US-16: Cek Batas Waktu / Kadaluarsa
+        if ($lowongan->batas_waktu && $lowongan->batas_waktu < date('Y-m-d')) {
+            return response()->json(['message' => 'Maaf, pendaftaran lowongan ini sudah ditutup (kadaluarsa).'], 400);
+        }
+
+        // US-14 AC2: Mencegah Pendaftaran Ganda
+        $nim = Auth::user()->email_or_nim;
+        $existing = Pendaftaran::where('id_mahasiswa', $nim)
+            ->where('id_lowongan', $request->id_lowongan)
+            ->first();
+
+        if ($existing) {
+            return response()->json(['message' => 'Anda sudah mendaftar pada lowongan ini sebelumnya.'], 400);
         }
 
         // 3. Simpan CV & Portofolio

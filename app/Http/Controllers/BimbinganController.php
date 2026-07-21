@@ -39,8 +39,8 @@ class BimbinganController extends Controller
         ], 201);
     }
 
-    // 2. FITUR BARU: Dosen melihat daftar mahasiswa bimbingannya
-    public function getBimbinganDosen()
+    // 2. FITUR DOSEN: Melihat daftar mahasiswa bimbingannya (dengan pencarian US-19 & status US-20)
+    public function getBimbinganDosen(Request $request)
     {
         // Cari ID user dosen yang sedang login
         $dosen = DB::table('dosen')->where('id_user', Auth::id())->first();
@@ -49,8 +49,10 @@ class BimbinganController extends Controller
             return response()->json(['message' => 'Data profil dosen tidak ditemukan di database.'], 404);
         }
 
+        $search = $request->query('search');
+
         // Tarik data mahasiswa yang dibimbing oleh dosen ini
-        $bimbingan = DB::table('bimbingan')
+        $query = DB::table('bimbingan')
             ->join('pendaftaran', 'bimbingan.id_pendaftaran', '=', 'pendaftaran.id_pendaftaran')
             ->join('mahasiswa', 'pendaftaran.id_mahasiswa', '=', 'mahasiswa.id_mahasiswa')
             ->join('lowongan', 'pendaftaran.id_lowongan', '=', 'lowongan.id_lowongan')
@@ -58,16 +60,75 @@ class BimbinganController extends Controller
             ->where('bimbingan.nidn', $dosen->nidn)
             ->select(
                 'bimbingan.id_bimbingan',
+                'bimbingan.status_verifikasi',
+                'bimbingan.catatan_verifikasi',
                 'pendaftaran.id_pendaftaran',
+                'pendaftaran.status as status_magang',
                 'mahasiswa.nama as nama_mahasiswa',
                 'mahasiswa.id_mahasiswa as nim',
                 'lowongan.judul_posisi',
+                'lowongan.lokasi',
                 'mitra.nama_perusahaan as nama_mitra'
-            )
-            ->get();
+            );
+
+        $bimbingan = $query->get();
+
+        $bimbingan->transform(function ($item) {
+            $logbooks = DB::table('logbook')
+                ->where('id_pendaftaran', $item->id_pendaftaran)
+                ->orderBy('minggu_ke', 'asc')
+                ->get();
+
+            $item->weekly_reports = $logbooks->map(function ($lb) use ($item) {
+                return [
+                    'id' => (string) $lb->id_logbook,
+                    'week_number' => (int) $lb->minggu_ke,
+                    'title' => 'Laporan Minggu ke-' . $lb->minggu_ke,
+                    'submitted_by' => $item->nama_mahasiswa,
+                    'submitted_at' => $lb->created_at ?? $lb->tanggal,
+                    'content' => $lb->deskripsi_kegiatan,
+                    'is_approved' => $lb->status_validasi === 'disetujui',
+                    'lecturer_feedback' => $lb->feedback_dosen,
+                ];
+            })->values();
+
+            $totalWeeks = 6;
+            $completedLogbooks = $logbooks->where('status_validasi', 'disetujui')->count();
+            $item->current_week = $logbooks->max('minggu_ke') ?? 1;
+            $item->total_weeks = $totalWeeks;
+            $item->progress = round(min(1.0, $completedLogbooks / $totalWeeks), 2);
+
+            return $item;
+        });
 
         return response()->json([
             'message' => 'Berhasil mengambil daftar mahasiswa bimbingan',
+            'data' => $bimbingan
+        ], 200);
+    }
+
+    // 3. FITUR DOSEN: Verifikasi / Persetujuan Mahasiswa Magang (US-24)
+    public function verifikasiMahasiswa(Request $request, $id_bimbingan)
+    {
+        $request->validate([
+            'status_verifikasi' => 'required|in:disetujui,ditolak',
+            'catatan' => 'nullable|string'
+        ]);
+
+        $bimbingan = Bimbingan::find($id_bimbingan);
+
+        if (!$bimbingan) {
+            return response()->json(['message' => 'Data bimbingan tidak ditemukan'], 404);
+        }
+
+        $bimbingan->status_verifikasi = $request->status_verifikasi;
+        if ($request->filled('catatan')) {
+            $bimbingan->catatan_verifikasi = $request->catatan;
+        }
+        $bimbingan->save();
+
+        return response()->json([
+            'message' => 'Mahasiswa bimbingan berhasil di-verifikasi (' . $request->status_verifikasi . ')',
             'data' => $bimbingan
         ], 200);
     }

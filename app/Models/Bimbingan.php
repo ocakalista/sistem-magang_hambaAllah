@@ -15,6 +15,8 @@ class Bimbingan extends Model
 
     protected $fillable = [
         'id_pendaftaran',
-        'nidn'
+        'nidn',
+        'status_verifikasi',
+        'catatan_verifikasi'
     ];
 }

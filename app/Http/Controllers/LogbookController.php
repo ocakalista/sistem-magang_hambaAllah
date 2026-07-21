@@ -60,11 +60,12 @@ class LogbookController extends Controller
         ], 201);
     }
 
-    // 3. FITUR ASLI ABANG: Dosen mengubah status logbook
+    // 3. FITUR DOSEN: Mengubah status logbook & memberikan feedback (US-21)
     public function updateStatus(Request $request, $id)
     {
         $request->validate([
-            'status_validasi' => 'required|in:disetujui,revisi'
+            'status_validasi' => 'required|in:disetujui,revisi',
+            'feedback_dosen'  => 'nullable|string'
         ]);
 
         $logbook = Logbook::find($id);
@@ -74,6 +75,9 @@ class LogbookController extends Controller
         }
 
         $logbook->status_validasi = $request->status_validasi;
+        if ($request->has('feedback_dosen')) {
+            $logbook->feedback_dosen = $request->feedback_dosen;
+        }
         $logbook->save();
 
         return response()->json([

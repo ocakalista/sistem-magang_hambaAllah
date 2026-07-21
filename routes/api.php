@@ -42,6 +42,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // --- KHUSUS KAMAR MITRA ---
     Route::middleware('role:mitra')->group(function () {
+        Route::get('/mitra/lowongan', [LowonganController::class, 'mitraLowongan']);
         Route::post('/lowongan', [LowonganController::class, 'store']); 
         Route::get('/lowongan/{id_lowongan}/pelamar', [PendaftaranController::class, 'getPelamar']); 
         Route::put('/pendaftaran/{id}/status', [PendaftaranController::class, 'updateStatus']); 
@@ -54,6 +55,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('role:dosen')->group(function () {
         // JALAN BARU: Dosen melihat siapa saja bimbingannya & cek logbook
         Route::get('/dosen/bimbingan', [BimbinganController::class, 'getBimbinganDosen']); 
+        Route::put('/dosen/bimbingan/{id}/verifikasi', [BimbinganController::class, 'verifikasiMahasiswa']);
         Route::get('/dosen/logbook/{id_pendaftaran}', [LogbookController::class, 'getLogbookByPendaftaran']); 
         
         Route::put('/logbook/{id}/status', [LogbookController::class, 'updateStatus']); 
