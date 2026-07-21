@@ -1,11 +1,9 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../models/application_model.dart';
 import '../../models/nexus_app_state.dart';
 import '../../theme/app_theme.dart';
 import 'dashboard_mahasiswa.dart';
-import 'internship_progress_screen.dart';
 import '../notifications_screen.dart';
 import '../../widgets/bottom_nav.dart';
 
@@ -71,56 +69,33 @@ class ApplicationStatusScreen extends StatelessWidget {
           ),
         ],
       ),
-      body: Stack(
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(20, 14, 20, 120),
         children: [
-          ListView(
-            padding: const EdgeInsets.fromLTRB(20, 14, 20, 120),
-            children: [
-              _CompanySummaryCard(application: app),
-              const SizedBox(height: 18),
-              _SectionBlock(
-                title: 'Application Progress',
-                trailing: TextButton(
-                  onPressed: () {},
-                  child: const Text('View History'),
-                ),
-                child: _Timeline(application: app, stageIndex: stageIndex),
-              ),
-              const SizedBox(height: 18),
-              _SectionBlock(
-                title: 'Activity History',
-                child: Column(
-                  children:
-                      _activityItems(
-                        app,
-                      ).map((item) => _ActivityRow(item: item)).toList(),
-                ),
-              ),
-              if (app.status.index >= ApplicationStatus.underReview.index) ...[
-                const SizedBox(height: 18),
-                _FeedbackSection(application: app),
-              ],
-            ],
-          ),
-          if (kDebugMode)
-            Positioned(
-              right: 16,
-              bottom: 104,
-              child: _DevStatusMenu(
-                currentStatus: app.status,
-                onChanged: (status) {
-                  state.updateApplicationStatus(status);
-                  if (status == ApplicationStatus.accepted) {
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const InternshipProgressScreen(),
-                      ),
-                    );
-                  }
-                },
-              ),
+          _CompanySummaryCard(application: app),
+          const SizedBox(height: 18),
+          _SectionBlock(
+            title: 'Application Progress',
+            trailing: TextButton(
+              onPressed: () {},
+              child: const Text('View History'),
             ),
+            child: _Timeline(application: app, stageIndex: stageIndex),
+          ),
+          const SizedBox(height: 18),
+          _SectionBlock(
+            title: 'Activity History',
+            child: Column(
+              children:
+                  _activityItems(
+                    app,
+                  ).map((item) => _ActivityRow(item: item)).toList(),
+            ),
+          ),
+          if (app.status.index >= ApplicationStatus.underReview.index) ...[
+            const SizedBox(height: 18),
+            _FeedbackSection(application: app),
+          ],
         ],
       ),
       bottomNavigationBar: NexusBottomNavigationBar(
@@ -146,29 +121,39 @@ class ApplicationStatusScreen extends StatelessWidget {
   }
 
   List<_ActivityItemData> _activityItems(Application app) {
-    return [
+    final items = <_ActivityItemData>[
       _ActivityItemData(
         icon: Icons.send_rounded,
         title: 'Application submitted',
         description:
             'Your application has been received by ${app.internship.company}.',
-        timestamp: 'Just now',
-      ),
-      _ActivityItemData(
-        icon: Icons.search_rounded,
-        title: 'Profile screening in progress',
-        description: 'The talent team is reviewing your portfolio and resume.',
-        timestamp: 'Today',
-      ),
-      _ActivityItemData(
-        icon: Icons.schedule_rounded,
-        title: 'Next stage prepared',
-        description:
-            'You will be notified when the next step becomes available.',
-        timestamp: 'Soon',
+        timestamp: _formatActivityDate(app.appliedDate),
       ),
     ];
+    if (app.status == ApplicationStatus.accepted ||
+        app.status == ApplicationStatus.rejected) {
+      items.add(
+        _ActivityItemData(
+          icon:
+              app.status == ApplicationStatus.accepted
+                  ? Icons.check_circle_rounded
+                  : Icons.cancel_rounded,
+          title:
+              app.status == ApplicationStatus.accepted
+                  ? 'Lamaran diterima'
+                  : 'Lamaran ditolak',
+          description: 'Status ini berasal dari data backend terbaru.',
+          timestamp: '-',
+        ),
+      );
+    }
+    return items;
   }
+
+  String _formatActivityDate(DateTime date) =>
+      date.millisecondsSinceEpoch == 0
+          ? '-'
+          : '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
 
   void _handleNav(BuildContext context, int index) {
     if (index == 0) {
@@ -752,69 +737,6 @@ class _FeedbackMiniChip extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _DevStatusMenu extends StatelessWidget {
-  const _DevStatusMenu({required this.currentStatus, required this.onChanged});
-
-  final ApplicationStatus currentStatus;
-  final ValueChanged<ApplicationStatus> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.white,
-      elevation: 8,
-      borderRadius: BorderRadius.circular(18),
-      child: PopupMenuButton<ApplicationStatus>(
-        onSelected: onChanged,
-        itemBuilder:
-            (context) => [
-              const PopupMenuItem(
-                value: ApplicationStatus.submitted,
-                child: Text('Set Submitted'),
-              ),
-              const PopupMenuItem(
-                value: ApplicationStatus.underReview,
-                child: Text('Set Under Review'),
-              ),
-              const PopupMenuItem(
-                value: ApplicationStatus.interview,
-                child: Text('Set Interview'),
-              ),
-              const PopupMenuItem(
-                value: ApplicationStatus.rejected,
-                child: Text('Set Rejected'),
-              ),
-              const PopupMenuItem(
-                value: ApplicationStatus.accepted,
-                child: Text('Set Accepted'),
-              ),
-            ],
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'DEV',
-                style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.primary,
-                ),
-              ),
-              Text(
-                currentStatus.label,
-                style: Theme.of(
-                  context,
-                ).textTheme.labelSmall?.copyWith(color: AppColors.neutral),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }

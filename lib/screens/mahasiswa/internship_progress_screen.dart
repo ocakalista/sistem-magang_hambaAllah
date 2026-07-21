@@ -1,11 +1,9 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../models/application_model.dart';
 import '../../models/nexus_app_state.dart';
 import '../../theme/app_theme.dart';
 import 'dashboard_mahasiswa.dart';
-import 'application_status_screen.dart';
 import '../notifications_screen.dart';
 import '../../widgets/bottom_nav.dart';
 
@@ -47,22 +45,17 @@ class _InternshipProgressScreenState extends State<InternshipProgressScreen> {
       );
     }
 
-    final reports =
-        app.weeklyReports.isNotEmpty
-            ? app.weeklyReports
-            : buildDemoWeeklyReports();
-    final currentWeek = app.currentWeek ?? 3;
-    final totalWeeks = app.totalWeeks ?? 6;
-    final progress = app.progressPercent ?? (currentWeek / totalWeeks);
+    final reports = app.weeklyReports;
+    final currentWeek = app.currentWeek ?? 0;
+    final totalWeeks = app.totalWeeks ?? (currentWeek == 0 ? 1 : currentWeek);
+    final completedReports =
+        reports.where((report) => report.status == 'completed').length;
+    final progress = reports.isEmpty ? 0.0 : completedReports / reports.length;
     final remainingWeeks = (totalWeeks - currentWeek).clamp(0, totalWeeks);
-    final currentReport = reports.firstWhere(
-      (report) => report.status == 'ongoing',
-      orElse: () => reports.last,
-    );
-    final feedbackReport = reports.lastWhere(
-      (report) => (report.feedbackFromLecturer ?? '').isNotEmpty,
-      orElse: () => currentReport,
-    );
+    final feedbackReports =
+        reports
+            .where((report) => (report.feedbackFromLecturer ?? '').isNotEmpty)
+            .toList();
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -93,57 +86,37 @@ class _InternshipProgressScreenState extends State<InternshipProgressScreen> {
           ),
         ],
       ),
-      body: Stack(
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(20, 14, 20, 120),
         children: [
-          ListView(
-            padding: const EdgeInsets.fromLTRB(20, 14, 20, 120),
-            children: [
-              _ProgressCard(
-                application: app,
-                currentWeek: currentWeek,
-                totalWeeks: totalWeeks,
-                remainingWeeks: remainingWeeks,
-                progress: progress,
-              ),
-              const SizedBox(height: 18),
-              _SectionTitleWithAction(
-                title: 'Weekly Timeline',
-                actionLabel: 'View History',
-                onAction: () {},
-              ),
-              const SizedBox(height: 10),
-              _WeeklyTimeline(reports: reports),
-              const SizedBox(height: 18),
-              _UploadSection(
-                selectedReportFile: _selectedReportFile,
-                onBrowse: _pickReportFile,
-              ),
-              const SizedBox(height: 18),
-              _LecturerFeedbackCard(report: feedbackReport),
-            ],
+          _ProgressCard(
+            application: app,
+            currentWeek: currentWeek,
+            totalWeeks: totalWeeks,
+            remainingWeeks: remainingWeeks,
+            progress: progress,
           ),
-          if (kDebugMode)
-            Positioned(
-              right: 16,
-              bottom: 104,
-              child: _DevStatusMenu(
-                currentStatus: app.status,
-                onChanged: (status) {
-                  state.updateApplicationStatus(status);
-                  if (status != ApplicationStatus.accepted) {
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(
-                        builder:
-                            (_) => ApplicationStatusScreen(
-                              application: state.currentApplication,
-                            ),
-                      ),
-                    );
-                  }
-                },
-              ),
-            ),
+          const SizedBox(height: 18),
+          _SectionTitleWithAction(
+            title: 'Weekly Timeline',
+            actionLabel: 'View History',
+            onAction: () {},
+          ),
+          const SizedBox(height: 10),
+          reports.isEmpty
+              ? const Padding(
+                padding: EdgeInsets.symmetric(vertical: 20),
+                child: Center(child: Text('Belum ada logbook dari server.')),
+              )
+              : _WeeklyTimeline(reports: reports),
+          const SizedBox(height: 18),
+          _UploadSection(
+            selectedReportFile: _selectedReportFile,
+            onBrowse: _pickReportFile,
+          ),
+          const SizedBox(height: 18),
+          if (feedbackReports.isNotEmpty)
+            _LecturerFeedbackCard(report: feedbackReports.last),
         ],
       ),
       bottomNavigationBar: NexusBottomNavigationBar(
@@ -154,12 +127,13 @@ class _InternshipProgressScreenState extends State<InternshipProgressScreen> {
   }
 
   void _pickReportFile() {
-    setState(() {
-      _selectedReportFile = 'Weekly_Report_Week_3.pdf';
-    });
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('Weekly report attached.')));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Backend logbook menerima deskripsi kegiatan, bukan file. Fitur upload file belum tersedia di API.',
+        ),
+      ),
+    );
   }
 
   void _handleNav(BuildContext context, int index) {
@@ -641,7 +615,9 @@ class _LecturerFeedbackCard extends StatelessWidget {
                 ),
               ),
               Text(
-                'Today, 08:30',
+                report.dueDate == null
+                    ? '-'
+                    : '${report.dueDate!.day.toString().padLeft(2, '0')}/${report.dueDate!.month.toString().padLeft(2, '0')}/${report.dueDate!.year}',
                 style: Theme.of(
                   context,
                 ).textTheme.labelSmall?.copyWith(color: AppColors.neutral),
@@ -660,8 +636,7 @@ class _LecturerFeedbackCard extends StatelessWidget {
               ),
             ),
             child: Text(
-              report.feedbackFromLecturer ??
-                  'Your weekly report is strong. Keep documenting decisions clearly and show the impact of each iteration.',
+              report.feedbackFromLecturer ?? '',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 fontStyle: FontStyle.italic,
                 height: 1.5,
@@ -669,69 +644,6 @@ class _LecturerFeedbackCard extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _DevStatusMenu extends StatelessWidget {
-  const _DevStatusMenu({required this.currentStatus, required this.onChanged});
-
-  final ApplicationStatus currentStatus;
-  final ValueChanged<ApplicationStatus> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.white,
-      elevation: 8,
-      borderRadius: BorderRadius.circular(18),
-      child: PopupMenuButton<ApplicationStatus>(
-        onSelected: onChanged,
-        itemBuilder:
-            (context) => [
-              const PopupMenuItem(
-                value: ApplicationStatus.submitted,
-                child: Text('Set Submitted'),
-              ),
-              const PopupMenuItem(
-                value: ApplicationStatus.underReview,
-                child: Text('Set Under Review'),
-              ),
-              const PopupMenuItem(
-                value: ApplicationStatus.interview,
-                child: Text('Set Interview'),
-              ),
-              const PopupMenuItem(
-                value: ApplicationStatus.rejected,
-                child: Text('Set Rejected'),
-              ),
-              const PopupMenuItem(
-                value: ApplicationStatus.accepted,
-                child: Text('Set Accepted'),
-              ),
-            ],
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'DEV',
-                style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.primary,
-                ),
-              ),
-              Text(
-                currentStatus.label,
-                style: Theme.of(
-                  context,
-                ).textTheme.labelSmall?.copyWith(color: AppColors.neutral),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }

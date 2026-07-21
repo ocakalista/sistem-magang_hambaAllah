@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:file_picker/file_picker.dart';
 
 import '../../models/application_model.dart';
 import '../../models/nexus_app_state.dart';
 import '../../theme/app_theme.dart';
 import 'application_status_screen.dart';
+import '../../services/api_service.dart';
 
 class ApplyScreen extends StatefulWidget {
   const ApplyScreen({super.key, required this.internship});
@@ -17,21 +19,22 @@ class ApplyScreen extends StatefulWidget {
 class _ApplyScreenState extends State<ApplyScreen> {
   final PageController _pageController = PageController();
   final GlobalKey<FormState> _detailsFormKey = GlobalKey<FormState>();
-  final TextEditingController _fullNameController = TextEditingController(
-    text: 'Ahmad Ramadhan',
-  );
-  final TextEditingController _phoneController = TextEditingController(
-    text: '+62 812-3456-7890',
-  );
-  final TextEditingController _semesterController = TextEditingController(
-    text: 'Semester 6',
-  );
+
+  final TextEditingController _fullNameController = TextEditingController();
+  final TextEditingController _phoneController = TextEditingController();
+  final TextEditingController _semesterController = TextEditingController();
   final TextEditingController _portfolioController = TextEditingController();
   final TextEditingController _motivationController = TextEditingController();
 
   int _currentStep = 0;
+  bool _isSubmitting = false;
+
+  // INJEKSI: Variabel diubah menjadi List<int> (bytes) khusus untuk Web
+  List<int>? _cvBytes;
   String? _cvFileName;
   double _cvUploadProgress = 0;
+
+  List<int>? _portfolioBytes;
   String? _portfolioSelection;
 
   @override
@@ -56,10 +59,12 @@ class _ApplyScreenState extends State<ApplyScreen> {
   }
 
   bool get _uploadsReady {
-    return _cvFileName != null &&
-        (_portfolioSelection != null ||
-            _portfolioController.text.trim().isNotEmpty) &&
-        _motivationController.text.trim().length >= 120;
+    final hasCv = _cvBytes != null;
+    final hasPortfolio =
+        _portfolioBytes != null || _portfolioController.text.trim().isNotEmpty;
+    final hasMotivation = _motivationController.text.trim().length >= 10;
+
+    return hasCv && hasPortfolio && hasMotivation;
   }
 
   bool get _canSubmit {
@@ -87,16 +92,6 @@ class _ApplyScreenState extends State<ApplyScreen> {
             fontWeight: FontWeight.w700,
           ),
         ),
-        actions: const [
-          Padding(
-            padding: EdgeInsets.only(right: 16),
-            child: CircleAvatar(
-              radius: 16,
-              backgroundColor: AppColors.primary,
-              child: Icon(Icons.person, color: Colors.white, size: 18),
-            ),
-          ),
-        ],
       ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -186,40 +181,70 @@ class _ApplyScreenState extends State<ApplyScreen> {
                 ),
                 child: ElevatedButton.icon(
                   onPressed:
-                      _currentStep == 2 && _canSubmit
-                          ? () => _submitApplication(context)
-                          : (_currentStep < 2
-                              ? () {
-                                if (_currentStep == 0 &&
-                                    !(_detailsFormKey.currentState
-                                            ?.validate() ??
-                                        false)) {
-                                  return;
-                                }
-                                if (_currentStep == 1 && !_uploadsReady) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text(
-                                        'Please complete your CV, portfolio, and motivation letter before continuing.',
+                      _isSubmitting
+                          ? null
+                          : (_currentStep == 2 && _canSubmit
+                              ? () => _submitApplication(context)
+                              : (_currentStep < 2
+                                  ? () {
+                                    if (_currentStep == 0 &&
+                                        !(_detailsFormKey.currentState
+                                                ?.validate() ??
+                                            false)) {
+                                      return;
+                                    }
+                                    if (_currentStep == 1 && !_uploadsReady) {
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                            _cvBytes == null
+                                                ? 'File CV belum di-upload!'
+                                                : _portfolioBytes == null &&
+                                                    _portfolioController.text
+                                                        .trim()
+                                                        .isEmpty
+                                                ? 'Isi URL Portofolio atau Upload filenya!'
+                                                : 'Motivasi minimal 10 karakter!',
+                                          ),
+                                          backgroundColor:
+                                              Colors.orange.shade800,
+                                        ),
+                                      );
+                                      return;
+                                    }
+                                    _pageController.nextPage(
+                                      duration: const Duration(
+                                        milliseconds: 280,
                                       ),
-                                    ),
-                                  );
-                                  return;
-                                }
-                                _pageController.nextPage(
-                                  duration: const Duration(milliseconds: 280),
-                                  curve: Curves.easeOut,
-                                );
-                              }
-                              : null),
-                  icon: Icon(
-                    _currentStep == 2
-                        ? Icons.send_rounded
-                        : Icons.arrow_forward_rounded,
-                  ),
-                  label: Text(
-                    _currentStep == 2 ? 'Submit Application' : 'Continue',
-                  ),
+                                      curve: Curves.easeOut,
+                                    );
+                                  }
+                                  : null)),
+                  icon:
+                      _isSubmitting
+                          ? const SizedBox.shrink()
+                          : Icon(
+                            _currentStep == 2
+                                ? Icons.send_rounded
+                                : Icons.arrow_forward_rounded,
+                          ),
+                  label:
+                      _isSubmitting
+                          ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
+                          )
+                          : Text(
+                            _currentStep == 2
+                                ? 'Submit Application'
+                                : 'Continue',
+                          ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.transparent,
                     shadowColor: Colors.transparent,
@@ -257,7 +282,10 @@ class _ApplyScreenState extends State<ApplyScreen> {
             TextFormField(
               controller: _phoneController,
               keyboardType: TextInputType.phone,
-              decoration: const InputDecoration(labelText: 'Phone Number'),
+              decoration: const InputDecoration(
+                labelText: 'Phone Number',
+                hintText: '+62...',
+              ),
               validator:
                   (value) =>
                       (value == null || value.trim().isEmpty)
@@ -269,6 +297,7 @@ class _ApplyScreenState extends State<ApplyScreen> {
               controller: _semesterController,
               decoration: const InputDecoration(
                 labelText: 'University Semester',
+                hintText: 'e.g. Semester 6',
               ),
               validator:
                   (value) =>
@@ -324,7 +353,7 @@ class _ApplyScreenState extends State<ApplyScreen> {
           const SizedBox(height: 14),
           _UploadCard(
             title: 'Upload CV / Resume',
-            subtitle: 'PDF, Max 5MB',
+            subtitle: 'PDF/DOCX/JPG, Max 5MB',
             icon: Icons.description_outlined,
             actionLabel: _cvFileName == null ? 'Upload' : 'Replace',
             onAction: _pickCvFile,
@@ -357,7 +386,7 @@ class _ApplyScreenState extends State<ApplyScreen> {
                       ),
                     ),
                     Text(
-                      '${_motivationController.text.length} / 1000 characters',
+                      '${_motivationController.text.length} / 1000',
                       style: Theme.of(context).textTheme.labelSmall?.copyWith(
                         color: AppColors.neutral,
                       ),
@@ -371,15 +400,7 @@ class _ApplyScreenState extends State<ApplyScreen> {
                   maxLength: 1000,
                   decoration: const InputDecoration(
                     hintText:
-                        'Tell the team why this internship matters to you and how your design or product experience can contribute.',
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Tip: keep it specific. Mention a portfolio project, a product insight, or a design challenge you solved.',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: AppColors.neutral,
-                    fontStyle: FontStyle.italic,
+                        'Tuliskan alasan Anda mendaftar (min. 10 karakter)',
                   ),
                 ),
               ],
@@ -434,42 +455,48 @@ class _ApplyScreenState extends State<ApplyScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 14),
-          _ReviewCard(
-            title: 'Position Applied',
-            onEdit: () {},
-            children: [
-              _SnapshotRow(
-                label: 'Position',
-                value: widget.internship.position,
-              ),
-              _SnapshotRow(label: 'Company', value: widget.internship.company),
-              _SnapshotRow(
-                label: 'Location',
-                value: widget.internship.location,
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Text(
-            _canSubmit
-                ? 'Your application is ready to submit.'
-                : 'Complete the uploads and motivation letter to unlock submission.',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: _canSubmit ? AppColors.primary : AppColors.neutral,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
         ],
       ),
     );
   }
 
-  void _pickCvFile() {
-    setState(() {
-      _cvFileName = 'Ahmad_Ramadhan_CV.pdf';
-      _cvUploadProgress = 1;
-    });
+  // FUNGSI INJEKSI: Menggunakan `withData: true` agar file dibaca sebagai bytes memori di Web
+  Future<void> _pickCvFile() async {
+    try {
+      FilePickerResult? result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['pdf', 'doc', 'docx', 'png', 'jpg', 'jpeg'],
+        withData: true, // WAJIB ADA agar bisa dibaca di Flutter Web
+      );
+
+      if (result != null) {
+        final platformFile = result.files.single;
+
+        if (platformFile.bytes != null) {
+          setState(() {
+            _cvBytes = platformFile.bytes;
+            _cvFileName = platformFile.name;
+            _cvUploadProgress = 1.0;
+          });
+        } else {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Gagal membaca isi file. Coba file lain.'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Terjadi kesalahan saat membuka file manager: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   void _pickPortfolio() {
@@ -490,13 +517,13 @@ class _ApplyScreenState extends State<ApplyScreen> {
                   Icons.link_rounded,
                   color: AppColors.primary,
                 ),
-                title: const Text('Use portfolio link'),
-                subtitle: const Text('behance.net/ahmad-ramadhan'),
+                title: const Text('Gunakan URL Portofolio'),
+                subtitle: const Text('Ketik URL secara manual di kolom'),
                 onTap: () {
                   Navigator.pop(context);
                   setState(() {
-                    _portfolioSelection = 'behance.net/ahmad-ramadhan';
-                    _portfolioController.text = _portfolioSelection!;
+                    _portfolioBytes = null;
+                    _portfolioSelection = 'Link Portfolio';
                   });
                 },
               ),
@@ -505,14 +532,46 @@ class _ApplyScreenState extends State<ApplyScreen> {
                   Icons.picture_as_pdf_rounded,
                   color: AppColors.primary,
                 ),
-                title: const Text('Attach portfolio PDF'),
-                subtitle: const Text('Ahmad_Portfolio_TechNova.pdf'),
-                onTap: () {
+                title: const Text('Upload File Portofolio'),
+                subtitle: const Text('Pilih file dari memori HP/PC'),
+                onTap: () async {
                   Navigator.pop(context);
-                  setState(() {
-                    _portfolioSelection = 'Ahmad_Portfolio_TechNova.pdf';
-                    _portfolioController.text = _portfolioSelection!;
-                  });
+                  try {
+                    FilePickerResult? result = await FilePicker.platform
+                        .pickFiles(
+                          type: FileType.custom,
+                          allowedExtensions: ['pdf', 'png', 'jpg', 'jpeg'],
+                          withData:
+                              true, // WAJIB ADA agar bisa dibaca di Flutter Web
+                        );
+
+                    if (result != null) {
+                      final platformFile = result.files.single;
+                      if (platformFile.bytes != null) {
+                        setState(() {
+                          _portfolioBytes = platformFile.bytes;
+                          _portfolioSelection = platformFile.name;
+                          _portfolioController.clear();
+                        });
+                      } else {
+                        if (!mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Gagal membaca isi file portofolio.'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                      }
+                    }
+                  } catch (e) {
+                    if (!mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Gagal buka file manager: $e'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
                 },
               ),
               const SizedBox(height: 8),
@@ -523,24 +582,71 @@ class _ApplyScreenState extends State<ApplyScreen> {
     );
   }
 
-  void _submitApplication(BuildContext context) {
+  Future<void> _submitApplication(BuildContext context) async {
+    if (_cvBytes == null) return;
+
+    setState(() => _isSubmitting = true);
+
     final state = NexusScope.of(context);
-    final application = Application(
-      id: 'app-${DateTime.now().millisecondsSinceEpoch}',
-      internship: widget.internship,
-      status: ApplicationStatus.submitted,
-      appliedDate: DateTime.now(),
+    final token = state.authToken;
+
+    // Mengirim ke API Laravel
+    final result = await ApiService.applyInternship(
+      token: token ?? '',
+      lowonganId: widget.internship.id,
+      fullName: _fullNameController.text.trim(),
+      phone: _phoneController.text.trim(),
+      semester: _semesterController.text.trim(),
+      motivation: _motivationController.text.trim(),
+      cvBytes: _cvBytes!,
+      cvFileName: _cvFileName!,
+      portfolioBytes: _portfolioBytes,
+      portfolioFileName: _portfolioSelection,
+      portfolioLink: _portfolioController.text.trim(),
     );
-    state.submitApplication(application);
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Application submitted successfully.')),
-    );
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(
-        builder: (_) => ApplicationStatusScreen(application: application),
-      ),
-    );
+
+    setState(() => _isSubmitting = false);
+
+    if (result['success'] == true) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Lamaran berhasil dikirim!')),
+      );
+
+      try {
+        await state.loadStudentApplications();
+      } catch (e) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Lamaran tersimpan, tetapi sinkronisasi ulang gagal: $e',
+            ),
+          ),
+        );
+      }
+
+      final application = state.currentApplication;
+      if (application == null || !mounted) return;
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ApplicationStatusScreen(application: application),
+        ),
+      );
+    } else {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(result['message']), // Tampilkan error asli
+          backgroundColor: Colors.red,
+          duration: const Duration(
+            seconds: 6,
+          ), // Durasinya diperlama agar mudah dibaca
+        ),
+      );
+    }
   }
 
   Widget _cardTitle(String title) {
@@ -826,7 +932,7 @@ class _PortfolioDropZone extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Link or PDF Document',
+                      'Link or Document',
                       style: Theme.of(
                         context,
                       ).textTheme.bodySmall?.copyWith(color: AppColors.neutral),
@@ -867,8 +973,8 @@ class _PortfolioDropZone extends StatelessWidget {
                   const SizedBox(height: 6),
                   Text(
                     selection == null
-                        ? 'Drag-and-drop style placeholder area'
-                        : 'Selected portfolio will appear here',
+                        ? 'Pilih File atau Gunakan URL'
+                        : 'Portfolio berhasil dilampirkan',
                     style: Theme.of(
                       context,
                     ).textTheme.bodySmall?.copyWith(color: AppColors.neutral),
@@ -878,14 +984,16 @@ class _PortfolioDropZone extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: controller,
-            decoration: const InputDecoration(
-              labelText: 'Portfolio Link or File Name',
-              hintText: 'behance.net/your-profile or .pdf file',
+          if (selection == 'Link Portfolio') ...[
+            const SizedBox(height: 12),
+            TextField(
+              controller: controller,
+              decoration: const InputDecoration(
+                labelText: 'Ketikkan URL Portfolio',
+                hintText: 'Contoh: behance.net/profil-anda',
+              ),
             ),
-          ),
+          ],
         ],
       ),
     );

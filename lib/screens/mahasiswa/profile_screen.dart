@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../theme/app_theme.dart';
+import '../../models/nexus_app_state.dart';
 
 class DashboardMahasiswaProfileScreen extends StatelessWidget {
   static const routeName = '/mahasiswa/profile';
@@ -9,6 +10,10 @@ class DashboardMahasiswaProfileScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final user =
+        NexusScope.of(context).currentUser ?? const <String, dynamic>{};
+    final name = user['name']?.toString() ?? '-';
+    final identifier = user['email_or_nim']?.toString() ?? '-';
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(title: const Text('Profile')),
@@ -43,13 +48,13 @@ class DashboardMahasiswaProfileScreen extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Nama Mahasiswa',
+                            name,
                             style: Theme.of(context).textTheme.titleLarge
                                 ?.copyWith(fontWeight: FontWeight.w700),
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            'Mahasiswa Informatika',
+                            'Mahasiswa',
                             style: Theme.of(context).textTheme.bodyMedium
                                 ?.copyWith(color: AppColors.neutral),
                           ),
@@ -63,22 +68,22 @@ class DashboardMahasiswaProfileScreen extends StatelessWidget {
               _buildInfoTile(
                 context,
                 Icons.email_rounded,
-                'Email',
-                'mahasiswa@amikom.ac.id',
+                'Email / NIM',
+                identifier,
               ),
               const SizedBox(height: 12),
               _buildInfoTile(
                 context,
                 Icons.school_rounded,
-                'Program Studi',
-                'Informatika',
+                'Semester',
+                user['semester']?.toString() ?? '-',
               ),
               const SizedBox(height: 12),
               _buildInfoTile(
                 context,
-                Icons.location_on_rounded,
-                'Kampus',
-                'Universitas Amikom Yogyakarta',
+                Icons.phone_rounded,
+                'Telepon',
+                user['phone']?.toString() ?? '-',
               ),
               const SizedBox(height: 24),
               Text(

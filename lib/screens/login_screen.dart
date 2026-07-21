@@ -212,6 +212,9 @@ class _LoginScreenState extends State<LoginScreen> {
                                       response['token'] as String?,
                                     );
                                     state.setUserRole(role);
+                                    await state.syncForCurrentRole();
+
+                                    if (!mounted) return;
 
                                     if (mounted) {
                                       ScaffoldMessenger.of(
@@ -254,7 +257,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                         SnackBar(
                                           content: Text(
                                             response['message'] ??
-                                                'Gagal terhubung ke server. Harap pastikan backend Laravel berjalan di http://127.0.0.1:8000',
+                                                'Gagal terhubung ke server Railway.',
                                           ),
                                           backgroundColor: Colors.red.shade400,
                                           duration: const Duration(seconds: 4),

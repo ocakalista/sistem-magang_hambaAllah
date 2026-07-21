@@ -1,86 +1,38 @@
 import 'package:flutter/material.dart';
 
 import '../services/api_service.dart';
-import 'admin_model.dart';
 import 'application_model.dart';
 import 'mitra_model.dart';
 
 class MitraProvider extends ChangeNotifier {
   MitraProvider();
 
-  final MitraInfo info = const MitraInfo(
-    idMitra: 'mitra-001',
-    idUser: 'user-001',
-    companyName: 'PT Amikom Mitra Sejahtera',
+  MitraInfo info = const MitraInfo(
+    idMitra: '',
+    idUser: '',
+    companyName: 'Mitra',
   );
 
   MitraStats stats = const MitraStats(
-    totalLowongan: 12,
-    pendaftarBaru: 48,
-    pendaftarGrowthPercent: 15.0,
-    diterima: 24,
-    approvalRate: 85.0,
+    totalLowongan: 0,
+    pendaftarBaru: 0,
+    pendaftarGrowthPercent: 0,
+    diterima: 0,
+    approvalRate: 0,
   );
 
-  final List<PendaftarTerbaru> pendaftarTerbaru = [
-    PendaftarTerbaru(
-      id: 'm-1',
-      name: 'Ahmad Sulaiman',
-      position: 'Fullstack Developer Intern',
-      avatarUrl: 'https://i.pravatar.cc/150?img=5',
-      appliedAt: DateTime.now().subtract(const Duration(hours: 2)),
-      status: ApplicationStatus.underReview,
-    ),
-    PendaftarTerbaru(
-      id: 'm-2',
-      name: 'Sarah Putri',
-      position: 'UI/UX Designer Intern',
-      avatarUrl: 'https://i.pravatar.cc/150?img=12',
-      appliedAt: DateTime.now().subtract(const Duration(hours: 5)),
-      status: ApplicationStatus.interview,
-    ),
-    PendaftarTerbaru(
-      id: 'm-3',
-      name: 'Budi Santoso',
-      position: 'Data Scientist Intern',
-      avatarUrl: 'https://i.pravatar.cc/150?img=32',
-      appliedAt: DateTime.now().subtract(const Duration(days: 1)),
-      status: ApplicationStatus.submitted,
-    ),
-  ];
+  final List<PendaftarTerbaru> pendaftarTerbaru = <PendaftarTerbaru>[];
 
   bool isLoadingLowongan = false;
   String? lowonganError;
 
   InsightMingguan insight = const InsightMingguan(
-    insightText:
-        'Interaksi postingan Anda meningkat 24% dibandingkan minggu lalu. Posisi UI/UX Designer paling banyak diminati.',
-    capacityUsed: 70,
-    capacityTotal: 100,
+    insightText: 'Statistik dihitung dari data pelamar di server.',
+    capacityUsed: 0,
+    capacityTotal: 0,
   );
 
-  List<LowonganMitra> lowonganList = [
-    LowonganMitra(
-      id: 'm-l-1',
-      position: 'Frontend Developer Intern',
-      category: 'Engineering',
-      location: 'Remote',
-      tags: ['Remote', 'Full-time', '6 Months'],
-      period: 'Jul - Des 2026',
-      quota: 4,
-      applicantCount: 24,
-      description:
-          'Bergabung dengan tim produk kami untuk membangun antarmuka web yang dinamis dan terukur menggunakan Flutter Web dan React.',
-      requirements: [
-        'Sedang menempuh studi TI atau sejenisnya',
-        'Menguasai HTML, CSS, dan JavaScript',
-        'Paham prinsip desain responsif',
-      ],
-      benefits: ['Competitive Stipend', 'Mentorship Program'],
-      approvalStatus: LowonganApprovalStatus.approved,
-      deadline: DateTime.now().add(const Duration(days: 16)),
-    ),
-  ];
+  List<LowonganMitra> lowonganList = <LowonganMitra>[];
 
   Future<void> loadLowongan(String? token) async {
     isLoadingLowongan = true;
@@ -95,9 +47,60 @@ class MitraProvider extends ChangeNotifier {
     }
 
     try {
+      final user = await ApiService.fetchCurrentUser(token);
+      info = MitraInfo(
+        idMitra: '',
+        idUser: user['id']?.toString() ?? '',
+        companyName: user['name']?.toString() ?? 'Mitra',
+      );
       final fetched = await ApiService.fetchMitraLowongan(token);
       lowonganList = fetched;
-      stats = stats.copyWith(totalLowongan: fetched.length);
+      final applicants = <PendaftarTerbaru>[];
+      for (final lowongan in fetched) {
+        final rows = await ApiService.fetchApplicants(token, lowongan.id);
+        for (final row in rows) {
+          applicants.add(
+            PendaftarTerbaru(
+              id: row['id_pendaftaran']?.toString() ?? '',
+              name: row['nama_mahasiswa']?.toString() ?? '',
+              position: lowongan.position,
+              avatarUrl: null,
+              appliedAt:
+                  DateTime.tryParse(row['tanggal_daftar']?.toString() ?? '') ??
+                  DateTime.fromMillisecondsSinceEpoch(0),
+              status: Application.statusFromApi(row['status']),
+              nim: row['nim']?.toString(),
+              major: row['jurusan']?.toString(),
+              cvUrl: row['url_cv']?.toString(),
+            ),
+          );
+        }
+      }
+      applicants.sort((a, b) => b.appliedAt.compareTo(a.appliedAt));
+      pendaftarTerbaru
+        ..clear()
+        ..addAll(applicants);
+      final accepted =
+          applicants
+              .where((item) => item.status == ApplicationStatus.accepted)
+              .length;
+      stats = MitraStats(
+        totalLowongan: fetched.length,
+        pendaftarBaru: applicants.length,
+        pendaftarGrowthPercent: 0,
+        diterima: accepted,
+        approvalRate:
+            applicants.isEmpty ? 0 : (accepted / applicants.length) * 100,
+      );
+      insight = InsightMingguan(
+        insightText:
+            '${applicants.length} pelamar dari ${fetched.length} lowongan.',
+        capacityUsed: applicants.length.toDouble(),
+        capacityTotal: fetched.fold<double>(
+          0,
+          (total, item) => total + item.quota + item.applicantCount,
+        ),
+      );
     } catch (e) {
       lowonganError = e.toString();
     }
@@ -105,34 +108,27 @@ class MitraProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  void tambahLowongan(LowonganMitra lowongan) {
-    final pendingLowongan = LowonganMitra(
-      id: 'm-l-${DateTime.now().millisecondsSinceEpoch}',
-      position: lowongan.position,
-      category: lowongan.category,
-      location: lowongan.location,
-      tags: lowongan.tags,
-      period: lowongan.period,
-      quota: lowongan.quota,
-      applicantCount: lowongan.applicantCount,
-      description: lowongan.description,
-      requirements: lowongan.requirements,
-      benefits: lowongan.benefits,
-      approvalStatus: LowonganApprovalStatus.pending,
-      deadline: lowongan.deadline,
-    );
-
-    lowonganList.insert(0, pendingLowongan);
-    stats = stats.copyWith(totalLowongan: stats.totalLowongan + 1);
-    notifyListeners();
+  Future<void> tambahLowongan(
+    String token,
+    Map<String, dynamic> payload,
+  ) async {
+    await ApiService.createLowongan(token, payload);
+    await loadLowongan(token);
   }
 
-  void updateApplicantStatus(String id, ApplicationStatus status) {
+  Future<void> updateApplicantStatus(
+    String token,
+    String id,
+    ApplicationStatus status,
+  ) async {
     final index = pendaftarTerbaru.indexWhere((item) => item.id == id);
     if (index == -1) {
       return;
     }
 
+    final apiStatus =
+        status == ApplicationStatus.accepted ? 'diterima' : 'ditolak';
+    await ApiService.updateApplicantStatus(token, id, apiStatus);
     pendaftarTerbaru[index] = PendaftarTerbaru(
       id: pendaftarTerbaru[index].id,
       name: pendaftarTerbaru[index].name,
@@ -140,6 +136,9 @@ class MitraProvider extends ChangeNotifier {
       avatarUrl: pendaftarTerbaru[index].avatarUrl,
       appliedAt: pendaftarTerbaru[index].appliedAt,
       status: status,
+      nim: pendaftarTerbaru[index].nim,
+      major: pendaftarTerbaru[index].major,
+      cvUrl: pendaftarTerbaru[index].cvUrl,
     );
     notifyListeners();
   }

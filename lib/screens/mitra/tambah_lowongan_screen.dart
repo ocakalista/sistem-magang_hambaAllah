@@ -19,9 +19,8 @@ class TambahLowonganScreen extends StatefulWidget {
 class _TambahLowonganScreenState extends State<TambahLowonganScreen> {
   final _formKey = GlobalKey<FormState>();
   final _judulController = TextEditingController();
-  final _namaPerusahaanController = TextEditingController(
-    text: 'PT Amikom Tech',
-  );
+  final _namaPerusahaanController = TextEditingController();
+  bool _companyInitialized = false;
   final _lokasiController = TextEditingController();
   final _deskripsiController = TextEditingController();
   final _requirementController = TextEditingController();
@@ -35,6 +34,16 @@ class _TambahLowonganScreenState extends State<TambahLowonganScreen> {
   int _kuota = 1;
   final List<String> _requirements = [];
   final List<String> _benefits = [];
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_companyInitialized) {
+      _companyInitialized = true;
+      _namaPerusahaanController.text =
+          context.read<MitraProvider>().info.companyName;
+    }
+  }
 
   @override
   void dispose() {
@@ -496,7 +505,7 @@ class _TambahLowonganScreenState extends State<TambahLowonganScreen> {
     return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
   }
 
-  void _submitForm(BuildContext context, MitraProvider state) {
+  Future<void> _submitForm(BuildContext context, MitraProvider state) async {
     if (!_formKey.currentState!.validate() ||
         _periodeMulai == null ||
         _periodeSelesai == null) {
@@ -530,17 +539,37 @@ class _TambahLowonganScreenState extends State<TambahLowonganScreen> {
       deadline: _periodeSelesai!.add(const Duration(days: 7)),
     );
 
-    state.tambahLowongan(lowongan);
-    NexusScope.of(context).addPendingLowongan(
-      PendingLowongan(
-        id: 'req-${DateTime.now().millisecondsSinceEpoch}',
-        companyName: _namaPerusahaanController.text.trim(),
-        companyCategory: _selectedKategori ?? 'Other',
-        requestDescription:
-            '${_judulController.text.trim()} — ${_lokasiController.text.trim()}\nKuota: $_kuota \n${_deskripsiController.text.trim()}',
-      ),
-    );
-
+    final token = NexusScope.of(context).authToken;
+    if (token == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Sesi login tidak tersedia.')),
+      );
+      return;
+    }
+    try {
+      await state.tambahLowongan(token, {
+        'judul_posisi': lowongan.position,
+        'deskripsi': lowongan.description,
+        'persyaratan': lowongan.requirements.join('\n'),
+        'kategori': lowongan.category,
+        'lokasi': lowongan.location,
+        'tipe_kerja': _selectedTipeKerja,
+        'tipe_kontrak': _selectedTipeKontrak,
+        'benefit': lowongan.benefits.join('\n'),
+        'kuota': lowongan.quota,
+        'batas_waktu': _periodeSelesai!.toIso8601String().split('T').first,
+      });
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString().replaceFirst('Exception: ', '')),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+    if (!mounted) return;
     showDialog<void>(
       context: context,
       builder: (context) {

@@ -88,38 +88,60 @@ class InternshipDetailScreen extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 16),
+
+                  // INJEKSI: Mengatasi error jika requirements dari API kosong
                   _SectionCard(
                     title: 'Requirements',
-                    child: Column(
-                      children:
-                          internship.requirements
-                              .map(
-                                (item) => Padding(
-                                  padding: const EdgeInsets.only(bottom: 12),
-                                  child: _BulletRow(
-                                    icon: Icons.check_circle_rounded,
-                                    iconColor: AppColors.primary,
-                                    text: item,
-                                  ),
-                                ),
-                              )
-                              .toList(),
-                    ),
+                    child:
+                        internship.requirements.isEmpty
+                            ? Text(
+                              'Tidak ada persyaratan khusus yang dicantumkan.',
+                              style: Theme.of(context).textTheme.bodyMedium
+                                  ?.copyWith(color: AppColors.neutral),
+                            )
+                            : Column(
+                              children:
+                                  internship.requirements
+                                      .map(
+                                        (item) => Padding(
+                                          padding: const EdgeInsets.only(
+                                            bottom: 12,
+                                          ),
+                                          child: _BulletRow(
+                                            icon: Icons.check_circle_rounded,
+                                            iconColor: AppColors.primary,
+                                            text: item,
+                                          ),
+                                        ),
+                                      )
+                                      .toList(),
+                            ),
                   ),
                   const SizedBox(height: 16),
+
+                  // INJEKSI: Mengatasi error jika benefits dari API kosong
                   _SectionCard(
                     title: 'Benefits',
-                    child: Column(
-                      children:
-                          internship.benefits
-                              .map(
-                                (benefit) => Padding(
-                                  padding: const EdgeInsets.only(bottom: 12),
-                                  child: _BenefitRow(benefit: benefit),
-                                ),
-                              )
-                              .toList(),
-                    ),
+                    child:
+                        internship.benefits.isEmpty
+                            ? Text(
+                              'Tidak ada informasi benefit tambahan.',
+                              style: Theme.of(context).textTheme.bodyMedium
+                                  ?.copyWith(color: AppColors.neutral),
+                            )
+                            : Column(
+                              children:
+                                  internship.benefits
+                                      .map(
+                                        (benefit) => Padding(
+                                          padding: const EdgeInsets.only(
+                                            bottom: 12,
+                                          ),
+                                          child: _BenefitRow(benefit: benefit),
+                                        ),
+                                      )
+                                      .toList(),
+                            ),
                   ),
                 ],
               ),
@@ -278,36 +300,39 @@ class _HeroHeader extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(height: 10),
+                        // INJEKSI: Mengatasi error jika tags dari API kosong
                         Wrap(
                           spacing: 8,
                           runSpacing: 8,
                           children:
-                              internship.tags
-                                  .map(
-                                    (tag) => Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 12,
-                                        vertical: 8,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: Colors.white.withValues(
-                                          alpha: 0.16,
+                              internship.tags.isEmpty
+                                  ? []
+                                  : internship.tags
+                                      .map(
+                                        (tag) => Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 12,
+                                            vertical: 8,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: Colors.white.withValues(
+                                              alpha: 0.16,
+                                            ),
+                                            borderRadius: BorderRadius.circular(
+                                              999,
+                                            ),
+                                          ),
+                                          child: Text(
+                                            tag,
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontWeight: FontWeight.w600,
+                                              fontSize: 12,
+                                            ),
+                                          ),
                                         ),
-                                        borderRadius: BorderRadius.circular(
-                                          999,
-                                        ),
-                                      ),
-                                      child: Text(
-                                        tag,
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.w600,
-                                          fontSize: 12,
-                                        ),
-                                      ),
-                                    ),
-                                  )
-                                  .toList(),
+                                      )
+                                      .toList(),
                         ),
                       ],
                     ),
@@ -379,9 +404,11 @@ class _CompanyCard extends StatelessWidget {
                   spacing: 8,
                   runSpacing: 8,
                   children:
-                      internship.tags
-                          .map((tag) => _TagChip(label: tag))
-                          .toList(),
+                      internship.tags.isEmpty
+                          ? []
+                          : internship.tags
+                              .map((tag) => _TagChip(label: tag))
+                              .toList(),
                 ),
               ],
             ),

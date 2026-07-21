@@ -10,11 +10,31 @@ import '../../screens/mitra/tambah_lowongan_screen.dart';
 import '../../screens/notifications_screen.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/mitra_bottom_nav.dart';
+import '../../models/nexus_app_state.dart';
 
-class MitraDashboardScreen extends StatelessWidget {
+class MitraDashboardScreen extends StatefulWidget {
   static const routeName = '/mitra/dashboard';
 
   const MitraDashboardScreen({super.key});
+
+  @override
+  State<MitraDashboardScreen> createState() => _MitraDashboardScreenState();
+}
+
+class _MitraDashboardScreenState extends State<MitraDashboardScreen> {
+  bool _isInitialized = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_isInitialized) {
+      _isInitialized = true;
+      final appState = NexusScope.of(context);
+      final mitraProvider = Provider.of<MitraProvider>(context, listen: false);
+      // INJEKSI: Memanggil API saat Dashboard Mitra terbuka
+      mitraProvider.loadLowongan(appState.authToken);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -67,7 +87,7 @@ class MitraDashboardScreen extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                'Halo, PT Amikom Tech',
+                'Halo, ${state.info.companyName}', // Menggunakan nama perusahaan dari state
                 style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                   fontSize: 32,
                   fontWeight: FontWeight.w800,
@@ -113,7 +133,7 @@ class MitraDashboardScreen extends StatelessWidget {
                   ),
                   TextButton(
                     onPressed: () {},
-                    child: Text(
+                    child: const Text(
                       'Lihat Semua',
                       style: TextStyle(
                         color: AppColors.primary,
@@ -124,16 +144,29 @@ class MitraDashboardScreen extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 10),
-              ListView.separated(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: state.pendaftarTerbaru.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 12),
-                itemBuilder: (context, index) {
-                  final pendaftar = state.pendaftarTerbaru[index];
-                  return _buildApplicantCard(context, pendaftar);
-                },
-              ),
+              // Menangani jika data pendaftar terbaru kosong
+              if (state.pendaftarTerbaru.isEmpty)
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  alignment: Alignment.center,
+                  child: Text(
+                    'Belum ada pendaftar terbaru.',
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodyMedium?.copyWith(color: AppColors.neutral),
+                  ),
+                )
+              else
+                ListView.separated(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: state.pendaftarTerbaru.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 12),
+                  itemBuilder: (context, index) {
+                    final pendaftar = state.pendaftarTerbaru[index];
+                    return _buildApplicantCard(context, pendaftar);
+                  },
+                ),
               const SizedBox(height: 24),
               _buildInsightCard(context, state.insight),
             ],
@@ -176,13 +209,18 @@ class MitraDashboardScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 10),
-                Text(
-                  state.stats.totalLowongan.toString(),
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    fontSize: 42,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
+                // INJEKSI: Menampilkan loading indicator kecil jika data API sedang diambil
+                state.isLoadingLowongan
+                    ? const SizedBox(
+                      height: 24,
+                      width: 24,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                    : Text(
+                      state.stats.totalLowongan.toString(),
+                      style: Theme.of(context).textTheme.headlineMedium
+                          ?.copyWith(fontSize: 42, fontWeight: FontWeight.w800),
+                    ),
               ],
             ),
           ),
@@ -431,13 +469,6 @@ class MitraDashboardScreen extends StatelessWidget {
                 ),
               ),
             ],
-          ),
-          const SizedBox(height: 10),
-          Text(
-            'TODO: Connect to backend API when available',
-            style: Theme.of(
-              context,
-            ).textTheme.bodySmall?.copyWith(color: AppColors.neutral),
           ),
         ],
       ),

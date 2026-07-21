@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../models/application_model.dart';
 import '../../models/nexus_app_state.dart';
+import '../../services/api_service.dart'; // INJEKSI 1: Import ApiService
 import 'application_status_screen.dart';
 import 'internship_detail_screen.dart';
 import 'internship_progress_screen.dart';
@@ -19,30 +20,74 @@ class DashboardMahasiswa extends StatefulWidget {
 
 class _DashboardMahasiswaState extends State<DashboardMahasiswa> {
   int _selectedIndex = 0;
-  final List<String> _filters = ['All', 'Engineering', 'Design', 'Marketing'];
-  final List<Internship> _recommended = const [demoInternship];
+  String _query = '';
 
-  final List<Map<String, String>> _activities = const [
-    {
-      'title': 'Application submitted',
-      'desc': 'Frontend Engineering Intern at Telkom Indonesia',
-      'time': '10 min ago',
-    },
-    {
-      'title': 'Interview scheduled',
-      'desc': 'Product Design Intern at Gojek',
-      'time': '2 hours ago',
-    },
-    {
-      'title': 'Profile completed',
-      'desc': 'Your internship profile is now 100% complete',
-      'time': 'Yesterday',
-    },
-  ];
+  // Data katalog selalu berasal dari API.
+  List<Internship> _recommended = [];
+  bool _isLoading = true;
+  String? _error;
+
+  // INJEKSI 3: Jalankan penarikan data saat halaman pertama kali dibuka
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _fetchDataLowongan();
+    });
+  }
+
+  Future<void> _fetchDataLowongan() async {
+    final token = NexusScope.of(context).authToken;
+    try {
+      final data = await ApiService.fetchLowonganMahasiswa(token);
+      if (mounted) {
+        setState(() {
+          _recommended = data;
+          _isLoading = false;
+          _error = null;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _error = e.toString().replaceFirst('Exception: ', '');
+        });
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final appState = NexusScope.of(context);
+    final recommendations =
+        _recommended.where((item) {
+          final query = _query.toLowerCase();
+          return query.isEmpty ||
+              item.position.toLowerCase().contains(query) ||
+              item.company.toLowerCase().contains(query);
+        }).toList();
+    final activeApplications =
+        appState.applications
+            .where((item) => item.status != ApplicationStatus.rejected)
+            .length;
+    final accepted =
+        appState.applications
+            .where((item) => item.status == ApplicationStatus.accepted)
+            .length;
+    final completion =
+        activeApplications == 0 ? 0.0 : accepted / activeApplications;
+    final activities =
+        appState.applications
+            .map(
+              (application) => {
+                'title': 'Lamaran ${application.status.label}',
+                'desc':
+                    '${application.internship.position} - ${application.internship.company}',
+                'time': _formatDate(application.appliedDate),
+              },
+            )
+            .toList();
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -95,6 +140,7 @@ class _DashboardMahasiswaState extends State<DashboardMahasiswa> {
               ),
               const SizedBox(height: 18),
               TextField(
+                onChanged: (value) => setState(() => _query = value),
                 decoration: InputDecoration(
                   hintText: 'Search internships...',
                   prefixIcon: const Icon(Icons.search_rounded),
@@ -102,34 +148,6 @@ class _DashboardMahasiswaState extends State<DashboardMahasiswa> {
                     onPressed: () {},
                     icon: const Icon(Icons.tune_rounded),
                   ),
-                ),
-              ),
-              const SizedBox(height: 18),
-              SizedBox(
-                height: 42,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: _filters.length,
-                  separatorBuilder: (_, __) => const SizedBox(width: 10),
-                  itemBuilder: (context, index) {
-                    final isSelected = index == 0;
-                    return ChoiceChip(
-                      label: Text(_filters[index]),
-                      selected: isSelected,
-                      onSelected: (_) {},
-                      selectedColor: AppColors.primary,
-                      labelStyle: Theme.of(
-                        context,
-                      ).textTheme.labelMedium?.copyWith(
-                        color: isSelected ? Colors.white : Colors.black87,
-                      ),
-                      backgroundColor: const Color(0xFFF4EFFB),
-                      side: BorderSide.none,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(999),
-                      ),
-                    );
-                  },
                 ),
               ),
               const SizedBox(height: 18),
@@ -157,7 +175,7 @@ class _DashboardMahasiswaState extends State<DashboardMahasiswa> {
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            '2 Active',
+                            '$activeApplications Aktif',
                             style: Theme.of(context).textTheme.headlineMedium
                                 ?.copyWith(color: Colors.white, fontSize: 28),
                           ),
@@ -176,8 +194,8 @@ class _DashboardMahasiswaState extends State<DashboardMahasiswa> {
                       child: Stack(
                         alignment: Alignment.center,
                         children: [
-                          const CircularProgressIndicator(
-                            value: 0.75,
+                          CircularProgressIndicator(
+                            value: completion,
                             strokeWidth: 8,
                             backgroundColor: Colors.white24,
                             valueColor: AlwaysStoppedAnimation<Color>(
@@ -185,7 +203,7 @@ class _DashboardMahasiswaState extends State<DashboardMahasiswa> {
                             ),
                           ),
                           Text(
-                            '75%',
+                            '${(completion * 100).round()}%',
                             style: Theme.of(
                               context,
                             ).textTheme.titleMedium?.copyWith(
@@ -213,29 +231,73 @@ class _DashboardMahasiswaState extends State<DashboardMahasiswa> {
                 ],
               ),
               const SizedBox(height: 12),
-              SizedBox(
-                height: 178,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: _recommended.length,
-                  separatorBuilder: (_, __) => const SizedBox(width: 14),
-                  itemBuilder: (context, index) {
-                    final item = _recommended[index];
-                    return _RecommendationCard(
-                      internship: item,
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder:
-                                (_) => InternshipDetailScreen(internship: item),
+
+              // INJEKSI 4: Tampilkan animasi loading, text kosong, atau List Lowongan API
+              _isLoading
+                  ? const Center(
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(vertical: 40),
+                      child: CircularProgressIndicator(
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  )
+                  : _error != null
+                  ? Center(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 32),
+                      child: Column(
+                        children: [
+                          Text(_error!, textAlign: TextAlign.center),
+                          TextButton(
+                            onPressed: () {
+                              setState(() => _isLoading = true);
+                              _fetchDataLowongan();
+                            },
+                            child: const Text('Coba lagi'),
                           ),
+                        ],
+                      ),
+                    ),
+                  )
+                  : recommendations.isEmpty
+                  ? Center(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 40),
+                      child: Text(
+                        'Belum ada lowongan magang tersedia.',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: AppColors.neutral,
+                        ),
+                      ),
+                    ),
+                  )
+                  : SizedBox(
+                    height: 178,
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: recommendations.length,
+                      separatorBuilder: (_, __) => const SizedBox(width: 14),
+                      itemBuilder: (context, index) {
+                        final item = recommendations[index];
+                        return _RecommendationCard(
+                          internship: item,
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder:
+                                    (_) => InternshipDetailScreen(
+                                      internship: item,
+                                    ),
+                              ),
+                            );
+                          },
                         );
                       },
-                    );
-                  },
-                ),
-              ),
+                    ),
+                  ),
+
               const SizedBox(height: 22),
               Text(
                 'Recent Activity',
@@ -244,7 +306,12 @@ class _DashboardMahasiswaState extends State<DashboardMahasiswa> {
                 ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 10),
-              ..._activities.map(
+              if (activities.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 20),
+                  child: Center(child: Text('Belum ada riwayat lamaran.')),
+                ),
+              ...activities.map(
                 (activity) => _ActivityTile(activity: activity),
               ),
             ],
@@ -310,6 +377,11 @@ class _DashboardMahasiswaState extends State<DashboardMahasiswa> {
         ],
       ),
     );
+  }
+
+  String _formatDate(DateTime date) {
+    if (date.millisecondsSinceEpoch == 0) return '-';
+    return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
   }
 }
 

@@ -20,6 +20,9 @@ class DosenDashboardScreen extends StatefulWidget {
 
 class _DosenDashboardScreenState extends State<DosenDashboardScreen> {
   int _selectedIndex = 0;
+  bool _isInitialized = false;
+  bool _isLoading = false;
+  String? _loadError;
 
   String _getRelativeTime(DateTime dateTime) {
     final now = DateTime.now();
@@ -175,16 +178,28 @@ class _DosenDashboardScreenState extends State<DosenDashboardScreen> {
                       ],
                     ),
                     const SizedBox(height: 20),
-                    Text(
-                      '${dosenStats.totalApprovalNeeded.toString().padLeft(2, '0')}',
-                      style: Theme.of(
-                        context,
-                      ).textTheme.headlineLarge?.copyWith(
-                        color: AppColors.white,
-                        fontSize: 48,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
+                    _isLoading
+                        ? const Center(
+                          child: SizedBox(
+                            height: 48,
+                            width: 48,
+                            child: CircularProgressIndicator(
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                AppColors.white,
+                              ),
+                            ),
+                          ),
+                        )
+                        : Text(
+                          '${dosenStats.totalApprovalNeeded.toString().padLeft(2, '0')}',
+                          style: Theme.of(
+                            context,
+                          ).textTheme.headlineLarge?.copyWith(
+                            color: AppColors.white,
+                            fontSize: 48,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
                     const SizedBox(height: 12),
                     Row(
                       children: [
@@ -195,7 +210,9 @@ class _DosenDashboardScreenState extends State<DosenDashboardScreen> {
                         ),
                         const SizedBox(width: 4),
                         Text(
-                          '+${dosenStats.approvalChangeFromYesterday} from yesterday',
+                          _isLoading
+                              ? 'Memuat…'
+                              : '+${dosenStats.approvalChangeFromYesterday} from yesterday',
                           style: Theme.of(
                             context,
                           ).textTheme.labelSmall?.copyWith(
@@ -323,6 +340,27 @@ class _DosenDashboardScreenState extends State<DosenDashboardScreen> {
                 ],
               ),
               const SizedBox(height: 24),
+
+              if (_loadError != null)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Gagal memuat mahasiswa: $_loadError',
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(color: AppColors.neutral),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      ElevatedButton(
+                        onPressed: _loadData,
+                        child: const Text('Coba Lagi'),
+                      ),
+                    ],
+                  ),
+                ),
 
               // Pending Approvals Section
               Row(
@@ -669,6 +707,37 @@ class _DosenDashboardScreenState extends State<DosenDashboardScreen> {
         },
       ),
     );
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_isInitialized) {
+      _isInitialized = true;
+      _loadData();
+    }
+  }
+
+  Future<void> _loadData() async {
+    final state = NexusScope.of(context);
+    if (state.mahasiswaBimbingan.isNotEmpty) return;
+    setState(() {
+      _isLoading = true;
+      _loadError = null;
+    });
+
+    try {
+      await state.loadMahasiswaBimbingan();
+      setState(() {
+        _isLoading = false;
+        _loadError = null;
+      });
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+        _loadError = e.toString();
+      });
+    }
   }
 
   void _navigateToStudents() {

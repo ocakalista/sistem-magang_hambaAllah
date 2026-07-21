@@ -24,6 +24,53 @@ class Internship {
     required this.requirements,
     required this.benefits,
   });
+
+  // FUNGSI BARU: Untuk mengubah data JSON dari API Laravel menjadi objek Internship
+  factory Internship.fromJson(Map<String, dynamic> json) {
+    List<String> strings(dynamic value) {
+      if (value is List) return value.map((item) => item.toString()).toList();
+      if (value is String) {
+        return value
+            .split(RegExp(r'[,\n]'))
+            .map((item) => item.trim())
+            .where((item) => item.isNotEmpty)
+            .toList();
+      }
+      return <String>[];
+    }
+
+    final start = json['tanggal_mulai']?.toString();
+    final end = (json['batas_waktu'] ?? json['tanggal_selesai'])?.toString();
+    return Internship(
+      id: json['id_lowongan']?.toString() ?? json['id']?.toString() ?? '',
+      position:
+          json['judul_posisi'] ??
+          json['posisi'] ??
+          json['position'] ??
+          'Posisi Magang',
+      company:
+          json['nama_perusahaan']?.toString() ??
+          json['company']?.toString() ??
+          '',
+      location:
+          json['lokasi']?.toString() ?? json['location']?.toString() ?? '',
+      tags: strings(json['tags'] ?? json['kategori']),
+      period:
+          json['periode']?.toString() ??
+          json['period']?.toString() ??
+          [
+            start,
+            end,
+          ].whereType<String>().where((value) => value.isNotEmpty).join(' - '),
+      quota: json['kuota']?.toString() ?? json['quota']?.toString() ?? '0',
+      description:
+          json['deskripsi']?.toString() ??
+          json['description']?.toString() ??
+          '',
+      requirements: strings(json['requirements'] ?? json['persyaratan']),
+      benefits: strings(json['benefits'] ?? json['keuntungan']),
+    );
+  }
 }
 
 class Application {
@@ -68,9 +115,52 @@ class Application {
       weeklyReports: weeklyReports ?? this.weeklyReports,
     );
   }
+
+  static ApplicationStatus statusFromApi(dynamic value) {
+    switch (value?.toString().toLowerCase()) {
+      case 'diterima':
+      case 'accepted':
+      case 'selesai':
+        return ApplicationStatus.accepted;
+      case 'ditolak':
+      case 'rejected':
+        return ApplicationStatus.rejected;
+      case 'review':
+      case 'under_review':
+        return ApplicationStatus.underReview;
+      case 'interview':
+        return ApplicationStatus.interview;
+      default:
+        return ApplicationStatus.submitted;
+    }
+  }
+
+  factory Application.fromJson(
+    Map<String, dynamic> json, {
+    required Internship internship,
+    List<WeeklyReport> weeklyReports = const [],
+  }) {
+    final appliedAt = json['created_at'] ?? json['tanggal_daftar'];
+    return Application(
+      id: json['id_pendaftaran']?.toString() ?? json['id']?.toString() ?? '',
+      internship: internship,
+      status: statusFromApi(json['status']),
+      appliedDate:
+          DateTime.tryParse(appliedAt?.toString() ?? '') ??
+          DateTime.fromMillisecondsSinceEpoch(0),
+      currentWeek:
+          weeklyReports.isEmpty
+              ? 0
+              : weeklyReports
+                  .map((item) => item.weekNumber)
+                  .reduce((a, b) => a > b ? a : b),
+      weeklyReports: weeklyReports,
+    );
+  }
 }
 
 class WeeklyReport {
+  final String id;
   final int weekNumber;
   final String title;
   final String description;
@@ -80,6 +170,7 @@ class WeeklyReport {
   String? lecturerName;
 
   WeeklyReport({
+    this.id = '',
     required this.weekNumber,
     required this.title,
     required this.description,
@@ -88,6 +179,26 @@ class WeeklyReport {
     this.feedbackFromLecturer,
     this.lecturerName,
   });
+
+  factory WeeklyReport.fromJson(Map<String, dynamic> json) {
+    final validation = json['status_validasi']?.toString().toLowerCase();
+    return WeeklyReport(
+      id: json['id_logbook']?.toString() ?? json['id']?.toString() ?? '',
+      weekNumber: int.tryParse(json['minggu_ke']?.toString() ?? '') ?? 0,
+      title: 'Logbook Minggu ${json['minggu_ke'] ?? '-'}',
+      description:
+          json['deskripsi_kegiatan']?.toString() ??
+          json['deskripsi']?.toString() ??
+          '',
+      status:
+          validation == 'disetujui'
+              ? 'completed'
+              : validation == 'revisi'
+              ? 'revision'
+              : 'submitted',
+      dueDate: DateTime.tryParse(json['tanggal']?.toString() ?? ''),
+    );
+  }
 }
 
 extension ApplicationStatusLabel on ApplicationStatus {
@@ -105,65 +216,4 @@ extension ApplicationStatusLabel on ApplicationStatus {
         return 'Rejected';
     }
   }
-}
-
-const Internship demoInternship = Internship(
-  id: 'tech-nova-senior-product-design',
-  position: 'Senior Product Design Intern',
-  company: 'TechNova Solutions',
-  location: 'Jakarta, ID',
-  tags: ['Remote', 'Full-time', '6 Months'],
-  period: 'Aug - Jan 2024',
-  quota: '3 Positions Left',
-  description:
-      'Join TechNova Solutions to contribute to fintech app design alongside senior design leads. You will help shape intuitive flows, polish interface systems, and support product decisions that make complex financial experiences feel simple and human.',
-  requirements: [
-    'Active student in Computer Science, Design, or a related field',
-    'Proficiency with Figma, Adobe XD, or Framer',
-    'Solid understanding of UI/UX systems and design thinking',
-    'Comfort working in a fast-moving agile environment',
-  ],
-  benefits: [
-    'Competitive Stipend',
-    'Mentorship Program',
-    'Potential Full-time Offer',
-  ],
-);
-
-List<WeeklyReport> buildDemoWeeklyReports() {
-  return [
-    WeeklyReport(
-      weekNumber: 1,
-      title: 'Onboarding and Product Audit',
-      description:
-          'Completed onboarding sessions, mapped the current design system, and documented UX gaps across the financial onboarding flow.',
-      status: 'completed',
-      dueDate: DateTime(2024, 8, 9),
-      feedbackFromLecturer:
-          'Strong observation skills. Keep sharpening your hierarchy decisions.',
-      lecturerName: 'Dr. Rina Saraswati',
-    ),
-    WeeklyReport(
-      weekNumber: 2,
-      title: 'Wireframe Exploration',
-      description:
-          'Created low-fidelity wireframes for the savings dashboard and aligned the proposed navigation with the product team.',
-      status: 'completed',
-      dueDate: DateTime(2024, 8, 16),
-      feedbackFromLecturer:
-          'Good structure. Consider more contrast in the primary actions.',
-      lecturerName: 'Dr. Rina Saraswati',
-    ),
-    WeeklyReport(
-      weekNumber: 3,
-      title: 'Interaction Refinement',
-      description:
-          'Refining component states and preparing the high-fidelity handoff for the payments feature.',
-      status: 'ongoing',
-      dueDate: DateTime(2024, 8, 23),
-      feedbackFromLecturer:
-          'You are on track. Focus on edge states before the next review.',
-      lecturerName: 'Dr. Rina Saraswati',
-    ),
-  ];
 }

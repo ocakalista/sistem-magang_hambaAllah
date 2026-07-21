@@ -197,30 +197,32 @@ class _MitraKelolaLowonganScreenState extends State<MitraKelolaLowonganScreen> {
             ).textTheme.bodyMedium?.copyWith(color: AppColors.neutral),
           ),
           const SizedBox(height: 10),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children:
-                lowongan.tags
-                    .map(
-                      (tag) => Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 6,
+          // INJEKSI: Mengatasi error jika tag kosong
+          if (lowongan.tags.isNotEmpty)
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children:
+                  lowongan.tags
+                      .map(
+                        (tag) => Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.background,
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Text(
+                            tag,
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(color: AppColors.neutral),
+                          ),
                         ),
-                        decoration: BoxDecoration(
-                          color: AppColors.background,
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: Text(
-                          tag,
-                          style: Theme.of(context).textTheme.bodySmall
-                              ?.copyWith(color: AppColors.neutral),
-                        ),
-                      ),
-                    )
-                    .toList(),
-          ),
+                      )
+                      .toList(),
+            ),
           const SizedBox(height: 12),
           Row(
             children: [

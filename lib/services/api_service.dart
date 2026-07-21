@@ -1,24 +1,81 @@
 import 'dart:convert';
+import 'dart:developer' as developer;
 import 'package:http/http.dart' as http;
+import 'package:flutter/foundation.dart'
+    show TargetPlatform, defaultTargetPlatform, kIsWeb;
 
 import '../models/admin_model.dart';
 import '../models/mitra_model.dart';
+import '../models/application_model.dart';
 
 class ApiService {
-  // Gunakan 10.0.2.2 untuk Android emulator, 127.0.0.1 untuk platform lain.
-  // Set base API URL. Use your Railway deployment as default.
-  // If you still need to run against a local emulator use the localUrl instead.
+  // Backend production sudah ter-deploy di Railway dan tersambung sebelumnya.
+  // Digunakan untuk semua platform karena emulator/device dapat langsung
+  // menghubungi Railway. Jika ingin kembali ke localhost untuk debugging,
+  // cukup ganti baris di getBaseUrlForPlatform di bawah.
   static final String productionUrl =
       'https://sistem-maganghambaallah-production.up.railway.app/api';
-  static final String baseUrl = productionUrl;
 
-  // Fungsi untuk menembak API Login
+  static String getBaseUrlForPlatform(TargetPlatform platform) {
+    return productionUrl;
+  }
+
+  static String get baseUrl {
+    if (kIsWeb) {
+      return productionUrl;
+    }
+    return getBaseUrlForPlatform(defaultTargetPlatform);
+  }
+
+  static Map<String, String> _headers(String? token) => {
+    'Accept': 'application/json',
+    'Content-Type': 'application/json',
+    if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+  };
+
+  static dynamic _decode(http.Response response) {
+    dynamic body;
+    try {
+      body =
+          response.body.isEmpty
+              ? <String, dynamic>{}
+              : jsonDecode(response.body);
+    } catch (_) {
+      throw Exception(
+        'Server mengirim respons yang tidak valid (${response.statusCode}).',
+      );
+    }
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      final message = body is Map ? body['message'] : null;
+      throw Exception(
+        message?.toString() ?? 'Permintaan gagal (${response.statusCode}).',
+      );
+    }
+    return body;
+  }
+
+  static List<dynamic> _dataList(dynamic decoded) {
+    final data = decoded is Map ? decoded['data'] : decoded;
+    if (data is List) return data;
+    throw Exception('Format data dari server tidak sesuai.');
+  }
+
+  static Future<Map<String, dynamic>> fetchCurrentUser(String token) async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/user'),
+      headers: _headers(token),
+    );
+    final decoded = _decode(response);
+    if (decoded is Map<String, dynamic>) return decoded;
+    if (decoded is Map) return decoded.cast<String, dynamic>();
+    throw Exception('Format profil pengguna tidak sesuai.');
+  }
+
   static Future<Map<String, dynamic>> login(
     String emailOrNim,
     String password,
   ) async {
     final url = Uri.parse('$baseUrl/login');
-
     try {
       final response = await http.post(
         url,
@@ -28,8 +85,6 @@ class ApiService {
         },
         body: jsonEncode({'email_or_nim': emailOrNim, 'password': password}),
       );
-
-      // Mengembalikan jawaban dari Laravel (berupa token & pesan error/sukses)
       return jsonDecode(response.body);
     } catch (e) {
       return {'message': 'Gagal terhubung ke server: $e'};
@@ -37,40 +92,133 @@ class ApiService {
   }
 
   static Future<List<LowonganMitra>> fetchMitraLowongan(String? token) async {
-    final url = Uri.parse('$baseUrl/mitra/lowongan');
+    // Try multiple possible endpoints in case backend route differs
+    final candidatePaths = [
+      '/mitra/lowongan',
+      '/mitra/lowongans',
+      '/lowongan',
+      '/mitra/lowongan-list',
+    ];
 
-    try {
-      final response = await http.get(
-        url,
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          if (token != null) 'Authorization': 'Bearer $token',
-        },
-      );
-
-      final decoded = jsonDecode(response.body);
-      final data =
-          decoded is Map && decoded.containsKey('data')
-              ? decoded['data']
-              : decoded;
-
-      if (data is List) {
-        return data
-            .cast<Map<String, dynamic>>()
-            .map(LowonganMitra.fromJson)
-            .toList();
+    // Helper: try to find a List anywhere in the decoded payload
+    List<Map<String, dynamic>>? extractList(dynamic node) {
+      if (node == null) return null;
+      if (node is List) {
+        try {
+          return node.cast<Map<String, dynamic>>();
+        } catch (_) {
+          return node.map((e) => e as Map<String, dynamic>).toList();
+        }
       }
+      if (node is Map<String, dynamic>) {
+        for (final key in [
+          'data',
+          'lowongan',
+          'lowongans',
+          'items',
+          'results',
+        ]) {
+          if (node.containsKey(key)) {
+            final candidate = extractList(node[key]);
+            if (candidate != null) return candidate;
+          }
+        }
 
-      throw Exception('Invalid response format for Mitra lowongan');
-    } catch (e) {
-      rethrow;
+        for (final value in node.values) {
+          final candidate = extractList(value);
+          if (candidate != null) return candidate;
+        }
+      }
+      return null;
     }
+
+    Exception? lastException;
+    const int maxAttempts = 3;
+
+    for (final path in candidatePaths) {
+      final url = Uri.parse('$baseUrl$path');
+
+      for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+        try {
+          final response = await http.get(
+            url,
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+              if (token != null) 'Authorization': 'Bearer $token',
+            },
+          );
+
+          if (response.statusCode == 404) {
+            // route not found for this candidate path -> try next path
+            developer.log(
+              'fetchMitraLowongan: 404 for $path',
+              name: 'ApiService',
+            );
+            break;
+          }
+
+          if (response.statusCode < 200 || response.statusCode >= 300) {
+            // Log details for debugging but do not expose raw body to UI
+            developer.log(
+              'fetchMitraLowongan: unexpected status ${response.statusCode} for $path. Body: ${response.body}',
+              name: 'ApiService',
+            );
+            lastException = Exception(
+              'Gagal memuat lowongan (kode ${response.statusCode}).',
+            );
+            // retry unless last attempt
+            if (attempt < maxAttempts) {
+              await Future.delayed(
+                Duration(milliseconds: 200 * (1 << (attempt - 1))),
+              );
+              continue;
+            }
+            break; // try next path
+          }
+
+          final decoded = jsonDecode(response.body);
+          final list = extractList(decoded);
+          if (list != null) {
+            return list.map(LowonganMitra.fromJson).toList();
+          }
+
+          // No list found - log payload and set generic error
+          developer.log(
+            'fetchMitraLowongan: no list found in response for $path. Body: ${response.body}',
+            name: 'ApiService',
+          );
+          lastException = Exception(
+            'Gagal memuat lowongan. Respons server tidak sesuai.',
+          );
+          break; // try next path
+        } catch (e, st) {
+          developer.log(
+            'fetchMitraLowongan: request failed for $path (attempt $attempt): $e',
+            name: 'ApiService',
+            error: e,
+            stackTrace: st,
+          );
+          lastException = Exception('Koneksi gagal saat memuat lowongan.');
+          if (attempt < maxAttempts) {
+            await Future.delayed(
+              Duration(milliseconds: 200 * (1 << (attempt - 1))),
+            );
+            continue;
+          }
+          // move to next path after exhausting attempts
+          break;
+        }
+      }
+    }
+
+    // Surface a generic message to UI; detailed info is sent to logs.
+    throw lastException ??
+        Exception('Gagal memuat lowongan. Silakan coba lagi.');
   }
 
   static Future<List<PendingLowongan>> fetchAdminLowongan(String? token) async {
     final url = Uri.parse('$baseUrl/admin/lowongan');
-
     try {
       final response = await http.get(
         url,
@@ -80,20 +228,17 @@ class ApiService {
           if (token != null) 'Authorization': 'Bearer $token',
         },
       );
-
       final decoded = jsonDecode(response.body);
       final data =
           decoded is Map && decoded.containsKey('data')
               ? decoded['data']
               : decoded;
-
       if (data is List) {
         return data
             .cast<Map<String, dynamic>>()
             .map(PendingLowongan.fromJson)
             .toList();
       }
-
       throw Exception('Invalid response format for admin lowongan');
     } catch (e) {
       rethrow;
@@ -102,7 +247,6 @@ class ApiService {
 
   static Future<AdminProfile> fetchAdminProfile(String? token) async {
     final url = Uri.parse('$baseUrl/admin/profile');
-
     try {
       final response = await http.get(
         url,
@@ -112,21 +256,17 @@ class ApiService {
           if (token != null) 'Authorization': 'Bearer $token',
         },
       );
-
       final decoded = jsonDecode(response.body);
       final data =
           decoded is Map && decoded.containsKey('data')
               ? decoded['data']
               : decoded;
-
       if (data is Map<String, dynamic>) {
         return AdminProfile.fromJson(data);
       }
-
       if (data is Map) {
         return AdminProfile.fromJson(data.cast<String, dynamic>());
       }
-
       throw Exception('Invalid response format for Admin profile');
     } catch (e) {
       rethrow;
@@ -135,7 +275,6 @@ class ApiService {
 
   static Future<List<UserAccount>> fetchUsers(String? token) async {
     final url = Uri.parse('$baseUrl/admin/users');
-
     try {
       final response = await http.get(
         url,
@@ -145,20 +284,17 @@ class ApiService {
           if (token != null) 'Authorization': 'Bearer $token',
         },
       );
-
       final decoded = jsonDecode(response.body);
       final data =
           decoded is Map && decoded.containsKey('data')
               ? decoded['data']
               : decoded;
-
       if (data is List) {
         return data
             .cast<Map<String, dynamic>>()
             .map(UserAccount.fromJson)
             .toList();
       }
-
       throw Exception('Invalid response format for users list');
     } catch (e) {
       rethrow;
@@ -167,7 +303,6 @@ class ApiService {
 
   static Future<void> approveLowongan(String? token, String id) async {
     final url = Uri.parse('$baseUrl/admin/lowongan/$id/approve');
-
     try {
       final response = await http.post(
         url,
@@ -177,7 +312,6 @@ class ApiService {
           if (token != null) 'Authorization': 'Bearer $token',
         },
       );
-
       if (response.statusCode < 200 || response.statusCode >= 300) {
         throw Exception('Failed to approve lowongan: ${response.statusCode}');
       }
@@ -192,7 +326,6 @@ class ApiService {
     String reason,
   ) async {
     final url = Uri.parse('$baseUrl/admin/lowongan/$id/reject');
-
     try {
       final response = await http.post(
         url,
@@ -203,12 +336,322 @@ class ApiService {
         },
         body: jsonEncode({'reason': reason}),
       );
-
       if (response.statusCode < 200 || response.statusCode >= 300) {
         throw Exception('Failed to reject lowongan: ${response.statusCode}');
       }
     } catch (e) {
       rethrow;
+    }
+  }
+
+  static Future<List<Internship>> fetchLowonganMahasiswa(String? token) async {
+    final url = Uri.parse('$baseUrl/lowongan');
+    try {
+      final response = await http.get(
+        url,
+        headers: {
+          'Accept': 'application/json',
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+      );
+      final decoded = _decode(response);
+      return _dataList(decoded)
+          .whereType<Map>()
+          .map((item) => Internship.fromJson(item.cast<String, dynamic>()))
+          .toList();
+    } catch (_) {
+      rethrow;
+    }
+  }
+
+  static Future<Map<String, dynamic>> fetchLowonganDetail(String id) async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/lowongan/$id'),
+      headers: _headers(null),
+    );
+    final decoded = _decode(response);
+    if (decoded is Map<String, dynamic>) return decoded;
+    if (decoded is Map) return decoded.cast<String, dynamic>();
+    throw Exception('Format detail lowongan tidak sesuai.');
+  }
+
+  static Future<List<Map<String, dynamic>>> fetchApplicationHistory(
+    String token,
+  ) async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/pendaftaran/riwayat'),
+      headers: _headers(token),
+    );
+    return _dataList(
+      _decode(response),
+    ).whereType<Map>().map((item) => item.cast<String, dynamic>()).toList();
+  }
+
+  static Future<List<Map<String, dynamic>>> fetchLogbooks(String token) async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/logbook'),
+      headers: _headers(token),
+    );
+    return _dataList(
+      _decode(response),
+    ).whereType<Map>().map((item) => item.cast<String, dynamic>()).toList();
+  }
+
+  static Future<Map<String, dynamic>> createLogbook({
+    required String token,
+    required String applicationId,
+    required int week,
+    required DateTime date,
+    required String description,
+  }) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/logbook'),
+      headers: _headers(token),
+      body: jsonEncode({
+        'id_pendaftaran': applicationId,
+        'minggu_ke': week,
+        'tanggal': date.toIso8601String().split('T').first,
+        'deskripsi_kegiatan': description,
+      }),
+    );
+    final decoded = _decode(response);
+    return decoded is Map<String, dynamic>
+        ? decoded
+        : Map<String, dynamic>.from(decoded as Map);
+  }
+
+  static Future<List<Map<String, dynamic>>> fetchApplicants(
+    String token,
+    String lowonganId,
+  ) async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/lowongan/$lowonganId/pelamar'),
+      headers: _headers(token),
+    );
+    return _dataList(_decode(response))
+        .whereType<Map>()
+        .map(
+          (item) => <String, dynamic>{
+            ...item.cast<String, dynamic>(),
+            'id_lowongan': lowonganId,
+          },
+        )
+        .toList();
+  }
+
+  static Future<void> updateApplicantStatus(
+    String token,
+    String applicationId,
+    String status,
+  ) async {
+    final response = await http.put(
+      Uri.parse('$baseUrl/pendaftaran/$applicationId/status'),
+      headers: _headers(token),
+      body: jsonEncode({'status': status}),
+    );
+    _decode(response);
+  }
+
+  static Future<void> updateLogbookStatus(
+    String token,
+    String logbookId,
+    String status,
+  ) async {
+    final response = await http.put(
+      Uri.parse('$baseUrl/logbook/$logbookId/status'),
+      headers: _headers(token),
+      body: jsonEncode({'status_validasi': status}),
+    );
+    _decode(response);
+  }
+
+  static Future<LowonganMitra> createLowongan(
+    String token,
+    Map<String, dynamic> payload,
+  ) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/lowongan'),
+      headers: _headers(token),
+      body: jsonEncode(payload),
+    );
+    final decoded = _decode(response);
+    final data = decoded is Map ? decoded['data'] : null;
+    if (data is Map) {
+      return LowonganMitra.fromJson(data.cast<String, dynamic>());
+    }
+    throw Exception('Server tidak mengembalikan data lowongan yang dibuat.');
+  }
+
+  static Future<Map<String, dynamic>> fetchAdminDashboard(String token) async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/admin/dashboard'),
+      headers: _headers(token),
+    );
+    final decoded = _decode(response);
+    final data = decoded is Map ? decoded['data'] : null;
+    if (data is Map<String, dynamic>) return data;
+    if (data is Map) return data.cast<String, dynamic>();
+    throw Exception('Format statistik admin tidak sesuai.');
+  }
+
+  static Future<void> logout(String token) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/logout'),
+      headers: _headers(token),
+    );
+    _decode(response);
+  }
+
+  static Future<List<dynamic>> fetchMahasiswaBimbingan(String? token) async {
+    // Backend route (lihat routes/api.php): /dosen/bimbingan
+    final candidatePaths = [
+      '/dosen/bimbingan',
+      '/dosen/mahasiswa',
+      '/dosen/mahasiswa-bimbingan',
+      '/dosen/students',
+      '/mahasiswa/dosen',
+    ];
+
+    Exception? lastException;
+    const int maxAttempts = 2;
+
+    for (final path in candidatePaths) {
+      final url = Uri.parse('$baseUrl$path');
+
+      for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+        try {
+          final response = await http.get(
+            url,
+            headers: {
+              'Accept': 'application/json',
+              if (token != null) 'Authorization': 'Bearer $token',
+            },
+          );
+
+          if (response.statusCode == 404) {
+            // try next candidate
+            break;
+          }
+
+          if (response.statusCode < 200 || response.statusCode >= 300) {
+            developer.log(
+              'fetchMahasiswaBimbingan: unexpected status ${response.statusCode} for $path',
+              name: 'ApiService',
+            );
+            lastException = Exception('Gagal memuat data mahasiswa.');
+            if (attempt < maxAttempts) {
+              await Future.delayed(
+                Duration(milliseconds: 150 * (1 << (attempt - 1))),
+              );
+              continue;
+            }
+            break;
+          }
+
+          final decoded = jsonDecode(response.body);
+          final data =
+              decoded is Map && decoded.containsKey('data')
+                  ? decoded['data']
+                  : decoded;
+          if (data is List) return data;
+
+          // try to find list inside object
+          if (decoded is Map) {
+            for (final v in decoded.values) {
+              if (v is List) return v;
+            }
+          }
+
+          lastException = Exception('Respons server tidak sesuai.');
+          break;
+        } catch (e, st) {
+          developer.log(
+            'fetchMahasiswaBimbingan: request failed for $path: $e',
+            name: 'ApiService',
+            error: e,
+            stackTrace: st,
+          );
+          lastException = Exception('Koneksi gagal saat memuat mahasiswa.');
+          if (attempt < maxAttempts) {
+            await Future.delayed(
+              Duration(milliseconds: 150 * (1 << (attempt - 1))),
+            );
+            continue;
+          }
+          break;
+        }
+      }
+    }
+
+    throw lastException ?? Exception('Gagal memuat mahasiswa.');
+  }
+
+  // Fungsi untuk mengirim lamaran dan menangkap pesan error asli dari Laravel
+  static Future<Map<String, dynamic>> applyInternship({
+    required String token,
+    required String lowonganId,
+    required String fullName,
+    required String phone,
+    required String semester,
+    required String motivation,
+    required List<int> cvBytes,
+    required String cvFileName,
+    List<int>? portfolioBytes,
+    String? portfolioFileName,
+    String? portfolioLink,
+  }) async {
+    final url = Uri.parse('$baseUrl/pendaftaran');
+    try {
+      var request = http.MultipartRequest('POST', url);
+
+      request.headers.addAll({
+        'Authorization': 'Bearer $token',
+        'Accept': 'application/json',
+      });
+
+      // Data Teks
+      request.fields['id_lowongan'] = lowonganId;
+      request.fields['nama_lengkap'] = fullName;
+      request.fields['no_telp'] = phone;
+      request.fields['semester'] = semester;
+      request.fields['motivasi'] = motivation;
+      if (portfolioLink != null && portfolioLink.isNotEmpty) {
+        request.fields['portofolio_link'] = portfolioLink;
+      }
+
+      // File CV
+      request.files.add(
+        http.MultipartFile.fromBytes(
+          'berkas_cv',
+          cvBytes,
+          filename: cvFileName,
+        ),
+      );
+
+      // File Portofolio
+      if (portfolioBytes != null && portfolioFileName != null) {
+        request.files.add(
+          http.MultipartFile.fromBytes(
+            'berkas_portofolio',
+            portfolioBytes,
+            filename: portfolioFileName,
+          ),
+        );
+      }
+
+      final response = await request.send();
+      final responseString = await response.stream.bytesToString();
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return {'success': true, 'message': 'Lamaran terkirim!'};
+      } else {
+        return {
+          'success': false,
+          'message': 'Error ${response.statusCode}: $responseString',
+        };
+      }
+    } catch (e) {
+      return {'success': false, 'message': 'Koneksi terputus / CORS: $e'};
     }
   }
 }

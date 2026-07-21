@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../models/application_model.dart';
 import '../../models/mitra_model.dart';
 import '../../models/mitra_provider.dart';
+import '../../models/nexus_app_state.dart';
 import '../../theme/app_theme.dart';
 
 class PendaftarDetailScreen extends StatefulWidget {
@@ -54,9 +55,13 @@ class _PendaftarDetailScreenState extends State<PendaftarDetailScreen> {
               const SizedBox(height: 20),
               _buildTimeline(context),
               const SizedBox(height: 20),
-              _buildDocumentRow(context, 'CV/Resume', Icons.download_rounded),
-              const SizedBox(height: 12),
-              _buildDocumentRow(context, 'Work Portfolio', Icons.link_rounded),
+              _buildDocumentRow(
+                context,
+                widget.applicant.cvUrl == null
+                    ? 'CV tidak tersedia'
+                    : 'CV tersedia di server',
+                Icons.description_rounded,
+              ),
               const SizedBox(height: 20),
               _buildMotivationSection(context),
             ],
@@ -76,12 +81,13 @@ class _PendaftarDetailScreenState extends State<PendaftarDetailScreen> {
                   children: [
                     Expanded(
                       child: OutlinedButton(
-                        onPressed: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Fitur segera hadir')),
-                          );
-                        },
-                        child: const Text('Jadwalkan Interview'),
+                        onPressed:
+                            () => _setStatus(
+                              context,
+                              state,
+                              ApplicationStatus.accepted,
+                            ),
+                        child: const Text('Terima'),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -169,8 +175,11 @@ class _PendaftarDetailScreenState extends State<PendaftarDetailScreen> {
   }
 
   Widget _buildTimeline(BuildContext context) {
-    final stages = ['Submitted', 'Under Review', 'Interview', 'Accepted'];
-    final activeIndex = _status.index.clamp(0, 3);
+    final stages = [
+      'Lamaran masuk',
+      _status == ApplicationStatus.rejected ? 'Ditolak' : 'Diterima',
+    ];
+    final activeIndex = _status == ApplicationStatus.submitted ? 0 : 1;
 
     return Container(
       width: double.infinity,
@@ -296,7 +305,7 @@ class _PendaftarDetailScreenState extends State<PendaftarDetailScreen> {
           ),
           const SizedBox(height: 12),
           Text(
-            'Saya tertarik untuk bergabung sebagai intern di posisi ini karena saya ingin mengembangkan keterampilan fullstack development dan berkontribusi pada proyek produk yang berdampak. Saya memiliki pengalaman membuat aplikasi mobile dan web, serta senang bekerja dalam tim untuk mencapai target produk.',
+            'Motivasi belum tersedia pada respons daftar pelamar dari server.',
             style: Theme.of(
               context,
             ).textTheme.bodyMedium?.copyWith(color: AppColors.neutral),
@@ -319,16 +328,10 @@ class _PendaftarDetailScreenState extends State<PendaftarDetailScreen> {
               child: const Text('Batal'),
             ),
             TextButton(
-              onPressed: () {
-                state.updateApplicantStatus(
-                  widget.applicant.id,
-                  ApplicationStatus.rejected,
-                );
-                setState(() {
-                  _status = ApplicationStatus.rejected;
-                });
+              onPressed: () async {
                 Navigator.of(context).pop();
-                Navigator.of(context).pop();
+                await _setStatus(context, state, ApplicationStatus.rejected);
+                if (mounted) Navigator.of(context).pop();
               },
               child: const Text('Tolak', style: TextStyle(color: Colors.red)),
             ),
@@ -336,5 +339,30 @@ class _PendaftarDetailScreenState extends State<PendaftarDetailScreen> {
         );
       },
     );
+  }
+
+  Future<void> _setStatus(
+    BuildContext context,
+    MitraProvider state,
+    ApplicationStatus status,
+  ) async {
+    final token = NexusScope.of(context).authToken;
+    if (token == null) return;
+    try {
+      await state.updateApplicantStatus(token, widget.applicant.id, status);
+      if (!mounted) return;
+      setState(() => _status = status);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Status berhasil disinkronkan.')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString().replaceFirst('Exception: ', '')),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 }

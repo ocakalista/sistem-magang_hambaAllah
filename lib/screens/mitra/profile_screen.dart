@@ -66,12 +66,6 @@ class MitraProfileScreen extends StatelessWidget {
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                'Mitra ID: ${info.idMitra}',
-                                style: Theme.of(context).textTheme.bodyMedium
-                                    ?.copyWith(color: AppColors.neutral),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
                                 'User ID: ${info.idUser}',
                                 style: Theme.of(context).textTheme.bodyMedium
                                     ?.copyWith(color: AppColors.neutral),
@@ -88,13 +82,6 @@ class MitraProfileScreen extends StatelessWidget {
                     Icons.business_outlined,
                     'Nama Perusahaan',
                     info.companyName,
-                  ),
-                  const SizedBox(height: 12),
-                  _buildInfoTile(
-                    context,
-                    Icons.badge_rounded,
-                    'ID Mitra',
-                    info.idMitra,
                   ),
                   const SizedBox(height: 12),
                   _buildInfoTile(
@@ -121,14 +108,6 @@ class MitraProfileScreen extends StatelessWidget {
                     context,
                     Icons.settings_outlined,
                     'Pengaturan Notifikasi',
-                  ),
-                  const SizedBox(height: 24),
-                  Text(
-                    'Profil Mitra ini ditampilkan berdasarkan data perusahaan.'
-                    ' Integrasi backend dapat ditambahkan nanti.',
-                    style: Theme.of(
-                      context,
-                    ).textTheme.bodySmall?.copyWith(color: AppColors.neutral),
                   ),
                 ],
               ),

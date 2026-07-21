@@ -44,6 +44,9 @@ class PendaftarTerbaru {
   final String? avatarUrl;
   final DateTime appliedAt;
   final ApplicationStatus status;
+  final String? nim;
+  final String? major;
+  final String? cvUrl;
 
   PendaftarTerbaru({
     required this.id,
@@ -52,6 +55,9 @@ class PendaftarTerbaru {
     required this.avatarUrl,
     required this.appliedAt,
     required this.status,
+    this.nim,
+    this.major,
+    this.cvUrl,
   });
 }
 
@@ -112,28 +118,49 @@ class LowonganMitra {
 
   factory LowonganMitra.fromJson(Map<String, dynamic> json) {
     final approvalString =
-        json['approval_status'] ?? json['approvalStatus'] ?? 'pending';
+        json['status_approval'] ??
+        json['approval_status'] ??
+        json['approvalStatus'] ??
+        json['status'] ??
+        'pending';
     final deadlineRaw =
-        json['deadline'] ?? json['tanggal_berakhir'] ?? json['end_date'];
+        json['batas_waktu'] ??
+        json['deadline'] ??
+        json['tanggal_berakhir'] ??
+        json['tgl_deadline'] ??
+        json['end_date'];
 
     return LowonganMitra(
-      id: json['id']?.toString() ?? '',
-      position: json['position'] ?? json['title'] ?? '',
-      category: json['category'] ?? json['kategori'] ?? '',
+      id: json['id']?.toString() ?? json['id_lowongan']?.toString() ?? '',
+      position:
+          json['position'] ??
+          json['title'] ??
+          json['judul_posisi'] ??
+          json['posisi'] ??
+          '',
+      category: json['category'] ?? json['kategori'] ?? json['jenis'] ?? '',
       location: json['location'] ?? json['lokasi'] ?? '',
-      tags: _normalizeStringList(json['tags'] ?? json['tag_list'] ?? []),
+      tags: _normalizeStringList(
+        json['tags'] ??
+            [
+              json['tipe_kerja'],
+              json['tipe_kontrak'],
+            ].whereType<String>().toList(),
+      ),
       period: json['period'] ?? json['periode'] ?? '',
-      quota: int.tryParse(json['quota']?.toString() ?? '') ?? 0,
+      quota:
+          int.tryParse((json['kuota'] ?? json['quota'])?.toString() ?? '') ?? 0,
       applicantCount:
           int.tryParse(json['applicant_count']?.toString() ?? '') ??
           int.tryParse(json['applicantCount']?.toString() ?? '') ??
           0,
-      description: json['description'] ?? json['deskripsi'] ?? '',
+      description:
+          json['description'] ?? json['deskripsi'] ?? json['detail'] ?? '',
       requirements: _normalizeStringList(
         json['requirements'] ?? json['persyaratan'] ?? [],
       ),
       benefits: _normalizeStringList(
-        json['benefits'] ?? json['keuntungan'] ?? [],
+        json['benefit'] ?? json['benefits'] ?? json['keuntungan'] ?? [],
       ),
       approvalStatus: LowonganApprovalStatus.values.firstWhere(
         (status) =>
@@ -143,7 +170,7 @@ class LowonganMitra {
       ),
       deadline:
           DateTime.tryParse(deadlineRaw?.toString() ?? '') ??
-          DateTime.now().add(const Duration(days: 30)),
+          DateTime.fromMillisecondsSinceEpoch(0),
     );
   }
 

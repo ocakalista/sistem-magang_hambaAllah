@@ -5,9 +5,12 @@ import '../models/nexus_app_state.dart';
 import '../models/notification_model.dart';
 import '../theme/app_theme.dart';
 import '../widgets/bottom_nav.dart';
+import '../widgets/mitra_bottom_nav.dart';
+import '../widgets/dosen_bottom_nav.dart';
 import 'admin/admin_dashboard_screen.dart';
 import 'dosen/dosen_dashboard_screen.dart';
 import 'dosen/profile_screen.dart';
+import 'dosen/students_screen.dart';
 import 'mahasiswa/application_status_screen.dart';
 import 'mahasiswa/dashboard_mahasiswa.dart';
 import 'mahasiswa/profile_screen.dart';
@@ -33,6 +36,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   @override
   Widget build(BuildContext context) {
     final state = NexusScope.of(context);
+    final role = state.currentUserRole;
+
     final filteredNotifications = _filteredNotifications(state.notifications);
     final newNotifications =
         filteredNotifications
@@ -48,8 +53,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        automaticallyImplyLeading: false,
-        titleSpacing: 20,
+        // INJEKSI: Tombol back hanya muncul untuk Admin karena Admin tidak punya bottom nav Alerts
+        automaticallyImplyLeading: role == UserRole.admin,
+        titleSpacing: role == UserRole.admin ? 0 : 20,
         title: Row(
           children: [
             const Icon(Icons.notifications_rounded, color: AppColors.primary),
@@ -160,11 +166,33 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           ),
         ),
       ),
-      bottomNavigationBar: NexusBottomNavigationBar(
+      // INJEKSI: Dinamis merender Bottom Navigation Bar sesuai Role
+      bottomNavigationBar: _buildBottomNav(context, state, role),
+    );
+  }
+
+  Widget? _buildBottomNav(
+    BuildContext context,
+    NexusAppState state,
+    UserRole role,
+  ) {
+    if (role == UserRole.mitra) {
+      return MitraBottomNavigationBar(
         selectedIndex: 2,
         onDestinationSelected: (index) => _handleNav(context, state, index),
-      ),
-    );
+      );
+    } else if (role == UserRole.dosen) {
+      return DosenBottomNav(
+        selectedIndex: 2,
+        onDestinationSelected: (index) => _handleNav(context, state, index),
+      );
+    } else if (role == UserRole.student) {
+      return NexusBottomNavigationBar(
+        selectedIndex: 2,
+        onDestinationSelected: (index) => _handleNav(context, state, index),
+      );
+    }
+    return null; // Admin menekan tombol back, tidak pakai nav bawah
   }
 
   List<AppNotification> _filteredNotifications(List<AppNotification> items) {
@@ -211,70 +239,81 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     }
   }
 
+  // INJEKSI: Navigasi disesuaikan dengan setiap menu yang dimiliki role masing-masing
   void _handleNav(BuildContext context, NexusAppState state, int index) {
+    if (index == 2) return; // Jika klik tab Alerts lagi, diam saja
+
     final role = state.currentUserRole;
-    switch (index) {
-      case 0:
-        if (role == UserRole.admin) {
-          Navigator.pushReplacementNamed(
-            context,
-            AdminDashboardScreen.routeName,
-          );
-        } else if (role == UserRole.dosen) {
+
+    if (role == UserRole.dosen) {
+      switch (index) {
+        case 0:
           Navigator.pushReplacementNamed(
             context,
             DosenDashboardScreen.routeName,
           );
-        } else if (role == UserRole.mitra) {
+          break;
+        case 1:
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (_) => const Scaffold(body: StudentsScreen()),
+            ),
+          );
+          break;
+        case 3:
+          Navigator.pushReplacementNamed(context, DosenProfileScreen.routeName);
+          break;
+      }
+    } else if (role == UserRole.mitra) {
+      switch (index) {
+        case 0:
           Navigator.pushReplacementNamed(
             context,
             MitraDashboardScreen.routeName,
           );
-        } else {
-          Navigator.pushReplacementNamed(context, DashboardMahasiswa.routeName);
-        }
-        break;
-      case 1:
-        if (role == UserRole.mitra) {
+          break;
+        case 1:
           Navigator.pushReplacementNamed(
             context,
             MitraKelolaLowonganScreen.routeName,
           );
-          return;
-        }
-
-        final application = state.currentApplication;
-        if (application == null) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Apply for an internship first.')),
-          );
-          return;
-        }
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder:
-                (_) =>
-                    application.status == ApplicationStatus.accepted
-                        ? InternshipProgressScreen(application: application)
-                        : ApplicationStatusScreen(application: application),
-          ),
-        );
-        break;
-      case 2:
-        break;
-      case 3:
-        if (role == UserRole.dosen) {
-          Navigator.pushReplacementNamed(context, DosenProfileScreen.routeName);
-        } else if (role == UserRole.mitra) {
+          break;
+        case 3:
           Navigator.pushReplacementNamed(context, MitraProfileScreen.routeName);
-        } else if (role == UserRole.student) {
+          break;
+      }
+    } else if (role == UserRole.student) {
+      switch (index) {
+        case 0:
+          Navigator.pushReplacementNamed(context, DashboardMahasiswa.routeName);
+          break;
+        case 1:
+          final application = state.currentApplication;
+          if (application == null) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Apply for an internship first.')),
+            );
+            return;
+          }
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder:
+                  (_) =>
+                      application.status == ApplicationStatus.accepted
+                          ? InternshipProgressScreen(application: application)
+                          : ApplicationStatusScreen(application: application),
+            ),
+          );
+          break;
+        case 3:
           Navigator.pushReplacementNamed(
             context,
             DashboardMahasiswaProfileScreen.routeName,
           );
-        }
-        break;
+          break;
+      }
     }
   }
 }
@@ -537,7 +576,7 @@ class _EmptyState extends StatelessWidget {
           ),
           SizedBox(height: 12),
           Text(
-            'No notifications here',
+            'Tidak ada notifikasi baru',
             style: TextStyle(
               color: AppColors.neutral,
               fontWeight: FontWeight.w600,

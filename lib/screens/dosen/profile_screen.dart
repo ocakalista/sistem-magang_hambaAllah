@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../theme/app_theme.dart';
+import '../../models/nexus_app_state.dart';
 
 class DosenProfileScreen extends StatelessWidget {
   static const routeName = '/dosen/profile';
@@ -9,6 +10,8 @@ class DosenProfileScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final user =
+        NexusScope.of(context).currentUser ?? const <String, dynamic>{};
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(title: const Text('Profile')),
@@ -43,13 +46,13 @@ class DosenProfileScreen extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Dr. Dosen Pembimbing',
+                            user['name']?.toString() ?? '-',
                             style: Theme.of(context).textTheme.titleLarge
                                 ?.copyWith(fontWeight: FontWeight.w700),
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            'Dosen Pembimbing Akademik',
+                            'Dosen',
                             style: Theme.of(context).textTheme.bodyMedium
                                 ?.copyWith(color: AppColors.neutral),
                           ),
@@ -63,22 +66,22 @@ class DosenProfileScreen extends StatelessWidget {
               _buildInfoTile(
                 context,
                 Icons.email_rounded,
-                'Email',
-                'dosen@amikom.ac.id',
+                'Email / NIDN',
+                user['email_or_nim']?.toString() ?? '-',
               ),
               const SizedBox(height: 12),
               _buildInfoTile(
                 context,
-                Icons.school_rounded,
-                'Departemen',
-                'Teknik Informatika',
+                Icons.phone_rounded,
+                'Telepon',
+                user['phone']?.toString() ?? '-',
               ),
               const SizedBox(height: 12),
               _buildInfoTile(
                 context,
-                Icons.location_on_rounded,
-                'Kampus',
-                'Universitas Amikom Yogyakarta',
+                Icons.badge_rounded,
+                'Role',
+                user['role']?.toString() ?? 'dosen',
               ),
               const SizedBox(height: 24),
               Text(
