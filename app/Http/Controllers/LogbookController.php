@@ -71,10 +71,7 @@ class LogbookController extends Controller
     {
         $request->validate([
             'status_validasi' => 'required|in:disetujui,revisi',
-<<<<<<< HEAD
             'feedback_dosen'  => 'nullable|string'
-=======
->>>>>>> f6b3645b01dc7980f13ef018c69ed208e5e79b85
         ]);
 
         $logbook = Logbook::find($id);

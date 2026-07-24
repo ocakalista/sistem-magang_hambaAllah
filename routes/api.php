@@ -64,15 +64,6 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // -------- MITRA --------
     Route::middleware('role:mitra')->group(function () {
-<<<<<<< HEAD
-        Route::get('/mitra/lowongan', [LowonganController::class, 'mitraLowongan']);
-        Route::post('/lowongan', [LowonganController::class, 'store']); 
-        Route::get('/lowongan/{id_lowongan}/pelamar', [PendaftaranController::class, 'getPelamar']); 
-        Route::put('/pendaftaran/{id}/status', [PendaftaranController::class, 'updateStatus']); 
-        
-        // JALAN BARU: Mitra memantau logbook anak magang
-        Route::get('/mitra/logbook/{id_pendaftaran}', [LogbookController::class, 'getLogbookByPendaftaran']); 
-=======
         // Buat lowongan baru
         Route::post('/lowongan', [LowonganController::class, 'store']);
 
@@ -87,19 +78,10 @@ Route::middleware('auth:sanctum')->group(function () {
 
         // Mitra pantau logbook
         Route::get('/mitra/logbook/{id_pendaftaran}', [LogbookController::class, 'getLogbookByPendaftaran']);
->>>>>>> f6b3645b01dc7980f13ef018c69ed208e5e79b85
     });
 
     // -------- DOSEN --------
     Route::middleware('role:dosen')->group(function () {
-<<<<<<< HEAD
-        // JALAN BARU: Dosen melihat siapa saja bimbingannya & cek logbook
-        Route::get('/dosen/bimbingan', [BimbinganController::class, 'getBimbinganDosen']); 
-        Route::put('/dosen/bimbingan/{id}/verifikasi', [BimbinganController::class, 'verifikasiMahasiswa']);
-        Route::get('/dosen/logbook/{id_pendaftaran}', [LogbookController::class, 'getLogbookByPendaftaran']); 
-        
-        Route::put('/logbook/{id}/status', [LogbookController::class, 'updateStatus']); 
-=======
         // List mahasiswa bimbingan + weekly reports (Flutter)
         Route::get('/dosen/bimbingan', [DosenBimbinganController::class, 'index']);
 
@@ -109,7 +91,6 @@ Route::middleware('auth:sanctum')->group(function () {
 
         // Validasi logbook
         Route::put('/logbook/{id}/status', [LogbookController::class, 'updateStatus']);
->>>>>>> f6b3645b01dc7980f13ef018c69ed208e5e79b85
     });
 
     // -------- MAHASISWA --------

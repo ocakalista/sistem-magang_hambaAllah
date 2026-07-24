@@ -10,80 +10,9 @@ use Illuminate\Support\Facades\Hash;
 
 class AdminController extends Controller
 {
-<<<<<<< HEAD
-    // 1. Dashboard Rekapitulasi untuk Admin
-    public function dashboard()
-    {
-        // Admin menghitung semua data di database
-        $total_mahasiswa = DB::table('users')->where('role', 'mahasiswa')->count();
-        $total_mitra = DB::table('users')->where('role', 'mitra')->count();
-        $total_dosen = DB::table('users')->where('role', 'dosen')->count();
-        $total_users = DB::table('users')->count();
-        $total_lowongan = DB::table('lowongan')->count();
-        $total_pendaftaran = DB::table('pendaftaran')->count();
-        $pendaftaran_diterima = DB::table('pendaftaran')->where('status', 'diterima')->count();
-
-        // Daftar pendaftaran siswa terbaru
-        $enrollments = DB::table('pendaftaran')
-            ->join('mahasiswa', 'pendaftaran.id_mahasiswa', '=', 'mahasiswa.id_mahasiswa')
-            ->join('lowongan', 'pendaftaran.id_lowongan', '=', 'lowongan.id_lowongan')
-            ->join('mitra', 'lowongan.id_mitra', '=', 'mitra.id_mitra')
-            ->select(
-                'mahasiswa.nama as user_name',
-                'mahasiswa.id_mahasiswa as nim',
-                'lowongan.judul_posisi as program_name',
-                'mitra.nama_perusahaan as company_name',
-                'pendaftaran.status'
-            )
-            ->latest('pendaftaran.created_at')
-            ->take(6)
-            ->get();
-
-        // Lowongan pending persetujuan
-        $pending_lowongan = DB::table('lowongan')
-            ->join('mitra', 'lowongan.id_mitra', '=', 'mitra.id_mitra')
-            ->where('lowongan.status_approval', 'pending')
-            ->select(
-                'lowongan.id_lowongan as id',
-                'mitra.nama_perusahaan as company_name',
-                'lowongan.kategori as company_category',
-                'lowongan.judul_posisi',
-                'lowongan.lokasi',
-                'lowongan.kuota',
-                'lowongan.deskripsi as request_description',
-                'lowongan.status_approval as status'
-            )
-            ->get();
-
-        // Distribusi bidang magang
-        $distribution = DB::table('lowongan')
-            ->select('kategori as label', DB::raw('count(*) as value'))
-            ->groupBy('kategori')
-            ->get();
-
-        return response()->json([
-            'message' => 'Berhasil mengambil data dashboard admin',
-            'data' => [
-                'total_users' => $total_users,
-                'total_mahasiswa' => $total_mahasiswa,
-                'total_mitra' => $total_mitra,
-                'total_dosen' => $total_dosen,
-                'total_lowongan' => $total_lowongan,
-                'total_pendaftaran' => $total_pendaftaran,
-                'active_internships' => $pendaftaran_diterima,
-                'enrollments' => $enrollments,
-                'pending_lowongan' => $pending_lowongan,
-                'distribution' => $distribution,
-            ]
-        ], 200);
-    }
-
-    // 2. FITUR BARU: Admin memvalidasi (menyetujui/menolak) lowongan dari Mitra
-=======
     // =========================================================================
     // Legacy method for Flutter — validasiLowongan (PUT /admin/lowongan/{id}/validasi)
     // =========================================================================
->>>>>>> f6b3645b01dc7980f13ef018c69ed208e5e79b85
     public function validasiLowongan(Request $request, $id)
     {
         $validated = $request->validate([

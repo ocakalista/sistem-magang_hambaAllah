@@ -18,46 +18,6 @@ class AuthController extends Controller
             'role'              => 'sometimes|string|in:admin,mahasiswa,mitra,dosen',
         ]);
 
-<<<<<<< HEAD
-        $role = $request->role ?? 'mahasiswa';
-
-        // Simpan ke database users
-        $user = User::create([
-            'name' => $request->name,
-            'email_or_nim' => $request->email_or_nim,
-            'password' => Hash::make($request->password), 
-            'role' => $role,
-        ]);
-
-        // Auto-populate tabel spesifik role
-        if ($role === 'mahasiswa') {
-            DB::table('mahasiswa')->insert([
-                'id_mahasiswa' => $user->email_or_nim,
-                'id_user' => (string) $user->id,
-                'nama' => $user->name,
-                'jurusan' => $request->jurusan ?? 'Informatika',
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-        } else if ($role === 'mitra') {
-            DB::table('mitra')->insert([
-                'id_user' => $user->id,
-                'nama_perusahaan' => $user->name,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-        } else if ($role === 'dosen') {
-            DB::table('dosen')->insert([
-                'nidn' => $user->email_or_nim,
-                'id_user' => $user->id,
-                'nama' => $user->name,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-        }
-
-        // Terbitkan Tiket/Token
-=======
         $user = User::create([
             'name'       => $validated['name'],
             'email_or_nim' => $validated['email_or_nim'],
@@ -65,19 +25,13 @@ class AuthController extends Controller
             'role'       => $validated['role'] ?? 'mahasiswa',
         ]);
 
->>>>>>> f6b3645b01dc7980f13ef018c69ed208e5e79b85
         $token = $user->createToken('nexus_token')->plainTextToken;
 
         return response()->json([
             'message' => 'Registrasi berhasil',
-<<<<<<< HEAD
             'data' => $user,
             'token' => $token,
             'role' => $user->role
-=======
-            'data'    => $user,
-            'token'   => $token,
->>>>>>> f6b3645b01dc7980f13ef018c69ed208e5e79b85
         ], 201);
     }
 

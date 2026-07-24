@@ -35,61 +35,6 @@ class PendaftaranController extends Controller
      */
     public function store(Request $request)
     {
-<<<<<<< HEAD
-        // 1. Validasi Input
-        $request->validate([
-            'id_lowongan' => 'required',
-            'motivasi' => 'required',
-            'berkas_cv' => 'required|file|mimes:pdf,doc,docx,png,jpg,jpeg|max:20480',
-            'portofolio_link' => 'nullable|string',
-            'portofolio_file' => 'nullable|file|mimes:pdf,doc,docx,png,jpg,jpeg|max:20480',
-        ]);
-
-        // 2. CEK & AMBIL DATA LOWONGAN DULU 👇
-        $lowongan = Lowongan::find($request->id_lowongan);
-        
-        if (!$lowongan) {
-            return response()->json(['message' => 'Lowongan tidak ditemukan'], 404);
-        }
-
-        // Cek Kuota
-        if ($lowongan->kuota < 1) {
-            return response()->json(['message' => 'Maaf, kuota magang sudah penuh'], 400);
-        }
-
-        // US-16: Cek Batas Waktu / Kadaluarsa
-        if ($lowongan->batas_waktu && $lowongan->batas_waktu < date('Y-m-d')) {
-            return response()->json(['message' => 'Maaf, pendaftaran lowongan ini sudah ditutup (kadaluarsa).'], 400);
-        }
-
-        // US-14 AC2: Mencegah Pendaftaran Ganda
-        $nim = Auth::user()->email_or_nim;
-        $existing = Pendaftaran::where('id_mahasiswa', $nim)
-            ->where('id_lowongan', $request->id_lowongan)
-            ->first();
-
-        if ($existing) {
-            return response()->json(['message' => 'Anda sudah mendaftar pada lowongan ini sebelumnya.'], 400);
-        }
-
-        // 3. Simpan CV & Portofolio
-        $cvPath = $request->file('berkas_cv')->store('berkas_cv', 'public');
-        
-        $portofolioData = null;
-        if ($request->hasFile('portofolio_file')) {
-            $portofolioData = $request->file('portofolio_file')->store('portofolio', 'public');
-        } elseif ($request->filled('portofolio_link')) {
-            $portofolioData = $request->portofolio_link;
-        }
-
-        // 4. Simpan ke Database
-        $pendaftaran = Pendaftaran::create([
-            'id_mahasiswa' => Auth::user()->email_or_nim, 
-            'id_lowongan' => $request->id_lowongan,
-            'motivasi' => $request->motivasi,
-            'berkas_cv' => $cvPath,
-            'portofolio' => $portofolioData,
-=======
         $validated = $request->validate([
             'id_lowongan' => 'required|exists:lowongan,id_lowongan',
             'nama_lengkap' => 'required|string|max:255',
@@ -109,7 +54,6 @@ class PendaftaranController extends Controller
             'name' => $validated['nama_lengkap'],
             'phone' => $validated['no_telp'],
             'semester' => (string) $validated['semester'],
->>>>>>> f6b3645b01dc7980f13ef018c69ed208e5e79b85
         ]);
 
         // 2) Pastikan record mahasiswa ada (find-or-create)
