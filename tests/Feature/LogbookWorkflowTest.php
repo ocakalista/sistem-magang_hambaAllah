@@ -11,6 +11,7 @@ use App\Models\Mitra;
 use App\Models\Pendaftaran;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
@@ -21,17 +22,23 @@ class LogbookWorkflowTest extends TestCase
 
     public function test_student_submission_notifies_supervisor_with_approval_metadata_only(): void
     {
+        Storage::fake('public');
         $data = $this->scenario();
         Sanctum::actingAs($data['student']);
 
-        $response = $this->postJson('/api/logbook', [
+        $response = $this->post('/api/logbook', [
             'id_pendaftaran' => $data['pendaftaran']->id_pendaftaran,
             'minggu_ke' => 1,
             'tanggal' => '2026-07-25',
             'deskripsi_kegiatan' => 'Mengerjakan integrasi API.',
+            'berkas_logbook' => UploadedFile::fake()
+                ->create('minggu-1.pdf', 100, 'application/pdf'),
         ])->assertCreated();
 
         $idLogbook = $response->json('data.id_logbook');
+        $logbook = Logbook::findOrFail($idLogbook);
+        Storage::disk('public')->assertExists($logbook->berkas_lampiran);
+        $this->assertStringStartsWith('logbook/', $logbook->berkas_lampiran);
         $this->assertSame(0, $data['student']->notifications()->count());
         $this->assertSame(1, $data['supervisor']->notifications()->count());
 
@@ -43,6 +50,66 @@ class LogbookWorkflowTest extends TestCase
             ->assertJsonPath('data.0.data.category', 'approval')
             ->assertJsonPath('data.0.data.requires_action', true)
             ->assertJsonPath('data.0.data.priority', 'high');
+    }
+
+    public function test_logbook_requires_pdf_with_maximum_size(): void
+    {
+        Storage::fake('public');
+        $data = $this->scenario();
+        Sanctum::actingAs($data['student']);
+        $payload = [
+            'id_pendaftaran' => $data['pendaftaran']->id_pendaftaran,
+            'minggu_ke' => 1,
+            'tanggal' => '2026-07-25',
+            'deskripsi_kegiatan' => 'Mengerjakan integrasi API.',
+        ];
+
+        $this->post('/api/logbook', $payload + [
+            'berkas_logbook' => UploadedFile::fake()
+                ->create('catatan.docx', 100, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'),
+        ])->assertUnprocessable()->assertJsonValidationErrors('berkas_logbook');
+
+        $this->post('/api/logbook', $payload + [
+            'berkas_logbook' => UploadedFile::fake()
+                ->create('terlalu-besar.pdf', 5121, 'application/pdf'),
+        ])->assertUnprocessable()->assertJsonValidationErrors('berkas_logbook');
+    }
+
+    public function test_other_student_and_duplicate_week_are_rejected_and_get_returns_pdf_url(): void
+    {
+        Storage::fake('public');
+        config([
+            'app.url' => 'https://sistem-maganghambaallah-production-5b92.up.railway.app',
+            'filesystems.disks.public.url' => 'https://sistem-maganghambaallah-production-5b92.up.railway.app/storage',
+        ]);
+        $data = $this->scenario();
+        $payload = fn () => [
+            'id_pendaftaran' => $data['pendaftaran']->id_pendaftaran,
+            'minggu_ke' => 1,
+            'tanggal' => '2026-07-25',
+            'deskripsi_kegiatan' => 'Mengerjakan integrasi API.',
+            'berkas_logbook' => UploadedFile::fake()
+                ->create('minggu-1.pdf', 100, 'application/pdf'),
+        ];
+
+        Sanctum::actingAs($data['otherStudent']);
+        $this->post('/api/logbook', $payload())->assertForbidden();
+
+        Sanctum::actingAs($data['student']);
+        $first = $this->post('/api/logbook', $payload())->assertCreated();
+        $this->post('/api/logbook', $payload())
+            ->assertUnprocessable()
+            ->assertJsonPath('code', 'DUPLICATE_LOGBOOK_WEEK');
+
+        $this->getJson('/api/logbook')
+            ->assertOk()
+            ->assertJsonPath('data.0.id_logbook', $first->json('data.id_logbook'))
+            ->assertJsonPath('data.0.berkas_logbook', $first->json('data.berkas_logbook'))
+            ->assertJsonPath(
+                'data.0.url_berkas_logbook',
+                'https://sistem-maganghambaallah-production-5b92.up.railway.app/storage/'
+                    .$first->json('data.berkas_logbook'),
+            );
     }
 
     public function test_only_assigned_supervisor_can_review_and_student_receives_update(): void

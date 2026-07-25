@@ -172,13 +172,15 @@ class AdminController extends Controller
     {
         $users = User::query()
             ->select('id', 'name', 'email_or_nim', 'phone', 'role', 'created_at')
+            ->with(['mahasiswa', 'dosen', 'mitra'])
             ->latest('created_at')
             ->get()
             ->map(fn (User $user) => [
                 'id' => $user->id,
-                'name' => $user->name,
+                'name' => $this->displayName($user),
                 'email' => $user->email_or_nim,
                 'email_or_nim' => $user->email_or_nim,
+                'username' => null,
                 'phone' => $user->phone,
                 'role' => $user->role,
                 'created_at' => $user->created_at?->toISOString(),
@@ -201,6 +203,10 @@ class AdminController extends Controller
         $query = Pendaftaran::query()
             ->with(['mahasiswa.user', 'lowongan.mitra', 'bimbingan.dosen'])
             ->withCount('logbook')
+            ->withCount([
+                'logbook as approved_logbook_count' => fn ($query) => $query
+                    ->where('status_validasi', 'disetujui'),
+            ])
             ->latest('created_at');
 
         if ($status = $validated['status'] ?? null) {
@@ -239,7 +245,7 @@ class AdminController extends Controller
         $user = User::query()
             ->with([
                 'mahasiswa.pendaftaran.lowongan.mitra',
-                'mahasiswa.pendaftaran.bimbingan.dosen',
+                'mahasiswa.pendaftaran.bimbingan.dosen.user',
                 'mahasiswa.pendaftaran.logbook',
                 'dosen.bimbingan.pendaftaran.mahasiswa',
                 'dosen.bimbingan.pendaftaran.lowongan.mitra',
@@ -254,7 +260,7 @@ class AdminController extends Controller
 
         $data = [
             'id' => $user->id,
-            'name' => $user->name,
+            'name' => $this->displayName($user),
             'email' => $user->email_or_nim,
             'email_or_nim' => $user->email_or_nim,
             'phone' => $user->phone,
@@ -262,6 +268,7 @@ class AdminController extends Controller
             'created_at' => $user->created_at?->toISOString(),
             'profile' => (object) [],
             'applications' => [],
+            'supervisor' => null,
             'supervised_students' => [],
             'vacancies' => [],
             'applicants' => [],
@@ -278,6 +285,24 @@ class AdminController extends Controller
             $data['applications'] = $student->pendaftaran
                 ->map(fn (Pendaftaran $item) => $this->formatEnrollment($item))
                 ->values();
+
+            $supervisedApplication = $student->pendaftaran
+                ->filter(fn (Pendaftaran $item) => $item->bimbingan?->dosen !== null)
+                ->sortByDesc(fn (Pendaftaran $item) => [
+                    $item->status === 'accepted' ? 1 : 0,
+                    $item->created_at?->timestamp ?? 0,
+                ])
+                ->first();
+            $supervisor = $supervisedApplication?->bimbingan?->dosen;
+            if ($supervisor) {
+                $data['supervisor'] = [
+                    'id_dosen' => $supervisor->nidn,
+                    'nama_dosen' => $supervisor->user?->name ?? $supervisor->nama,
+                    'nidn' => $supervisor->nidn,
+                    'email' => $supervisor->user?->email_or_nim,
+                    'jumlah_logbook' => $supervisedApplication->logbook->count(),
+                ];
+            }
         } elseif ($user->role === 'dosen' && $user->dosen) {
             $lecturer = $user->dosen;
             $data['profile'] = [
@@ -289,17 +314,21 @@ class AdminController extends Controller
                 ->map(function ($guidance) {
                     $application = $guidance->pendaftaran;
                     $logbookCount = $application?->logbook->count() ?? 0;
+                    $approvedLogbooks = $application?->logbook
+                        ->where('status_validasi', 'disetujui')
+                        ->count() ?? 0;
 
                     return [
                         'id_bimbingan' => $guidance->id_bimbingan,
                         'id_pendaftaran' => $application?->id_pendaftaran,
                         'id_mahasiswa' => $application?->id_mahasiswa,
+                        'nim' => $application?->id_mahasiswa,
                         'nama_mahasiswa' => $application?->mahasiswa?->nama,
                         'judul_posisi' => $application?->lowongan?->judul_posisi,
                         'nama_perusahaan' => $application?->lowongan?->mitra?->nama_perusahaan,
                         'status' => $application?->status,
                         'jumlah_logbook' => $logbookCount,
-                        'progress' => $this->progress($logbookCount),
+                        'progress' => $this->progress($approvedLogbooks),
                     ];
                 })->values();
         } elseif ($user->role === 'mitra' && $user->mitra) {
@@ -322,8 +351,10 @@ class AdminController extends Controller
                         'id_lowongan' => $item->id_lowongan,
                         'judul_posisi' => $vacancy->judul_posisi,
                         'id_mahasiswa' => $item->id_mahasiswa,
+                        'nim' => $item->id_mahasiswa,
                         'nama_mahasiswa' => $item->mahasiswa?->nama,
                         'status' => $item->status,
+                        'tanggal_daftar' => $item->created_at?->toISOString(),
                     ]
                 ))->values();
         }
@@ -392,6 +423,9 @@ class AdminController extends Controller
         $logbookCount = isset($item->logbook_count)
             ? (int) $item->logbook_count
             : $item->logbook->count();
+        $approvedLogbookCount = isset($item->approved_logbook_count)
+            ? (int) $item->approved_logbook_count
+            : $item->logbook->where('status_validasi', 'disetujui')->count();
 
         return [
             'id_pendaftaran' => $item->id_pendaftaran,
@@ -406,7 +440,7 @@ class AdminController extends Controller
             'tanggal_daftar' => $item->created_at?->toISOString(),
             'dosen_pembimbing' => $item->bimbingan?->dosen?->nama,
             'jumlah_logbook' => $logbookCount,
-            'progress' => $this->progress($logbookCount),
+            'progress' => $this->progress($approvedLogbookCount),
         ];
     }
 
@@ -415,5 +449,15 @@ class AdminController extends Controller
         $totalWeeks = max(1, config('internship.total_weeks'));
 
         return min(100, (int) round(($logbookCount / $totalWeeks) * 100));
+    }
+
+    private function displayName(User $user): string
+    {
+        return match ($user->role) {
+            'mahasiswa' => $user->mahasiswa?->nama ?? $user->name,
+            'dosen' => $user->dosen?->nama ?? $user->name,
+            'mitra' => $user->mitra?->nama_perusahaan ?? $user->name,
+            default => $user->name,
+        };
     }
 }

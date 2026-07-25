@@ -39,38 +39,50 @@ class LogbookController extends Controller
     // 2. FITUR ASLI ABANG: Menyimpan logbook baru
     public function store(Request $request)
     {
-        $request->validate([
-            'id_pendaftaran' => 'required|exists:pendaftaran,id_pendaftaran',
-            'minggu_ke' => 'required|integer',
-            'tanggal' => 'required|date',
-            'deskripsi_kegiatan' => 'nullable|required_without:berkas_lampiran|string',
-            'berkas_lampiran' => 'nullable|required_without:deskripsi_kegiatan|file|mimes:pdf,doc,docx,jpg,jpeg,png|max:5120',
+        $validated = $request->validate([
+            'id_pendaftaran' => ['required', 'exists:pendaftaran,id_pendaftaran'],
+            'minggu_ke' => ['required', 'integer', 'min:1', 'max:52'],
+            'tanggal' => ['required', 'date'],
+            'deskripsi_kegiatan' => ['required', 'string', 'max:5000'],
+            'berkas_logbook' => ['required', 'file', 'mimes:pdf', 'max:5120'],
         ]);
 
-        $pendaftaran = Pendaftaran::find($request->id_pendaftaran);
+        $pendaftaran = Pendaftaran::find($validated['id_pendaftaran']);
         if ($pendaftaran->id_mahasiswa !== $request->user()->email_or_nim) {
             return response()->json(['message' => 'Akses ditolak!'], 403);
         }
 
-        if (! in_array($pendaftaran->status, ['accepted', 'diterima'], true)) {
+        if (
+            ! in_array($pendaftaran->status, ['accepted', 'diterima'], true)
+            || $pendaftaran->completed_at !== null
+        ) {
             return response()->json([
-                'message' => 'Gagal! Mahasiswa ini belum berstatus diterima.',
+                'message' => 'Gagal! Program magang tidak aktif.',
             ], 403);
         }
 
-        $attachmentPath = null;
-        if ($request->hasFile('berkas_lampiran')) {
-            $file = $request->file('berkas_lampiran');
-            $name = uniqid('logbook_', true).'_'.preg_replace('/\s+/', '_', $file->getClientOriginalName());
-            $attachmentPath = $file->storeAs('logbook', $name, 'public');
+        $duplicateWeek = Logbook::query()
+            ->where('id_pendaftaran', $pendaftaran->id_pendaftaran)
+            ->where('minggu_ke', $validated['minggu_ke'])
+            ->exists();
+        if ($duplicateWeek) {
+            return response()->json([
+                'message' => 'Logbook untuk minggu tersebut sudah pernah dikirim.',
+                'code' => 'DUPLICATE_LOGBOOK_WEEK',
+            ], 422);
+        }
+
+        $attachmentPath = $request->file('berkas_logbook')->store('logbook', 'public');
+        if (! $attachmentPath) {
+            return response()->json(['message' => 'File logbook gagal disimpan.'], 500);
         }
 
         try {
             $logbook = DB::transaction(fn () => Logbook::create([
                 'id_pendaftaran' => $pendaftaran->id_pendaftaran,
-                'minggu_ke' => $request->minggu_ke,
-                'tanggal' => $request->tanggal,
-                'deskripsi_kegiatan' => $request->deskripsi_kegiatan,
+                'minggu_ke' => $validated['minggu_ke'],
+                'tanggal' => $validated['tanggal'],
+                'deskripsi_kegiatan' => $validated['deskripsi_kegiatan'],
                 'berkas_lampiran' => $attachmentPath,
                 'status_validasi' => 'pending',
                 'feedback_dosen' => null,
@@ -93,7 +105,7 @@ class LogbookController extends Controller
         $this->notifySupervisor($logbook, $pendaftaran, 'logbook_submitted');
 
         return response()->json([
-            'message' => 'Logbook minggu ke-'.$request->minggu_ke.' berhasil dikirim!',
+            'message' => 'Logbook minggu ke-'.$validated['minggu_ke'].' berhasil dikirim!',
             'data' => new LogbookResource(
                 $logbook->load(['validatorDosen.user', 'pendaftaran.bimbingan.dosen.user'])
             ),

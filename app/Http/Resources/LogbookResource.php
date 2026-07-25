@@ -12,6 +12,7 @@ class LogbookResource extends JsonResource
     {
         $lecturer = $this->validatorDosen
             ?? $this->pendaftaran?->bimbingan?->dosen;
+        $fileUrl = PublicFileUrl::from($this->berkas_lampiran);
 
         return [
             'id_logbook' => $this->id_logbook,
@@ -19,7 +20,9 @@ class LogbookResource extends JsonResource
             'minggu_ke' => (int) $this->minggu_ke,
             'tanggal' => $this->tanggal?->toDateString(),
             'deskripsi_kegiatan' => $this->deskripsi_kegiatan,
-            'berkas_lampiran_url' => PublicFileUrl::from($this->berkas_lampiran),
+            'berkas_logbook' => $this->berkas_lampiran,
+            'url_berkas_logbook' => $fileUrl,
+            'berkas_lampiran_url' => $fileUrl,
             'tipe_konten' => $this->deskripsi_kegiatan && $this->berkas_lampiran
                 ? 'teks_dan_file'
                 : ($this->berkas_lampiran ? 'file' : 'teks'),

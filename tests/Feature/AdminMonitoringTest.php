@@ -72,6 +72,7 @@ class AdminMonitoringTest extends TestCase
             'minggu_ke' => 1,
             'tanggal' => now()->toDateString(),
             'deskripsi_kegiatan' => 'Integrasi API.',
+            'status_validasi' => 'disetujui',
         ]);
         Bimbingan::create([
             'id_pendaftaran' => $application->id_pendaftaran,
@@ -111,6 +112,7 @@ class AdminMonitoringTest extends TestCase
             'minggu_ke' => 1,
             'tanggal' => now()->toDateString(),
             'deskripsi_kegiatan' => 'Integrasi API.',
+            'status_validasi' => 'disetujui',
         ]);
 
         Sanctum::actingAs($data['admin']);
@@ -119,18 +121,25 @@ class AdminMonitoringTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.profile.nim', '23.11.5818')
             ->assertJsonPath('data.applications.0.id_pendaftaran', $application->id_pendaftaran)
-            ->assertJsonPath('data.applications.0.jumlah_logbook', 1);
+            ->assertJsonPath('data.applications.0.jumlah_logbook', 1)
+            ->assertJsonPath('data.supervisor.nidn', '001')
+            ->assertJsonPath('data.supervisor.nama_dosen', 'Dr. Rina Saraswati')
+            ->assertJsonPath('data.supervisor.jumlah_logbook', 1);
 
         $this->getJson('/api/admin/users/'.$data['lecturerUser']->id)
             ->assertOk()
             ->assertJsonPath('data.profile.nidn', '001')
-            ->assertJsonPath('data.supervised_students.0.id_pendaftaran', $application->id_pendaftaran);
+            ->assertJsonPath('data.supervised_students.0.id_pendaftaran', $application->id_pendaftaran)
+            ->assertJsonPath('data.supervised_students.0.nim', '23.11.5818')
+            ->assertJsonPath('data.supervised_students.0.progress', 8);
 
         $this->getJson('/api/admin/users/'.$data['partnerUser']->id)
             ->assertOk()
             ->assertJsonPath('data.profile.id_mitra', $data['mitra']->id_mitra)
             ->assertJsonPath('data.vacancies.0.jumlah_pendaftar', 1)
-            ->assertJsonPath('data.applicants.0.id_pendaftaran', $application->id_pendaftaran);
+            ->assertJsonPath('data.applicants.0.id_pendaftaran', $application->id_pendaftaran)
+            ->assertJsonPath('data.applicants.0.nim', '23.11.5818')
+            ->assertJsonPath('data.applicants.0.tanggal_daftar', fn ($value) => is_string($value));
 
         $payload = $studentResponse->getContent();
         $this->assertStringNotContainsString('"password"', $payload);
@@ -149,11 +158,26 @@ class AdminMonitoringTest extends TestCase
                 'id' => $data['studentUser']->id,
                 'email' => '23.11.5818',
                 'email_or_nim' => '23.11.5818',
+                'username' => null,
                 'role' => 'mahasiswa',
             ]);
 
         $this->assertStringNotContainsString('"password"', $response->getContent());
         $this->assertStringNotContainsString('remember_token', $response->getContent());
+    }
+
+    public function test_non_admin_cannot_access_admin_users_and_missing_user_is_json_404(): void
+    {
+        $data = $this->scenario();
+
+        Sanctum::actingAs($data['studentUser']);
+        $this->getJson('/api/admin/users')->assertForbidden();
+        $this->getJson('/api/admin/users/'.$data['admin']->id)->assertForbidden();
+
+        Sanctum::actingAs($data['admin']);
+        $this->getJson('/api/admin/users/999999')
+            ->assertNotFound()
+            ->assertExactJson(['message' => 'Pengguna tidak ditemukan.']);
     }
 
     public function test_approve_and_reject_are_idempotent_and_only_transition_pending(): void
