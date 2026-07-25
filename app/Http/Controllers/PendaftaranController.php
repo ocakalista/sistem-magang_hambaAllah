@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Resources\PendaftaranResource;
+use App\Http\Resources\PendaftarResource;
 use App\Models\Lowongan;
 use App\Models\Mahasiswa;
 use App\Models\Pendaftaran;
@@ -14,7 +15,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
 use RuntimeException;
 use Throwable;
 
@@ -29,7 +29,7 @@ class PendaftaranController extends Controller
     {
         $pendaftaran = Pendaftaran::query()
             ->where('id_mahasiswa', $request->user()->email_or_nim)
-            ->with('lowongan.mitra')
+            ->with(['lowongan.mitra', 'bimbingan.dosen.user'])
             ->latest('created_at')
             ->get();
 
@@ -66,7 +66,7 @@ class PendaftaranController extends Controller
             'nama_lengkap' => 'required|string|max:255',
             'no_telp' => 'required|string|max:20',
             'semester' => 'required|integer|min:1|max:14',
-            'motivasi' => 'required|string',
+            'motivasi' => 'nullable|string|max:5000',
             'berkas_cv' => 'required|file|mimes:pdf,doc,docx|max:5120',
             'berkas_portofolio' => 'nullable|file|mimes:pdf,doc,docx|max:5120',
             'portofolio_link' => 'nullable|url',
@@ -139,7 +139,7 @@ class PendaftaranController extends Controller
 
                 $cv = $request->file('berkas_cv');
                 $cvPath = $cv->storeAs(
-                    'berkas_cv',
+                    'pendaftaran/cv',
                     uniqid('cv_', true).'_'.preg_replace('/\s+/', '_', $cv->getClientOriginalName()),
                     'public',
                 );
@@ -152,7 +152,7 @@ class PendaftaranController extends Controller
                 if ($request->hasFile('berkas_portofolio')) {
                     $portfolio = $request->file('berkas_portofolio');
                     $portofolioPath = $portfolio->storeAs(
-                        'berkas_portofolio',
+                        'pendaftaran/portfolio',
                         uniqid('portfolio_', true).'_'.preg_replace('/\s+/', '_', $portfolio->getClientOriginalName()),
                         'public',
                     );
@@ -168,7 +168,7 @@ class PendaftaranController extends Controller
                     'berkas_cv' => $cvPath,
                     'portofolio' => $portofolioPath,
                     'portfolio_link' => $validated['portofolio_link'] ?? null,
-                    'motivasi' => $validated['motivasi'],
+                    'motivasi' => $validated['motivasi'] ?? null,
                     'status' => 'pending',
                 ]);
 
@@ -502,33 +502,15 @@ class PendaftaranController extends Controller
 
         $pelamar = Pendaftaran::query()
             ->where('id_lowongan', $lowongan->id_lowongan)
-            ->with(['mahasiswa.user', 'lowongan'])
+            ->with(['mahasiswa.user', 'lowongan.mitra'])
             ->latest('created_at')
-            ->get()
-            ->map(fn (Pendaftaran $item) => [
-                'id_pendaftaran' => $item->id_pendaftaran,
-                'id_lowongan' => $item->id_lowongan,
-                'nama_mahasiswa' => $item->mahasiswa?->nama,
-                'nim' => $item->id_mahasiswa,
-                'jurusan' => $item->mahasiswa?->jurusan,
-                'email' => $item->mahasiswa?->user?->email_or_nim,
-                'no_telp' => $item->mahasiswa?->user?->phone,
-                'semester' => $item->mahasiswa?->user?->semester !== null
-                    ? (int) $item->mahasiswa->user->semester
-                    : null,
-                'motivasi' => $item->motivasi,
-                'status' => $item->status,
-                'tanggal_daftar' => $item->created_at?->toISOString(),
-                'url_cv' => $this->publicFileUrl($item->berkas_cv),
-                'url_portofolio' => $this->publicFileUrl($item->portofolio),
-                'portofolio_link' => $item->portfolio_link,
-            ]);
+            ->get();
 
         return response()->json([
             'message' => $pelamar->isEmpty()
                 ? 'Belum ada pelamar untuk lowongan ini.'
                 : 'Berhasil mengambil daftar pelamar',
-            'data' => $pelamar,
+            'data' => PendaftarResource::collection($pelamar),
         ], 200);
     }
 
@@ -565,19 +547,5 @@ class PendaftaranController extends Controller
             'message' => 'Laporan Akhir berhasil diunggah',
             'data' => $pendaftaran,
         ], 200);
-    }
-
-    private function publicFileUrl(?string $path): ?string
-    {
-        if (! $path) {
-            return null;
-        }
-
-        $storageUrl = Storage::disk('public')->url($path);
-        $absoluteUrl = Str::startsWith($storageUrl, ['http://', 'https://'])
-            ? $storageUrl
-            : url($storageUrl);
-
-        return Str::replaceStart('http://', 'https://', $absoluteUrl);
     }
 }

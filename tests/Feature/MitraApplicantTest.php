@@ -69,6 +69,43 @@ class MitraApplicantTest extends TestCase
         $this->assertSame('pending', $data['application']->fresh()->status);
     }
 
+    public function test_owned_vacancy_without_applicants_returns_an_empty_array(): void
+    {
+        $data = $this->scenario();
+        $emptyVacancy = $this->lowongan(
+            Mitra::where('id_user', $data['partner']->id)->firstOrFail()
+        );
+        Sanctum::actingAs($data['partner']);
+
+        $this->getJson('/api/lowongan/'.$emptyVacancy->id_lowongan.'/pelamar')
+            ->assertOk()
+            ->assertJsonPath('data', []);
+    }
+
+    public function test_document_urls_normalize_legacy_storage_prefixes_and_null_portfolio(): void
+    {
+        $data = $this->scenario();
+        config([
+            'app.url' => 'https://sistem-maganghambaallah-production-5b92.up.railway.app',
+            'filesystems.disks.public.url' => 'https://sistem-maganghambaallah-production-5b92.up.railway.app/storage',
+        ]);
+        $data['application']->update([
+            'berkas_cv' => 'storage\\storage\\pendaftaran\\cv\\cv.pdf',
+            'portofolio' => null,
+        ]);
+        Sanctum::actingAs($data['partner']);
+
+        $this->getJson('/api/lowongan/'.$data['ownLowongan']->id_lowongan.'/pelamar')
+            ->assertOk()
+            ->assertJsonPath(
+                'data.0.url_cv',
+                'https://sistem-maganghambaallah-production-5b92.up.railway.app/storage/pendaftaran/cv/cv.pdf',
+            )
+            ->assertJsonPath('data.0.url_portofolio', null)
+            ->assertJsonPath('data.0.no_telp', '08123456789')
+            ->assertJsonPath('data.0.semester', 6);
+    }
+
     public function test_accepting_rejected_applicant_is_idempotent_for_quota_and_notification(): void
     {
         $data = $this->scenario();

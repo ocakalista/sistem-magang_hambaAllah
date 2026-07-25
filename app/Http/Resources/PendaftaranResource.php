@@ -25,6 +25,15 @@ class PendaftaranResource extends JsonResource
             'berkas_cv' => $this->berkas_cv,
             'portofolio' => $this->portofolio,
             'portfolio_link' => $this->portfolio_link,
+            'dosen_pembimbing' => $this->whenLoaded('bimbingan', function () {
+                $dosen = $this->bimbingan?->dosen;
+
+                return $dosen ? [
+                    'id_dosen' => $dosen->nidn,
+                    'nama_lengkap' => $dosen->user?->name ?? $dosen->nama,
+                    'nidn' => $dosen->nidn,
+                ] : null;
+            }),
             'lowongan' => $this->whenLoaded('lowongan', fn () => [
                 'id_lowongan' => $this->lowongan?->id_lowongan,
                 'judul_posisi' => $this->lowongan?->judul_posisi,

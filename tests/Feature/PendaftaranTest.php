@@ -27,10 +27,17 @@ class PendaftaranTest extends TestCase
             'motivasi' => 'Draft lama',
         ]);
 
-        $this->post('/api/pendaftaran', $this->validPayload($lowongan))
+        $response = $this->post('/api/pendaftaran', $this->validPayload($lowongan))
             ->assertCreated()
             ->assertJsonPath('success', true)
             ->assertJsonPath('message', 'Lamaran terkirim!');
+
+        $application = Pendaftaran::find($response->json('data.id_pendaftaran'));
+        Storage::disk('public')->assertExists($application->berkas_cv);
+        Storage::disk('public')->assertExists($application->portofolio);
+        $this->assertStringStartsWith('pendaftaran/cv/', $application->berkas_cv);
+        $this->assertStringStartsWith('pendaftaran/portfolio/', $application->portofolio);
+        $this->assertSame('Saya ingin mengikuti program magang ini.', $application->motivasi);
 
         $this->assertDatabaseHas('mahasiswa', [
             'id_mahasiswa' => $mahasiswa->email_or_nim,
@@ -153,6 +160,20 @@ class PendaftaranTest extends TestCase
 
         $this->assertDatabaseCount('pendaftaran', 1);
         $this->assertSame(1, $lowongan->fresh()->kuota);
+    }
+
+    public function test_portfolio_file_and_motivation_are_nullable(): void
+    {
+        [, $lowongan] = $this->scenario();
+        $payload = $this->validPayload($lowongan);
+        unset($payload['berkas_portofolio'], $payload['motivasi']);
+
+        $response = $this->post('/api/pendaftaran', $payload)->assertCreated();
+        $application = Pendaftaran::find($response->json('data.id_pendaftaran'));
+
+        $this->assertNull($application->portofolio);
+        $this->assertNull($application->motivasi);
+        Storage::disk('public')->assertExists($application->berkas_cv);
     }
 
     private function scenario(int $quota = 2): array

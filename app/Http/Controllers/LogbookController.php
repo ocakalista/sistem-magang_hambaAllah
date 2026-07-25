@@ -2,12 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Resources\LogbookResource;
 use App\Models\Logbook;
 use App\Models\Pendaftaran;
 use App\Notifications\ApiNotification;
 use App\Support\SendsNotificationsSafely;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -18,21 +18,21 @@ class LogbookController extends Controller
     use SendsNotificationsSafely;
 
     // 1. FITUR BARU: Menampilkan riwayat logbook (Khusus Mahasiswa yang sedang login)
-    public function index()
+    public function index(Request $request)
     {
-        // Ambil NIM mahasiswa dari token loginnya
-        $nim = Auth::user()->email_or_nim;
-
-        // Cari catatan logbook yang terhubung dengan pendaftarannya
-        $logbook = DB::table('logbook')
-            ->join('pendaftaran', 'logbook.id_pendaftaran', '=', 'pendaftaran.id_pendaftaran')
-            ->where('pendaftaran.id_mahasiswa', $nim)
-            ->select('logbook.*')
+        $logbook = Logbook::query()
+            ->whereHas('pendaftaran', fn ($query) => $query
+                ->where('id_mahasiswa', $request->user()->email_or_nim))
+            ->with([
+                'validatorDosen.user',
+                'pendaftaran.bimbingan.dosen.user',
+            ])
+            ->latest('tanggal')
             ->get();
 
         return response()->json([
             'message' => 'Berhasil mengambil riwayat logbook',
-            'data' => $logbook->map(fn ($item) => $this->formatLogbook($item)),
+            'data' => LogbookResource::collection($logbook),
         ], 200);
     }
 
@@ -94,7 +94,9 @@ class LogbookController extends Controller
 
         return response()->json([
             'message' => 'Logbook minggu ke-'.$request->minggu_ke.' berhasil dikirim!',
-            'data' => $this->formatLogbook($logbook),
+            'data' => new LogbookResource(
+                $logbook->load(['validatorDosen.user', 'pendaftaran.bimbingan.dosen.user'])
+            ),
         ], 201);
     }
 
@@ -107,8 +109,9 @@ class LogbookController extends Controller
         ]);
 
         $logbook = Logbook::with([
-            'pendaftaran.bimbingan',
+            'pendaftaran.bimbingan.dosen.user',
             'pendaftaran.mahasiswa.user',
+            'validatorDosen.user',
         ])->find($id);
 
         if (! $logbook) {
@@ -126,9 +129,11 @@ class LogbookController extends Controller
             ], 403);
         }
 
-        DB::transaction(function () use ($logbook, $validated) {
+        DB::transaction(function () use ($logbook, $validated, $dosen) {
             $logbook->status_validasi = $validated['status_validasi'];
             $logbook->feedback_dosen = $validated['feedback_dosen'] ?? null;
+            $logbook->id_dosen_feedback = $dosen->nidn;
+            $logbook->validated_at = now();
             $logbook->save();
         });
 
@@ -154,7 +159,9 @@ class LogbookController extends Controller
 
         return response()->json([
             'message' => 'Status logbook berhasil diubah menjadi '.$logbook->status_validasi,
-            'data' => $this->formatLogbook($logbook),
+            'data' => new LogbookResource(
+                $logbook->load(['validatorDosen.user', 'pendaftaran.bimbingan.dosen.user'])
+            ),
         ], 200);
     }
 
@@ -200,6 +207,8 @@ class LogbookController extends Controller
                 }
                 $logbook->status_validasi = 'pending';
                 $logbook->feedback_dosen = null;
+                $logbook->id_dosen_feedback = null;
+                $logbook->validated_at = null;
                 $logbook->save();
             });
         } catch (Throwable $exception) {
@@ -225,16 +234,39 @@ class LogbookController extends Controller
 
         return response()->json([
             'message' => 'Logbook berhasil dikirim ulang dan menunggu review.',
-            'data' => $this->formatLogbook($logbook),
+            'data' => new LogbookResource(
+                $logbook->load(['validatorDosen.user', 'pendaftaran.bimbingan.dosen.user'])
+            ),
         ]);
     }
 
     // 4. FITUR BARU: Dosen & Mitra melihat isi logbook mahasiswa tertentu
-    public function getLogbookByPendaftaran($id_pendaftaran)
+    public function getLogbookByPendaftaran(Request $request, $id_pendaftaran)
     {
-        // Kita cari semua logbook milik pendaftaran ini, diurutkan dari minggu pertama
-        $logbook = DB::table('logbook')
-            ->where('id_pendaftaran', $id_pendaftaran)
+        $pendaftaran = Pendaftaran::with(['bimbingan.dosen', 'lowongan.mitra'])->find($id_pendaftaran);
+        if (! $pendaftaran) {
+            return response()->json(['message' => 'Data pendaftaran tidak ditemukan.'], 404);
+        }
+
+        if ($request->user()->role === 'dosen') {
+            $dosen = $request->user()->dosen;
+            if (! $dosen || $pendaftaran->bimbingan?->nidn !== $dosen->nidn) {
+                return response()->json([
+                    'message' => 'Anda bukan dosen pembimbing mahasiswa ini.',
+                ], 403);
+            }
+        } elseif ($request->user()->role === 'mitra') {
+            $mitra = $request->user()->mitra;
+            if (! $mitra || $pendaftaran->lowongan?->id_mitra !== $mitra->id_mitra) {
+                return response()->json([
+                    'message' => 'Anda tidak memiliki akses ke logbook ini.',
+                ], 403);
+            }
+        }
+
+        $logbook = Logbook::query()
+            ->where('id_pendaftaran', $pendaftaran->id_pendaftaran)
+            ->with(['validatorDosen.user', 'pendaftaran.bimbingan.dosen.user'])
             ->orderBy('minggu_ke', 'asc')
             ->get();
 
@@ -249,29 +281,8 @@ class LogbookController extends Controller
         // Kalau ada datanya, kirim ke HP Dosen/Mitra
         return response()->json([
             'message' => 'Berhasil mengambil data logbook',
-            'data' => $logbook->map(fn ($item) => $this->formatLogbook($item)),
+            'data' => LogbookResource::collection($logbook),
         ], 200);
-    }
-
-    private function formatLogbook(object $logbook): array
-    {
-        return [
-            'id_logbook' => $logbook->id_logbook,
-            'id_pendaftaran' => $logbook->id_pendaftaran,
-            'minggu_ke' => (int) $logbook->minggu_ke,
-            'tanggal' => $logbook->tanggal,
-            'deskripsi_kegiatan' => $logbook->deskripsi_kegiatan,
-            'berkas_lampiran_url' => $logbook->berkas_lampiran
-                ? asset('storage/'.$logbook->berkas_lampiran)
-                : null,
-            'tipe_konten' => $logbook->deskripsi_kegiatan && $logbook->berkas_lampiran
-                ? 'teks_dan_file'
-                : ($logbook->berkas_lampiran ? 'file' : 'teks'),
-            'status_validasi' => $logbook->status_validasi,
-            'feedback_dosen' => $logbook->feedback_dosen,
-            'created_at' => $logbook->created_at,
-            'updated_at' => $logbook->updated_at,
-        ];
     }
 
     private function notifySupervisor(Logbook $logbook, Pendaftaran $pendaftaran, string $type): void

@@ -21,15 +21,23 @@ class Logbook extends Model
         'berkas_lampiran',
         'status_validasi',
         'feedback_dosen',
+        'id_dosen_feedback',
+        'validated_at',
     ];
 
     protected $casts = [
         'minggu_ke' => 'integer',
         'tanggal' => 'date',
+        'validated_at' => 'datetime',
     ];
 
     public function pendaftaran()
     {
         return $this->belongsTo(Pendaftaran::class, 'id_pendaftaran', 'id_pendaftaran');
+    }
+
+    public function validatorDosen()
+    {
+        return $this->belongsTo(Dosen::class, 'id_dosen_feedback', 'nidn');
     }
 }

@@ -63,13 +63,24 @@ class LogbookWorkflowTest extends TestCase
         $this->putJson('/api/logbook/'.$logbook->id_logbook.'/status', [
             'status_validasi' => 'revisi',
             'feedback_dosen' => 'Tambahkan bukti hasil pengujian.',
+            'id_dosen_feedback' => '002',
         ])->assertOk()->assertJsonPath('data.status_validasi', 'revisi');
+
+        $this->assertSame('001', $logbook->fresh()->id_dosen_feedback);
+        $this->assertNotNull($logbook->fresh()->validated_at);
 
         $notification = $data['student']->notifications()->first();
         $this->assertNotNull($notification);
         $this->assertSame('status_logbook', $notification->data['type']);
         $this->assertSame('update', $notification->data['metadata']['category']);
         $this->assertFalse($notification->data['metadata']['requires_action']);
+
+        Sanctum::actingAs($data['student']);
+        $this->getJson('/api/logbook')
+            ->assertOk()
+            ->assertJsonPath('data.0.feedback_dosen', 'Tambahkan bukti hasil pengujian.')
+            ->assertJsonPath('data.0.id_dosen_feedback', '001')
+            ->assertJsonPath('data.0.nama_dosen', $data['supervisor']->name);
     }
 
     public function test_student_can_resubmit_revised_logbook_and_supervisor_is_notified(): void
@@ -168,6 +179,45 @@ class LogbookWorkflowTest extends TestCase
             ->assertOk()
             ->assertJsonCount(1, 'data')
             ->assertJsonPath('data.0.id', $data['otherStudent']->email_or_nim);
+    }
+
+    public function test_application_history_contains_real_supervisor_and_is_scoped_to_student(): void
+    {
+        $data = $this->scenario();
+
+        Sanctum::actingAs($data['student']);
+        $this->getJson('/api/pendaftaran/riwayat')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id_pendaftaran', $data['pendaftaran']->id_pendaftaran)
+            ->assertJsonPath('data.0.dosen_pembimbing.id_dosen', '001')
+            ->assertJsonPath('data.0.dosen_pembimbing.nidn', '001')
+            ->assertJsonPath(
+                'data.0.dosen_pembimbing.nama_lengkap',
+                $data['supervisor']->name,
+            );
+
+        Sanctum::actingAs($data['otherStudent']);
+        $this->getJson('/api/pendaftaran/riwayat')
+            ->assertOk()
+            ->assertJsonPath('data', []);
+    }
+
+    public function test_missing_supervisor_returns_null_without_server_error(): void
+    {
+        $data = $this->scenario();
+        $withoutSupervisor = Pendaftaran::create([
+            'id_mahasiswa' => $data['student']->email_or_nim,
+            'id_lowongan' => $data['pendaftaran']->id_lowongan,
+            'status' => 'accepted',
+        ]);
+
+        Sanctum::actingAs($data['student']);
+        $response = $this->getJson('/api/pendaftaran/riwayat')->assertOk();
+        $item = collect($response->json('data'))
+            ->firstWhere('id_pendaftaran', $withoutSupervisor->id_pendaftaran);
+
+        $this->assertNull($item['dosen_pembimbing']);
     }
 
     private function scenario(): array
