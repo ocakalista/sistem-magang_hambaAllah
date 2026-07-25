@@ -11,7 +11,7 @@ use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PendaftaranController;
 use App\Http\Controllers\PendaftaranDraftController;
 use App\Http\Controllers\SavedLowonganController;
-use Illuminate\Http\Request;
+use App\Http\Controllers\UserProfileController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -34,9 +34,7 @@ Route::get('/mitra', [MitraController::class, 'index']);
 Route::middleware('auth:sanctum')->group(function () {
 
     Route::post('/logout', [AuthController::class, 'logout']);
-    Route::get('/user', function (Request $request) {
-        return $request->user();
-    });
+    Route::get('/user', [UserProfileController::class, 'show']);
     Route::get('/notifications', [NotificationController::class, 'index']);
     Route::patch('/notifications/{id}/read', [NotificationController::class, 'markAsRead']);
     Route::patch('/notifications/read-all', [NotificationController::class, 'markAllAsRead']);
@@ -102,6 +100,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // -------- MAHASISWA --------
     Route::middleware('role:mahasiswa')->group(function () {
+        Route::put('/user/profile', [UserProfileController::class, 'update']);
+
         Route::get('/saved-lowongan', [SavedLowonganController::class, 'index']);
         Route::post('/saved-lowongan/{id_lowongan}', [SavedLowonganController::class, 'store']);
         Route::delete('/saved-lowongan/{id_lowongan}', [SavedLowonganController::class, 'destroy']);
