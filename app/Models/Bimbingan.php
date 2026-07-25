@@ -10,17 +10,19 @@ class Bimbingan extends Model
     use HasFactory;
 
     protected $table = 'bimbingan';
+
     protected $primaryKey = 'id_bimbingan';
+
     protected $fillable = [
         'id_pendaftaran',
         'nidn',
         'status_verifikasi',
-        'catatan_verifikasi'
+        'catatan_verifikasi',
     ];
 
     public function pendaftaran()
     {
-        return $this->belongsTo(Pendaftaran::class, 'id_pendaftaran');
+        return $this->belongsTo(Pendaftaran::class, 'id_pendaftaran', 'id_pendaftaran');
     }
 
     public function dosen()

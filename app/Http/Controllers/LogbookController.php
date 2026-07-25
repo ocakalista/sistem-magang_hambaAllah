@@ -9,6 +9,9 @@ use App\Support\SendsNotificationsSafely;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
+use Throwable;
 
 class LogbookController extends Controller
 {
@@ -55,32 +58,39 @@ class LogbookController extends Controller
             ], 403);
         }
 
-        $logbook = new Logbook;
-        $logbook->id_pendaftaran = $request->id_pendaftaran;
-        $logbook->minggu_ke = $request->minggu_ke;
-        $logbook->tanggal = $request->tanggal;
-        $logbook->deskripsi_kegiatan = $request->deskripsi_kegiatan;
+        $attachmentPath = null;
         if ($request->hasFile('berkas_lampiran')) {
             $file = $request->file('berkas_lampiran');
-            $name = time().'_'.preg_replace('/\s+/', '_', $file->getClientOriginalName());
-            $logbook->berkas_lampiran = $file->storeAs('logbook', $name, 'public');
+            $name = uniqid('logbook_', true).'_'.preg_replace('/\s+/', '_', $file->getClientOriginalName());
+            $attachmentPath = $file->storeAs('logbook', $name, 'public');
         }
-        $logbook->status_validasi = 'pending';
-        $logbook->save();
 
-        $this->notifySafely(
-            $logbook->pendaftaran?->mahasiswa?->user,
-            new ApiNotification(
-                'status_logbook',
-                $request->status_validasi === 'disetujui' ? 'Logbook disetujui' : 'Logbook perlu direvisi',
-                $request->feedback_dosen ?: 'Status logbook minggu ke-'.$logbook->minggu_ke.' diperbarui.',
-                [
-                    'id_logbook' => $logbook->id_logbook,
-                    'status_validasi' => $request->status_validasi,
-                ],
-            ),
-            'logbook.status_updated',
-        );
+        try {
+            $logbook = DB::transaction(fn () => Logbook::create([
+                'id_pendaftaran' => $pendaftaran->id_pendaftaran,
+                'minggu_ke' => $request->minggu_ke,
+                'tanggal' => $request->tanggal,
+                'deskripsi_kegiatan' => $request->deskripsi_kegiatan,
+                'berkas_lampiran' => $attachmentPath,
+                'status_validasi' => 'pending',
+                'feedback_dosen' => null,
+            ]));
+        } catch (Throwable $exception) {
+            if ($attachmentPath) {
+                Storage::disk('public')->delete($attachmentPath);
+            }
+
+            Log::error('Logbook submission failed.', [
+                'user_id' => $request->user()->id,
+                'id_pendaftaran' => $pendaftaran->id_pendaftaran,
+                'exception' => $exception::class,
+                'message' => $exception->getMessage(),
+            ]);
+
+            return response()->json(['message' => 'Logbook gagal disimpan.'], 500);
+        }
+
+        $this->notifySupervisor($logbook, $pendaftaran, 'logbook_submitted');
 
         return response()->json([
             'message' => 'Logbook minggu ke-'.$request->minggu_ke.' berhasil dikirim!',
@@ -91,27 +101,132 @@ class LogbookController extends Controller
     // 3. FITUR DOSEN: Mengubah status logbook & memberikan feedback (US-21)
     public function updateStatus(Request $request, $id)
     {
-        $request->validate([
+        $validated = $request->validate([
             'status_validasi' => 'required|in:disetujui,revisi',
-            'feedback_dosen' => 'nullable|string',
+            'feedback_dosen' => 'nullable|required_if:status_validasi,revisi|string|max:5000',
         ]);
 
-        $logbook = Logbook::find($id);
+        $logbook = Logbook::with([
+            'pendaftaran.bimbingan',
+            'pendaftaran.mahasiswa.user',
+        ])->find($id);
 
         if (! $logbook) {
             return response()->json(['message' => 'Data logbook tidak ditemukan'], 404);
         }
 
-        $logbook->status_validasi = $request->status_validasi;
-        if ($request->has('feedback_dosen')) {
-            $logbook->feedback_dosen = $request->feedback_dosen;
+        $dosen = $request->user()->dosen;
+        if (
+            ! $dosen
+            || ! $logbook->pendaftaran?->bimbingan
+            || $logbook->pendaftaran->bimbingan->nidn !== $dosen->nidn
+        ) {
+            return response()->json([
+                'message' => 'Anda bukan dosen pembimbing untuk logbook ini.',
+            ], 403);
         }
-        $logbook->save();
+
+        DB::transaction(function () use ($logbook, $validated) {
+            $logbook->status_validasi = $validated['status_validasi'];
+            $logbook->feedback_dosen = $validated['feedback_dosen'] ?? null;
+            $logbook->save();
+        });
+
+        $this->notifySafely(
+            $logbook->pendaftaran?->mahasiswa?->user,
+            new ApiNotification(
+                'status_logbook',
+                $logbook->status_validasi === 'disetujui'
+                    ? 'Logbook disetujui'
+                    : 'Logbook perlu direvisi',
+                $logbook->feedback_dosen
+                    ?: 'Status logbook minggu ke-'.$logbook->minggu_ke.' diperbarui.',
+                [
+                    'id_logbook' => $logbook->id_logbook,
+                    'id_pendaftaran' => $logbook->id_pendaftaran,
+                    'status_validasi' => $logbook->status_validasi,
+                    'category' => 'update',
+                    'requires_action' => false,
+                ],
+            ),
+            'logbook.reviewed',
+        );
 
         return response()->json([
-            'message' => 'Status logbook berhasil diubah menjadi '.$request->status_validasi,
+            'message' => 'Status logbook berhasil diubah menjadi '.$logbook->status_validasi,
             'data' => $this->formatLogbook($logbook),
         ], 200);
+    }
+
+    public function resubmit(Request $request, $id)
+    {
+        $validated = $request->validate([
+            'tanggal' => 'required|date',
+            'deskripsi_kegiatan' => 'nullable|required_without:berkas_lampiran|string|max:10000',
+            'berkas_lampiran' => 'nullable|required_without:deskripsi_kegiatan|file|mimes:pdf,doc,docx,jpg,jpeg,png|max:5120',
+        ]);
+
+        $logbook = Logbook::with('pendaftaran.bimbingan.dosen.user')->find($id);
+        if (! $logbook) {
+            return response()->json(['message' => 'Data logbook tidak ditemukan'], 404);
+        }
+
+        $pendaftaran = $logbook->pendaftaran;
+        if (! $pendaftaran || $pendaftaran->id_mahasiswa !== $request->user()->email_or_nim) {
+            return response()->json(['message' => 'Akses ditolak!'], 403);
+        }
+
+        if ($logbook->status_validasi !== 'revisi') {
+            return response()->json([
+                'message' => 'Hanya logbook berstatus revisi yang dapat dikirim ulang.',
+            ], 409);
+        }
+
+        $oldAttachment = $logbook->berkas_lampiran;
+        $newAttachment = null;
+
+        if ($request->hasFile('berkas_lampiran')) {
+            $file = $request->file('berkas_lampiran');
+            $name = uniqid('logbook_', true).'_'.preg_replace('/\s+/', '_', $file->getClientOriginalName());
+            $newAttachment = $file->storeAs('logbook', $name, 'public');
+        }
+
+        try {
+            DB::transaction(function () use ($logbook, $validated, $newAttachment) {
+                $logbook->tanggal = $validated['tanggal'];
+                $logbook->deskripsi_kegiatan = $validated['deskripsi_kegiatan'] ?? null;
+                if ($newAttachment) {
+                    $logbook->berkas_lampiran = $newAttachment;
+                }
+                $logbook->status_validasi = 'pending';
+                $logbook->feedback_dosen = null;
+                $logbook->save();
+            });
+        } catch (Throwable $exception) {
+            if ($newAttachment) {
+                Storage::disk('public')->delete($newAttachment);
+            }
+
+            Log::error('Logbook resubmission failed.', [
+                'user_id' => $request->user()->id,
+                'id_logbook' => $logbook->id_logbook,
+                'exception' => $exception::class,
+                'message' => $exception->getMessage(),
+            ]);
+
+            return response()->json(['message' => 'Logbook gagal dikirim ulang.'], 500);
+        }
+
+        if ($newAttachment && $oldAttachment) {
+            Storage::disk('public')->delete($oldAttachment);
+        }
+
+        $this->notifySupervisor($logbook, $pendaftaran, 'logbook_resubmitted');
+
+        return response()->json([
+            'message' => 'Logbook berhasil dikirim ulang dan menunggu review.',
+            'data' => $this->formatLogbook($logbook),
+        ]);
     }
 
     // 4. FITUR BARU: Dosen & Mitra melihat isi logbook mahasiswa tertentu
@@ -153,8 +268,36 @@ class LogbookController extends Controller
                 ? 'teks_dan_file'
                 : ($logbook->berkas_lampiran ? 'file' : 'teks'),
             'status_validasi' => $logbook->status_validasi,
+            'feedback_dosen' => $logbook->feedback_dosen,
             'created_at' => $logbook->created_at,
             'updated_at' => $logbook->updated_at,
         ];
+    }
+
+    private function notifySupervisor(Logbook $logbook, Pendaftaran $pendaftaran, string $type): void
+    {
+        $pendaftaran->loadMissing(['mahasiswa', 'bimbingan.dosen.user']);
+        $dosenUser = $pendaftaran->bimbingan?->dosen?->user;
+
+        $this->notifySafely(
+            $dosenUser,
+            new ApiNotification(
+                $type,
+                $type === 'logbook_submitted'
+                    ? 'Logbook baru menunggu review'
+                    : 'Logbook revisi menunggu review',
+                ($pendaftaran->mahasiswa?->nama ?? $pendaftaran->id_mahasiswa)
+                    .' mengirim logbook minggu ke-'.$logbook->minggu_ke.'.',
+                [
+                    'id_logbook' => $logbook->id_logbook,
+                    'id_pendaftaran' => $logbook->id_pendaftaran,
+                    'id_mahasiswa' => $pendaftaran->id_mahasiswa,
+                    'category' => 'approval',
+                    'requires_action' => true,
+                    'priority' => 'high',
+                ],
+            ),
+            $type,
+        );
     }
 }

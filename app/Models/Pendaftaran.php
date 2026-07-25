@@ -38,11 +38,11 @@ class Pendaftaran extends Model
 
     public function logbook()
     {
-        return $this->hasMany(Logbook::class, 'id_pendaftaran');
+        return $this->hasMany(Logbook::class, 'id_pendaftaran', 'id_pendaftaran');
     }
 
     public function bimbingan()
     {
-        return $this->hasOne(Bimbingan::class, 'id_pendaftaran');
+        return $this->hasOne(Bimbingan::class, 'id_pendaftaran', 'id_pendaftaran');
     }
 }

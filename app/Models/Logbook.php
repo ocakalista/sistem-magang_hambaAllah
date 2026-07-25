@@ -20,6 +20,7 @@ class Logbook extends Model
         'deskripsi_kegiatan',
         'berkas_lampiran',
         'status_validasi',
+        'feedback_dosen',
     ];
 
     protected $casts = [
@@ -29,6 +30,6 @@ class Logbook extends Model
 
     public function pendaftaran()
     {
-        return $this->belongsTo(Pendaftaran::class, 'id_pendaftaran');
+        return $this->belongsTo(Pendaftaran::class, 'id_pendaftaran', 'id_pendaftaran');
     }
 }

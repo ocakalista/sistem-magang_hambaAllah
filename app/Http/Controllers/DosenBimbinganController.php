@@ -17,7 +17,7 @@ class DosenBimbinganController extends Controller
         $user = $request->user();
         $dosen = $user->dosen;
 
-        if (!$dosen) {
+        if (! $dosen) {
             return response()->json([
                 'message' => 'Profil dosen tidak ditemukan untuk user ini.',
                 'data' => [],
@@ -35,12 +35,12 @@ class DosenBimbinganController extends Controller
 
         $result = $bimbingans->map(function ($bimbingan) {
             $pendaftaran = $bimbingan->pendaftaran;
-            if (!$pendaftaran) {
+            if (! $pendaftaran) {
                 return null;
             }
 
             $mahasiswa = $pendaftaran->mahasiswa;
-            $logbooks  = $pendaftaran->logbook->sortBy('minggu_ke');
+            $logbooks = $pendaftaran->logbook->sortBy('minggu_ke');
 
             // Default 12 minggu. Bisa di-override jika lowongan punya batas_waktu
             $totalWeeks = 12;
@@ -63,22 +63,23 @@ class DosenBimbinganController extends Controller
 
             $weeklyReports = $logbooks->map(function ($lb) {
                 return [
-                    'id'               => $lb->id_logbook,
-                    'minggu_ke'        => $lb->minggu_ke,
-                    'tanggal'          => $lb->tanggal,
-                    'deskripsi'        => $lb->deskripsi_kegiatan,
-                    'status_validasi'  => $lb->status_validasi,
+                    'id' => $lb->id_logbook,
+                    'minggu_ke' => $lb->minggu_ke,
+                    'tanggal' => $lb->tanggal?->toDateString(),
+                    'deskripsi' => $lb->deskripsi_kegiatan,
+                    'status_validasi' => $lb->status_validasi,
+                    'feedback_dosen' => $lb->feedback_dosen,
                 ];
             })->values();
 
             return [
-                'id'            => $mahasiswa ? $mahasiswa->id_mahasiswa : null,
-                'name'          => $mahasiswa ? $mahasiswa->nama : '(Tanpa Nama)',
-                'position'      => $pendaftaran->lowongan->judul_posisi ?? null,
-                'company'       => $pendaftaran->lowongan->mitra->nama_perusahaan ?? null,
-                'currentWeek'   => $currentWeek,
-                'totalWeeks'    => $totalWeeks,
-                'progress'      => $progress,
+                'id' => $mahasiswa ? $mahasiswa->id_mahasiswa : null,
+                'name' => $mahasiswa ? $mahasiswa->nama : '(Tanpa Nama)',
+                'position' => $pendaftaran->lowongan->judul_posisi ?? null,
+                'company' => $pendaftaran->lowongan->mitra->nama_perusahaan ?? null,
+                'currentWeek' => $currentWeek,
+                'totalWeeks' => $totalWeeks,
+                'progress' => $progress,
                 'weeklyReports' => $weeklyReports,
             ];
         })->filter()->values();

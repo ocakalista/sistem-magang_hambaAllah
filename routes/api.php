@@ -118,5 +118,6 @@ Route::middleware('auth:sanctum')->group(function () {
         // Logbook mingguan
         Route::get('/logbook', [LogbookController::class, 'index']);
         Route::post('/logbook', [LogbookController::class, 'store']);
+        Route::put('/logbook/{id}', [LogbookController::class, 'resubmit']);
     });
 });
