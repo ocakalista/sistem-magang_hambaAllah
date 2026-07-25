@@ -192,7 +192,7 @@ class AdminController extends Controller
     public function enrollments(Request $request)
     {
         $validated = $request->validate([
-            'status' => 'nullable|in:pending,diterima,ditolak,selesai',
+            'status' => 'nullable|in:pending,under_review,interview,accepted,rejected,withdrawn,completed,diterima,ditolak,selesai',
             'search' => 'nullable|string|max:255',
             'page' => 'nullable|integer|min:1',
             'per_page' => 'nullable|integer|min:1|max:100',
@@ -350,15 +350,16 @@ class AdminController extends Controller
         $usersGrowth = $this->calcGrowthPercent($newLast7, $newPrior7);
 
         // ---- Active internships & growth (30 hari) ----
-        $activeInternships = Pendaftaran::whereIn('status', ['diterima', 'selesai'])
+        $activeInternships = Pendaftaran::where('status', 'accepted')
+            ->whereNull('completed_at')
             ->whereHas('lowongan', function ($q) use ($now) {
                 $q->where('batas_waktu', '>=', $now)
                     ->where('status_approval', 'approved');
             })->count();
 
-        $acceptedLast30 = Pendaftaran::where('status', 'diterima')
+        $acceptedLast30 = Pendaftaran::where('status', 'accepted')
             ->where('created_at', '>=', $thirtyAgo)->count();
-        $acceptedPrior30 = Pendaftaran::where('status', 'diterima')
+        $acceptedPrior30 = Pendaftaran::where('status', 'accepted')
             ->whereBetween('created_at', [$prior30, $thirtyAgo])->count();
         $internGrowth = $this->calcGrowthPercent($acceptedLast30, $acceptedPrior30);
 
@@ -411,6 +412,8 @@ class AdminController extends Controller
 
     private function progress(int $logbookCount): int
     {
-        return min(100, (int) round(($logbookCount / 12) * 100));
+        $totalWeeks = max(1, config('internship.total_weeks'));
+
+        return min(100, (int) round(($logbookCount / $totalWeeks) * 100));
     }
 }

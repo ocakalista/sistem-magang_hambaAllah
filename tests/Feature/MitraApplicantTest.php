@@ -72,19 +72,19 @@ class MitraApplicantTest extends TestCase
     public function test_accepting_rejected_applicant_is_idempotent_for_quota_and_notification(): void
     {
         $data = $this->scenario();
-        $data['application']->update(['status' => 'ditolak']);
+        $data['application']->update(['status' => 'rejected']);
         $data['ownLowongan']->update(['kuota' => 3]);
         Sanctum::actingAs($data['partner']);
 
         $this->putJson('/api/pendaftaran/'.$data['application']->id_pendaftaran.'/status', [
-            'status' => 'diterima',
-        ])->assertOk()->assertJsonPath('data.status', 'diterima');
+            'status' => 'accepted',
+        ])->assertOk()->assertJsonPath('data.status', 'accepted');
 
         $this->assertSame(2, $data['ownLowongan']->fresh()->kuota);
         $this->assertSame(1, $data['student']->notifications()->count());
 
         $this->putJson('/api/pendaftaran/'.$data['application']->id_pendaftaran.'/status', [
-            'status' => 'diterima',
+            'status' => 'accepted',
         ])->assertOk()->assertJsonPath('message', 'Status pendaftaran tidak berubah.');
 
         $this->assertSame(2, $data['ownLowongan']->fresh()->kuota);

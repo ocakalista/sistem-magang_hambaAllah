@@ -66,6 +66,8 @@ Route::middleware('auth:sanctum')->group(function () {
     // Admin tetapkan dosen pembimbing
     Route::post('/bimbingan', [BimbinganController::class, 'store'])
         ->middleware('role:admin');
+    Route::put('/pendaftaran/{id}/complete', [PendaftaranController::class, 'complete'])
+        ->middleware('role:dosen,admin');
 
     // -------- MITRA --------
     Route::middleware('role:mitra')->group(function () {
@@ -111,6 +113,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
         // Riwayat pendaftaran
         Route::get('/pendaftaran/riwayat', [PendaftaranController::class, 'index']);
+        Route::get('/pendaftaran/aktif', [PendaftaranController::class, 'active']);
 
         // Apply internship — multipart form submission
         Route::post('/pendaftaran', [PendaftaranController::class, 'store']);

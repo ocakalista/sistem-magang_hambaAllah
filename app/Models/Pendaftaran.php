@@ -22,6 +22,18 @@ class Pendaftaran extends Model
         'motivasi',
         'status',
         'laporan_akhir',
+        'accepted_at',
+        'rejected_at',
+        'withdrawn_at',
+        'completed_at',
+        'rejection_reason',
+    ];
+
+    protected $casts = [
+        'accepted_at' => 'datetime',
+        'rejected_at' => 'datetime',
+        'withdrawn_at' => 'datetime',
+        'completed_at' => 'datetime',
     ];
 
     public function mahasiswa()

@@ -52,7 +52,7 @@ class LogbookController extends Controller
             return response()->json(['message' => 'Akses ditolak!'], 403);
         }
 
-        if ($pendaftaran->status != 'diterima') {
+        if (! in_array($pendaftaran->status, ['accepted', 'diterima'], true)) {
             return response()->json([
                 'message' => 'Gagal! Mahasiswa ini belum berstatus diterima.',
             ], 403);

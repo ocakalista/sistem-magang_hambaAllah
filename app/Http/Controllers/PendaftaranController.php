@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Resources\PendaftaranResource;
 use App\Models\Lowongan;
 use App\Models\Mahasiswa;
 use App\Models\Pendaftaran;
@@ -26,15 +27,31 @@ class PendaftaranController extends Controller
      */
     public function index(Request $request)
     {
-        $user = $request->user();
-        $nim = $user->email_or_nim;
-
-        $pendaftaran = Pendaftaran::where('id_mahasiswa', $nim)->get();
+        $pendaftaran = Pendaftaran::query()
+            ->where('id_mahasiswa', $request->user()->email_or_nim)
+            ->with('lowongan.mitra')
+            ->latest('created_at')
+            ->get();
 
         return response()->json([
             'message' => 'Berhasil mengambil riwayat pendaftaran Anda',
-            'data' => $pendaftaran,
+            'data' => PendaftaranResource::collection($pendaftaran),
         ], 200);
+    }
+
+    public function active(Request $request)
+    {
+        $pendaftaran = Pendaftaran::query()
+            ->where('id_mahasiswa', $request->user()->email_or_nim)
+            ->where('status', 'accepted')
+            ->whereNull('completed_at')
+            ->with(['lowongan.mitra', 'logbook'])
+            ->latest('accepted_at')
+            ->first();
+
+        return response()->json([
+            'data' => $pendaftaran ? new PendaftaranResource($pendaftaran) : null,
+        ]);
     }
 
     /**
@@ -68,6 +85,21 @@ class PendaftaranController extends Controller
 
                 if (! $lowongan) {
                     return ['error' => 'Lowongan tidak ditemukan.', 'status' => 404];
+                }
+
+                $hasActiveInternship = Pendaftaran::query()
+                    ->where('id_mahasiswa', $nim)
+                    ->where('status', 'accepted')
+                    ->whereNull('completed_at')
+                    ->lockForUpdate()
+                    ->first();
+
+                if ($hasActiveInternship) {
+                    return [
+                        'error' => 'Anda masih memiliki program magang aktif.',
+                        'status' => 422,
+                        'code' => 'ACTIVE_INTERNSHIP_EXISTS',
+                    ];
                 }
 
                 if ($lowongan->kuota < 1) {
@@ -171,6 +203,7 @@ class PendaftaranController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => $result['error'],
+                'code' => $result['code'] ?? null,
             ], $result['status']);
         }
 
@@ -197,7 +230,9 @@ class PendaftaranController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Lamaran terkirim!',
-            'data' => $pendaftaran,
+            'data' => new PendaftaranResource(
+                $pendaftaran->load('lowongan.mitra')
+            ),
         ], 201);
     }
 
@@ -207,7 +242,8 @@ class PendaftaranController extends Controller
     public function updateStatus(Request $request, string $id)
     {
         $validated = $request->validate([
-            'status' => 'required|in:diterima,ditolak,selesai',
+            'status' => 'required|in:pending,under_review,interview,accepted,rejected,withdrawn,diterima,ditolak',
+            'rejection_reason' => 'nullable|string|max:2000',
         ]);
 
         $result = DB::transaction(function () use ($request, $validated, $id) {
@@ -233,33 +269,90 @@ class PendaftaranController extends Controller
             }
 
             $oldStatus = $pendaftaran->status;
-            $newStatus = $validated['status'];
+            $newStatus = match ($validated['status']) {
+                'diterima' => 'accepted',
+                'ditolak' => 'rejected',
+                default => $validated['status'],
+            };
             $changed = $oldStatus !== $newStatus;
 
             if ($changed) {
-                $lowongan = Lowongan::query()
-                    ->whereKey($pendaftaran->id_lowongan)
-                    ->lockForUpdate()
-                    ->first();
+                if ($newStatus === 'accepted') {
+                    $hasActiveInternship = Pendaftaran::query()
+                        ->where('id_mahasiswa', $pendaftaran->id_mahasiswa)
+                        ->whereKeyNot($pendaftaran->id_pendaftaran)
+                        ->where('status', 'accepted')
+                        ->whereNull('completed_at')
+                        ->lockForUpdate()
+                        ->first();
 
-                if ($oldStatus !== 'ditolak' && $newStatus === 'ditolak') {
-                    $lowongan?->increment('kuota');
-                } elseif ($oldStatus === 'ditolak' && $newStatus !== 'ditolak') {
-                    if (! $lowongan || $lowongan->kuota < 1) {
-                        return ['error' => 'Kuota lowongan sudah penuh.', 'status' => 409];
+                    if ($hasActiveInternship) {
+                        return [
+                            'error' => 'Mahasiswa sudah memiliki program magang aktif.',
+                            'status' => 409,
+                            'code' => 'ACTIVE_INTERNSHIP_EXISTS',
+                        ];
                     }
-                    $lowongan->decrement('kuota');
+
+                    if ($oldStatus === 'rejected') {
+                        $lowongan = Lowongan::query()
+                            ->whereKey($pendaftaran->id_lowongan)
+                            ->lockForUpdate()
+                            ->first();
+                        if (! $lowongan || $lowongan->kuota < 1) {
+                            return ['error' => 'Kuota lowongan sudah penuh.', 'status' => 409];
+                        }
+                        $lowongan->decrement('kuota');
+                    }
+
+                    $otherApplications = Pendaftaran::query()
+                        ->where('id_mahasiswa', $pendaftaran->id_mahasiswa)
+                        ->whereKeyNot($pendaftaran->id_pendaftaran)
+                        ->whereIn('status', ['pending', 'under_review', 'interview'])
+                        ->lockForUpdate()
+                        ->get();
+
+                    foreach ($otherApplications as $other) {
+                        Lowongan::query()
+                            ->whereKey($other->id_lowongan)
+                            ->lockForUpdate()
+                            ->increment('kuota');
+                        $other->update([
+                            'status' => 'withdrawn',
+                            'withdrawn_at' => now(),
+                        ]);
+                    }
                 }
 
-                $pendaftaran->status = $newStatus;
-                $pendaftaran->save();
+                if ($newStatus === 'rejected' && $oldStatus !== 'rejected') {
+                    Lowongan::query()
+                        ->whereKey($pendaftaran->id_lowongan)
+                        ->lockForUpdate()
+                        ->increment('kuota');
+                }
+
+                $pendaftaran->update([
+                    'status' => $newStatus,
+                    'accepted_at' => $newStatus === 'accepted'
+                        ? ($pendaftaran->accepted_at ?? now())
+                        : $pendaftaran->accepted_at,
+                    'rejected_at' => $newStatus === 'rejected' ? now() : $pendaftaran->rejected_at,
+                    'withdrawn_at' => $newStatus === 'withdrawn' ? now() : $pendaftaran->withdrawn_at,
+                    'completed_at' => $pendaftaran->completed_at,
+                    'rejection_reason' => $newStatus === 'rejected'
+                        ? ($validated['rejection_reason'] ?? null)
+                        : $pendaftaran->rejection_reason,
+                ]);
             }
 
             return compact('pendaftaran', 'changed');
         }, 3);
 
         if (isset($result['error'])) {
-            return response()->json(['message' => $result['error']], $result['status']);
+            return response()->json([
+                'message' => $result['error'],
+                'code' => $result['code'] ?? null,
+            ], $result['status']);
         }
 
         $pendaftaran = $result['pendaftaran'];
@@ -267,8 +360,8 @@ class PendaftaranController extends Controller
 
         if ($result['changed']) {
             $title = match ($status) {
-                'diterima' => 'Lamaran diterima',
-                'ditolak' => 'Lamaran ditolak',
+                'accepted' => 'Lamaran diterima',
+                'rejected' => 'Lamaran ditolak',
                 default => 'Status lamaran diperbarui',
             };
 
@@ -294,8 +387,100 @@ class PendaftaranController extends Controller
             'message' => $result['changed']
                 ? 'Status pendaftaran berhasil diubah menjadi '.$status
                 : 'Status pendaftaran tidak berubah.',
-            'data' => $pendaftaran,
+            'data' => new PendaftaranResource(
+                $pendaftaran->load('lowongan.mitra')
+            ),
         ], 200);
+    }
+
+    public function complete(Request $request, string $id)
+    {
+        $result = DB::transaction(function () use ($request, $id) {
+            $pendaftaran = Pendaftaran::query()
+                ->with(['mahasiswa.user', 'lowongan.mitra', 'bimbingan.dosen'])
+                ->withCount([
+                    'logbook as approved_logbooks_count' => fn ($query) => $query
+                        ->where('status_validasi', 'disetujui'),
+                ])
+                ->lockForUpdate()
+                ->find($id);
+
+            if (! $pendaftaran) {
+                return ['error' => 'Data pendaftaran tidak ditemukan.', 'status' => 404];
+            }
+
+            if ($request->user()->role === 'dosen') {
+                $dosen = $request->user()->dosen;
+                if (! $dosen || $pendaftaran->bimbingan?->nidn !== $dosen->nidn) {
+                    return [
+                        'error' => 'Anda bukan dosen pembimbing mahasiswa ini.',
+                        'status' => 403,
+                    ];
+                }
+            }
+
+            if ($pendaftaran->status === 'completed' && $pendaftaran->completed_at) {
+                return compact('pendaftaran') + ['changed' => false];
+            }
+
+            if ($pendaftaran->status !== 'accepted') {
+                return [
+                    'error' => 'Hanya magang berstatus accepted yang dapat diselesaikan.',
+                    'status' => 422,
+                ];
+            }
+
+            $minimumLogbooks = config('internship.minimum_logbooks_to_complete');
+            if ($pendaftaran->approved_logbooks_count < $minimumLogbooks) {
+                return [
+                    'error' => 'Persyaratan logbook belum terpenuhi.',
+                    'status' => 422,
+                    'code' => 'LOGBOOK_REQUIREMENT_NOT_MET',
+                    'required_logbooks' => $minimumLogbooks,
+                    'approved_logbooks' => $pendaftaran->approved_logbooks_count,
+                ];
+            }
+
+            $pendaftaran->update([
+                'status' => 'completed',
+                'completed_at' => now(),
+            ]);
+
+            return compact('pendaftaran') + ['changed' => true];
+        }, 3);
+
+        if (isset($result['error'])) {
+            return response()->json($result, $result['status']);
+        }
+
+        $pendaftaran = $result['pendaftaran'];
+        if ($result['changed']) {
+            $this->notifySafely(
+                $pendaftaran->mahasiswa?->user,
+                new ApiNotification(
+                    'internship_completed',
+                    'Program magang selesai',
+                    'Program magang Anda telah dinyatakan selesai.',
+                    [
+                        'id_pendaftaran' => $pendaftaran->id_pendaftaran,
+                        'id_lowongan' => $pendaftaran->id_lowongan,
+                        'status' => 'completed',
+                        'category' => 'update',
+                        'requires_action' => false,
+                    ],
+                ),
+                'pendaftaran.completed',
+            );
+        }
+
+        return response()->json([
+            'message' => $result['changed']
+                ? 'Program magang berhasil diselesaikan.'
+                : 'Program magang sudah diselesaikan sebelumnya.',
+            'data' => new PendaftaranResource(
+                $pendaftaran->load(['lowongan.mitra', 'logbook'])
+            ),
+        ]);
     }
 
     /**
@@ -366,7 +551,7 @@ class PendaftaranController extends Controller
             return response()->json(['message' => 'Akses ditolak!'], 403);
         }
 
-        if ($pendaftaran->status !== 'diterima' && $pendaftaran->status !== 'selesai') {
+        if (! in_array($pendaftaran->status, ['accepted', 'completed', 'diterima', 'selesai'], true)) {
             return response()->json(['message' => 'Gagal! Anda belum berstatus diterima magang.'], 403);
         }
 
