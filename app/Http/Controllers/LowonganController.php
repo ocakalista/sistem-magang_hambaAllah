@@ -5,10 +5,13 @@ namespace App\Http\Controllers;
 use App\Models\Lowongan;
 use App\Models\User;
 use App\Notifications\ApiNotification;
+use App\Support\SendsNotificationsSafely;
 use Illuminate\Http\Request;
 
 class LowonganController extends Controller
 {
+    use SendsNotificationsSafely;
+
     public function store(Request $request)
     {
         $validated = $request->validate([
@@ -31,12 +34,18 @@ class LowonganController extends Controller
 
         $lowongan = $mitra->lowongan()->create($validated + ['status_approval' => 'pending']);
 
-        User::where('role', 'admin')->each(fn (User $admin) => $admin->notify(new ApiNotification(
-            'lowongan_baru',
-            'Lowongan baru menunggu persetujuan',
-            $mitra->nama_perusahaan.' mengajukan lowongan '.$lowongan->judul_posisi.'.',
-            ['id_lowongan' => $lowongan->id_lowongan]
-        )));
+        User::where('role', 'admin')->each(
+            fn (User $admin) => $this->notifySafely(
+                $admin,
+                new ApiNotification(
+                    'lowongan_baru',
+                    'Lowongan baru menunggu persetujuan',
+                    $mitra->nama_perusahaan.' mengajukan lowongan '.$lowongan->judul_posisi.'.',
+                    ['id_lowongan' => $lowongan->id_lowongan]
+                ),
+                'lowongan.created',
+            )
+        );
 
         return response()->json([
             'message' => 'Lowongan berhasil dibuat dan menunggu persetujuan admin.',
@@ -51,21 +60,73 @@ class LowonganController extends Controller
     /**
      * GET /api/lowongan  — list lowongan yang masih ada kuotanya (publik)
      */
-    public function index()
+    public function index(Request $request)
     {
-        $lowongan = Lowongan::approved()->where('kuota', '>', 0)->get();
+        $validated = $request->validate([
+            'search' => 'nullable|string|max:255',
+            'kategori' => 'nullable|string|max:100',
+            'lokasi' => 'nullable|string|max:255',
+            'tipe_kerja' => 'nullable|string|max:50',
+            'page' => 'nullable|integer|min:1',
+            'per_page' => 'nullable|integer|min:1|max:50',
+        ]);
 
-        if ($lowongan->isEmpty()) {
-            return response()->json([
-                'message' => 'Belum ada lowongan magang yang tersedia saat ini.',
-                'data' => [],
-            ], 200);
+        $query = Lowongan::query()
+            ->with('mitra')
+            ->approved()
+            ->where('kuota', '>', 0)
+            ->whereDate('batas_waktu', '>=', today());
+
+        if ($search = $validated['search'] ?? null) {
+            $query->where(function ($builder) use ($search) {
+                $builder
+                    ->where('judul_posisi', 'like', '%'.$search.'%')
+                    ->orWhere('lokasi', 'like', '%'.$search.'%')
+                    ->orWhereHas('mitra', fn ($mitra) => $mitra
+                        ->where('nama_perusahaan', 'like', '%'.$search.'%'));
+            });
         }
 
+        foreach (['kategori', 'lokasi', 'tipe_kerja'] as $filter) {
+            if ($value = $validated[$filter] ?? null) {
+                $query->where($filter, $value);
+            }
+        }
+
+        $query->latest('id_lowongan');
+        $usesPagination = $request->hasAny(['page', 'per_page']);
+
+        if ($usesPagination) {
+            $paginator = $query
+                ->paginate($validated['per_page'] ?? 15)
+                ->withQueryString();
+
+            return response()->json([
+                'message' => 'Berhasil mengambil katalog lowongan',
+                'data' => $paginator->getCollection()
+                    ->map(fn (Lowongan $item) => self::formatLowongan($item)),
+                'meta' => [
+                    'current_page' => $paginator->currentPage(),
+                    'last_page' => $paginator->lastPage(),
+                    'per_page' => $paginator->perPage(),
+                    'total' => $paginator->total(),
+                ],
+                'links' => [
+                    'next' => $paginator->nextPageUrl(),
+                    'previous' => $paginator->previousPageUrl(),
+                ],
+            ]);
+        }
+
+        $lowongan = $query->get()
+            ->map(fn (Lowongan $item) => self::formatLowongan($item));
+
         return response()->json([
-            'message' => 'Berhasil mengambil katalog lowongan',
+            'message' => $lowongan->isEmpty()
+                ? 'Belum ada lowongan magang yang tersedia saat ini.'
+                : 'Berhasil mengambil katalog lowongan',
             'data' => $lowongan,
-        ], 200);
+        ]);
     }
 
     /**
@@ -73,13 +134,14 @@ class LowonganController extends Controller
      */
     public function show($id)
     {
-        $lowongan = Lowongan::find($id);
+        $lowongan = Lowongan::with('mitra')->find($id);
 
         if (! $lowongan) {
             return response()->json(['message' => 'Lowongan tidak ditemukan'], 404);
         }
 
-        return response()->json($lowongan, 200);
+        // Pertahankan kontrak lama: detail dikembalikan langsung, bukan dibungkus "data".
+        return response()->json(self::formatLowongan($lowongan));
     }
 
     // =========================================================
@@ -124,11 +186,16 @@ class LowonganController extends Controller
 
         $lowongan->status_approval = 'approved';
         $lowongan->save();
-        $lowongan->mitra?->user?->notify(new ApiNotification(
-            'status_lowongan', 'Lowongan disetujui',
-            'Lowongan '.$lowongan->judul_posisi.' telah disetujui.',
-            ['id_lowongan' => $lowongan->id_lowongan, 'status' => 'approved']
-        ));
+        $this->notifySafely(
+            $lowongan->mitra?->user,
+            new ApiNotification(
+                'status_lowongan',
+                'Lowongan disetujui',
+                'Lowongan '.$lowongan->judul_posisi.' telah disetujui.',
+                ['id_lowongan' => $lowongan->id_lowongan, 'status' => 'approved']
+            ),
+            'lowongan.approved',
+        );
 
         return response()->json([
             'message' => 'Lowongan berhasil di-approve.',
@@ -157,11 +224,16 @@ class LowonganController extends Controller
 
         $lowongan->status_approval = 'rejected';
         $lowongan->save();
-        $lowongan->mitra?->user?->notify(new ApiNotification(
-            'status_lowongan', 'Lowongan ditolak',
-            $validated['reason'] ?: 'Lowongan '.$lowongan->judul_posisi.' ditolak.',
-            ['id_lowongan' => $lowongan->id_lowongan, 'status' => 'rejected']
-        ));
+        $this->notifySafely(
+            $lowongan->mitra?->user,
+            new ApiNotification(
+                'status_lowongan',
+                'Lowongan ditolak',
+                $validated['reason'] ?: 'Lowongan '.$lowongan->judul_posisi.' ditolak.',
+                ['id_lowongan' => $lowongan->id_lowongan, 'status' => 'rejected']
+            ),
+            'lowongan.rejected',
+        );
 
         // Restore kuota jika sebelumnya ada pelamar yang diterima
         // (karena kuota sudah dipotong saat approve/reject lowongan tidak mengembalikan otomatis)
@@ -196,5 +268,25 @@ class LowonganController extends Controller
         $lowongan = Lowongan::where('id_mitra', $mitra->id_mitra)->get();
 
         return response()->json(['data' => $lowongan]);
+    }
+
+    public static function formatLowongan(Lowongan $lowongan): array
+    {
+        return [
+            'id_lowongan' => $lowongan->id_lowongan,
+            'id_mitra' => $lowongan->id_mitra,
+            'nama_perusahaan' => $lowongan->mitra?->nama_perusahaan,
+            'judul_posisi' => $lowongan->judul_posisi,
+            'deskripsi' => $lowongan->deskripsi,
+            'persyaratan' => $lowongan->persyaratan,
+            'kategori' => $lowongan->kategori,
+            'lokasi' => $lowongan->lokasi,
+            'tipe_kerja' => $lowongan->tipe_kerja,
+            'tipe_kontrak' => $lowongan->tipe_kontrak,
+            'benefit' => $lowongan->benefit,
+            'kuota' => (int) $lowongan->kuota,
+            'batas_waktu' => $lowongan->batas_waktu?->toDateString(),
+            'status_approval' => $lowongan->status_approval,
+        ];
     }
 }

@@ -35,12 +35,17 @@ class Lowongan extends Model
 
     public function mitra()
     {
-        return $this->belongsTo(Mitra::class, 'id_mitra');
+        return $this->belongsTo(Mitra::class, 'id_mitra', 'id_mitra');
     }
 
     public function pendaftaran()
     {
-        return $this->hasMany(Pendaftaran::class, 'id_lowongan');
+        return $this->hasMany(Pendaftaran::class, 'id_lowongan', 'id_lowongan');
+    }
+
+    public function savedBy()
+    {
+        return $this->hasMany(SavedLowongan::class, 'id_lowongan', 'id_lowongan');
     }
 
     public function scopeApproved($query)

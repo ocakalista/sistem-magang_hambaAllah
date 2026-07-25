@@ -12,8 +12,10 @@ class NotificationController extends Controller
 
         $notifications->getCollection()->transform(fn ($notification) => [
             'id' => $notification->id,
-            ...$notification->data,
-            'is_read' => $notification->read_at !== null,
+            'type' => $notification->data['type'] ?? null,
+            'title' => $notification->data['title'] ?? null,
+            'description' => $notification->data['message'] ?? null,
+            'data' => $notification->data['metadata'] ?? [],
             'read_at' => $notification->read_at,
             'created_at' => $notification->created_at,
         ]);
@@ -45,8 +47,13 @@ class NotificationController extends Controller
 
     public function markAllAsRead(Request $request)
     {
-        $request->user()->unreadNotifications->markAsRead();
+        $updated = $request->user()
+            ->unreadNotifications()
+            ->update(['read_at' => now()]);
 
-        return response()->json(['message' => 'Semua notifikasi ditandai sudah dibaca.']);
+        return response()->json([
+            'message' => 'Semua notifikasi ditandai sudah dibaca.',
+            'updated_count' => $updated,
+        ]);
     }
 }

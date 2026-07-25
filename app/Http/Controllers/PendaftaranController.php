@@ -5,13 +5,21 @@ namespace App\Http\Controllers;
 use App\Models\Lowongan;
 use App\Models\Mahasiswa;
 use App\Models\Pendaftaran;
+use App\Models\PendaftaranDraft;
 use App\Models\User;
 use App\Notifications\ApiNotification;
+use App\Support\SendsNotificationsSafely;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
+use RuntimeException;
+use Throwable;
 
 class PendaftaranController extends Controller
 {
+    use SendsNotificationsSafely;
+
     /**
      * GET /api/pendaftaran  — list semua pendaftaran untuk user yang login
      */
@@ -47,81 +55,137 @@ class PendaftaranController extends Controller
         ]);
 
         $user = $request->user();
-        $nim = $user->email_or_nim;   // untuk mahasiswa, email_or_nim = NIM
+        $nim = $user->email_or_nim;
+        $storedFiles = [];
 
-        // 1) Sinkronkan profile user dengan data dari form
-        $user->update([
-            'name' => $validated['nama_lengkap'],
-            'phone' => $validated['no_telp'],
-            'semester' => (string) $validated['semester'],
-        ]);
+        try {
+            $result = DB::transaction(function () use ($request, $validated, $user, $nim, &$storedFiles) {
+                $lowongan = Lowongan::query()
+                    ->whereKey($validated['id_lowongan'])
+                    ->lockForUpdate()
+                    ->first();
 
-        // 2) Pastikan record mahasiswa ada (find-or-create)
-        $mahasiswa = Mahasiswa::firstOrCreate(
-            ['id_mahasiswa' => $nim],
-            [
-                'id_user' => $user->id,
-                'nama' => $validated['nama_lengkap'],
-                'jurusan' => $user->konsentrasi,
-            ],
+                if (! $lowongan) {
+                    return ['error' => 'Lowongan tidak ditemukan.', 'status' => 404];
+                }
+
+                if ($lowongan->kuota < 1) {
+                    return ['error' => 'Maaf, kuota lowongan ini sudah penuh.', 'status' => 409];
+                }
+
+                if (
+                    $lowongan->status_approval !== 'approved'
+                    || $lowongan->batas_waktu?->lt(today())
+                ) {
+                    return ['error' => 'Lowongan tidak lagi tersedia.', 'status' => 409];
+                }
+
+                $existing = Pendaftaran::query()
+                    ->where('id_mahasiswa', $nim)
+                    ->where('id_lowongan', $lowongan->id_lowongan)
+                    ->exists();
+
+                if ($existing) {
+                    return ['error' => 'Gagal! Anda sudah mendaftar di lowongan ini.', 'status' => 409];
+                }
+
+                $user->update([
+                    'name' => $validated['nama_lengkap'],
+                    'phone' => $validated['no_telp'],
+                    'semester' => (string) $validated['semester'],
+                ]);
+
+                Mahasiswa::updateOrCreate(
+                    ['id_mahasiswa' => $nim],
+                    [
+                        'id_user' => $user->id,
+                        'nama' => $validated['nama_lengkap'],
+                        'jurusan' => $user->konsentrasi ?: 'Belum ditentukan',
+                    ],
+                );
+
+                $cv = $request->file('berkas_cv');
+                $cvPath = $cv->storeAs(
+                    'berkas_cv',
+                    uniqid('cv_', true).'_'.preg_replace('/\s+/', '_', $cv->getClientOriginalName()),
+                    'public',
+                );
+                if (! $cvPath) {
+                    throw new RuntimeException('CV gagal disimpan.');
+                }
+                $storedFiles[] = $cvPath;
+
+                $portofolioPath = null;
+                if ($request->hasFile('berkas_portofolio')) {
+                    $portfolio = $request->file('berkas_portofolio');
+                    $portofolioPath = $portfolio->storeAs(
+                        'berkas_portofolio',
+                        uniqid('portfolio_', true).'_'.preg_replace('/\s+/', '_', $portfolio->getClientOriginalName()),
+                        'public',
+                    );
+                    if (! $portofolioPath) {
+                        throw new RuntimeException('Portofolio gagal disimpan.');
+                    }
+                    $storedFiles[] = $portofolioPath;
+                }
+
+                $pendaftaran = Pendaftaran::create([
+                    'id_mahasiswa' => $nim,
+                    'id_lowongan' => $lowongan->id_lowongan,
+                    'berkas_cv' => $cvPath,
+                    'portofolio' => $portofolioPath,
+                    'portfolio_link' => $validated['portofolio_link'] ?? null,
+                    'motivasi' => $validated['motivasi'],
+                    'status' => 'pending',
+                ]);
+
+                $lowongan->decrement('kuota');
+
+                PendaftaranDraft::query()
+                    ->where('user_id', $user->id)
+                    ->where('id_lowongan', $lowongan->id_lowongan)
+                    ->delete();
+
+                return compact('pendaftaran', 'lowongan');
+            }, 3);
+        } catch (Throwable $exception) {
+            foreach ($storedFiles as $path) {
+                Storage::disk('public')->delete($path);
+            }
+
+            Log::error('Internship application failed.', [
+                'user_id' => $user->id,
+                'id_lowongan' => $validated['id_lowongan'],
+                'exception' => $exception::class,
+                'message' => $exception->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Lamaran gagal diproses. Silakan coba kembali.',
+            ], 500);
+        }
+
+        if (isset($result['error'])) {
+            return response()->json([
+                'success' => false,
+                'message' => $result['error'],
+            ], $result['status']);
+        }
+
+        $pendaftaran = $result['pendaftaran'];
+        $lowongan = $result['lowongan'];
+
+        $this->notifySafely(
+            $lowongan->mitra?->user,
+            new ApiNotification(
+                'pelamar_baru',
+                'Pelamar baru',
+                $validated['nama_lengkap'].' melamar posisi '.$lowongan->judul_posisi.'.',
+                ['id_lowongan' => $lowongan->id_lowongan, 'id_pendaftaran' => $pendaftaran->id_pendaftaran]
+            ),
+            'pendaftaran.created',
         );
-
-        // 3) Cek double-application
-        $existing = Pendaftaran::where('id_mahasiswa', $nim)
-            ->where('id_lowongan', $validated['id_lowongan'])
-            ->first();
-
-        if ($existing) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Gagal! Anda sudah mendaftar di lowongan ini.',
-            ], 400);
-        }
-
-        // 4) Cek kuota
-        $lowongan = Lowongan::find($validated['id_lowongan']);
-        if (! $lowongan || $lowongan->kuota < 1) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Maaf, kuota lowongan ini sudah penuh.',
-            ], 400);
-        }
-
-        // 5) Upload CV (wajib)
-        $cvPath = null;
-        if ($request->hasFile('berkas_cv')) {
-            $file = $request->file('berkas_cv');
-            $namaFile = time().'_'.preg_replace('/\s+/', '_', $file->getClientOriginalName());
-            $cvPath = $file->storeAs('berkas_cv', $namaFile, 'public');
-        }
-
-        // 6) Upload portfolio file (opsional)
-        $portofolioPath = null;
-        if ($request->hasFile('berkas_portofolio')) {
-            $pFile = $request->file('berkas_portofolio');
-            $pName = time().'_'.preg_replace('/\s+/', '_', $pFile->getClientOriginalName());
-            $portofolioPath = $pFile->storeAs('berkas_portofolio', $pName, 'public');
-        }
-
-        // 7) Decrement kuota
-        $lowongan->decrement('kuota');
-
-        // 8) Simpan pendaftaran
-        $pendaftaran = new Pendaftaran;
-        $pendaftaran->id_mahasiswa = $nim;
-        $pendaftaran->id_lowongan = $validated['id_lowongan'];
-        $pendaftaran->berkas_cv = $cvPath;
-        $pendaftaran->portofolio = $portofolioPath;
-        $pendaftaran->portfolio_link = $validated['portofolio_link'] ?? null;
-        $pendaftaran->motivasi = $validated['motivasi'];
-        $pendaftaran->status = 'pending';
-        $pendaftaran->save();
-
-        $lowongan->mitra?->user?->notify(new ApiNotification(
-            'pelamar_baru', 'Pelamar baru',
-            $validated['nama_lengkap'].' melamar posisi '.$lowongan->judul_posisi.'.',
-            ['id_lowongan' => $lowongan->id_lowongan, 'id_pendaftaran' => $pendaftaran->id_pendaftaran]
-        ));
 
         return response()->json([
             'success' => true,
@@ -155,11 +219,16 @@ class PendaftaranController extends Controller
 
         $pendaftaran->status = $request->status;
         $pendaftaran->save();
-        $pendaftaran->mahasiswa?->user?->notify(new ApiNotification(
-            'status_pendaftaran', 'Status lamaran diperbarui',
-            'Status lamaran Anda menjadi '.$request->status.'.',
-            ['id_pendaftaran' => $pendaftaran->id_pendaftaran, 'status' => $request->status]
-        ));
+        $this->notifySafely(
+            $pendaftaran->mahasiswa?->user,
+            new ApiNotification(
+                'status_pendaftaran',
+                'Status lamaran diperbarui',
+                'Status lamaran Anda menjadi '.$request->status.'.',
+                ['id_pendaftaran' => $pendaftaran->id_pendaftaran, 'status' => $request->status]
+            ),
+            'pendaftaran.status_updated',
+        );
 
         return response()->json([
             'message' => 'Status pendaftaran berhasil diubah menjadi '.$request->status,

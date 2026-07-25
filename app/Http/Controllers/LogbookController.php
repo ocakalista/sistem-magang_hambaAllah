@@ -4,12 +4,16 @@ namespace App\Http\Controllers;
 
 use App\Models\Logbook;
 use App\Models\Pendaftaran;
+use App\Notifications\ApiNotification;
+use App\Support\SendsNotificationsSafely;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class LogbookController extends Controller
 {
+    use SendsNotificationsSafely;
+
     // 1. FITUR BARU: Menampilkan riwayat logbook (Khusus Mahasiswa yang sedang login)
     public function index()
     {
@@ -41,6 +45,10 @@ class LogbookController extends Controller
         ]);
 
         $pendaftaran = Pendaftaran::find($request->id_pendaftaran);
+        if ($pendaftaran->id_mahasiswa !== $request->user()->email_or_nim) {
+            return response()->json(['message' => 'Akses ditolak!'], 403);
+        }
+
         if ($pendaftaran->status != 'diterima') {
             return response()->json([
                 'message' => 'Gagal! Mahasiswa ini belum berstatus diterima.',
@@ -60,6 +68,20 @@ class LogbookController extends Controller
         $logbook->status_validasi = 'pending';
         $logbook->save();
 
+        $this->notifySafely(
+            $logbook->pendaftaran?->mahasiswa?->user,
+            new ApiNotification(
+                'status_logbook',
+                $request->status_validasi === 'disetujui' ? 'Logbook disetujui' : 'Logbook perlu direvisi',
+                $request->feedback_dosen ?: 'Status logbook minggu ke-'.$logbook->minggu_ke.' diperbarui.',
+                [
+                    'id_logbook' => $logbook->id_logbook,
+                    'status_validasi' => $request->status_validasi,
+                ],
+            ),
+            'logbook.status_updated',
+        );
+
         return response()->json([
             'message' => 'Logbook minggu ke-'.$request->minggu_ke.' berhasil dikirim!',
             'data' => $this->formatLogbook($logbook),
@@ -71,7 +93,7 @@ class LogbookController extends Controller
     {
         $request->validate([
             'status_validasi' => 'required|in:disetujui,revisi',
-            'feedback_dosen'  => 'nullable|string'
+            'feedback_dosen' => 'nullable|string',
         ]);
 
         $logbook = Logbook::find($id);

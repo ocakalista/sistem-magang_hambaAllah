@@ -9,6 +9,8 @@ use App\Http\Controllers\LowonganController;
 use App\Http\Controllers\MitraController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PendaftaranController;
+use App\Http\Controllers\PendaftaranDraftController;
+use App\Http\Controllers\SavedLowonganController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -95,6 +97,15 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // -------- MAHASISWA --------
     Route::middleware('role:mahasiswa')->group(function () {
+        Route::get('/saved-lowongan', [SavedLowonganController::class, 'index']);
+        Route::post('/saved-lowongan/{id_lowongan}', [SavedLowonganController::class, 'store']);
+        Route::delete('/saved-lowongan/{id_lowongan}', [SavedLowonganController::class, 'destroy']);
+
+        Route::get('/pendaftaran/draft', [PendaftaranDraftController::class, 'index']);
+        Route::get('/pendaftaran/draft/{id_lowongan}', [PendaftaranDraftController::class, 'show']);
+        Route::put('/pendaftaran/draft/{id_lowongan}', [PendaftaranDraftController::class, 'update']);
+        Route::delete('/pendaftaran/draft/{id_lowongan}', [PendaftaranDraftController::class, 'destroy']);
+
         // Riwayat pendaftaran
         Route::get('/pendaftaran/riwayat', [PendaftaranController::class, 'index']);
 

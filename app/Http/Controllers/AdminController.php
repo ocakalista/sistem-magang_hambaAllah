@@ -5,11 +5,16 @@ namespace App\Http\Controllers;
 use App\Models\Lowongan;
 use App\Models\Pendaftaran;
 use App\Models\User;
+use App\Notifications\ApiNotification;
+use App\Support\SendsNotificationsSafely;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 
 class AdminController extends Controller
 {
+    use SendsNotificationsSafely;
+
     // =========================================================================
     // Legacy method for Flutter — validasiLowongan (PUT /admin/lowongan/{id}/validasi)
     // =========================================================================
@@ -26,6 +31,22 @@ class AdminController extends Controller
 
         $lowongan->status_approval = $validated['status_approval'];
         $lowongan->save();
+
+        if (in_array($validated['status_approval'], ['approved', 'rejected'], true)) {
+            $this->notifySafely(
+                $lowongan->mitra?->user,
+                new ApiNotification(
+                    'status_lowongan',
+                    $validated['status_approval'] === 'approved' ? 'Lowongan disetujui' : 'Lowongan ditolak',
+                    'Status lowongan '.$lowongan->judul_posisi.' menjadi '.$validated['status_approval'].'.',
+                    [
+                        'id_lowongan' => $lowongan->id_lowongan,
+                        'status' => $validated['status_approval'],
+                    ],
+                ),
+                'lowongan.status_updated',
+            );
+        }
 
         return response()->json([
             'message' => 'Status lowongan berhasil diubah menjadi '.$validated['status_approval'],
@@ -71,14 +92,14 @@ class AdminController extends Controller
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
-        } else if ($request->role === 'mitra') {
+        } elseif ($request->role === 'mitra') {
             DB::table('mitra')->insert([
                 'id_user' => $user->id,
                 'nama_perusahaan' => $user->name,
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
-        } else if ($request->role === 'dosen') {
+        } elseif ($request->role === 'dosen') {
             DB::table('dosen')->insert([
                 'nidn' => $user->email_or_nim,
                 'id_user' => $user->id,
