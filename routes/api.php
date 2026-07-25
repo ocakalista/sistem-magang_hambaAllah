@@ -54,15 +54,18 @@ Route::middleware('auth:sanctum')->group(function () {
         // Profile & user management
         Route::get('profile', [AdminController::class, 'profile']);
         Route::get('users', [AdminController::class, 'usersList']);
+        Route::get('users/{id}', [AdminController::class, 'showUser']);
         Route::post('users', [AdminController::class, 'storeUser']);
         Route::delete('users/{id}', [AdminController::class, 'destroyUser']);
+        Route::get('enrollments', [AdminController::class, 'enrollments']);
 
         // Dashboard stats
         Route::get('dashboard', [AdminController::class, 'dashboard']);
     });
 
     // Admin tetapkan dosen pembimbing
-    Route::post('/bimbingan', [BimbinganController::class, 'store']);
+    Route::post('/bimbingan', [BimbinganController::class, 'store'])
+        ->middleware('role:admin');
 
     // -------- MITRA --------
     Route::middleware('role:mitra')->group(function () {

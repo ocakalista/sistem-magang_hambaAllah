@@ -13,6 +13,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use RuntimeException;
 use Throwable;
 
@@ -182,7 +183,13 @@ class PendaftaranController extends Controller
                 'pelamar_baru',
                 'Pelamar baru',
                 $validated['nama_lengkap'].' melamar posisi '.$lowongan->judul_posisi.'.',
-                ['id_lowongan' => $lowongan->id_lowongan, 'id_pendaftaran' => $pendaftaran->id_pendaftaran]
+                [
+                    'id_pendaftaran' => $pendaftaran->id_pendaftaran,
+                    'id_lowongan' => $lowongan->id_lowongan,
+                    'category' => 'approval',
+                    'requires_action' => true,
+                    'priority' => 'high',
+                ]
             ),
             'pendaftaran.created',
         );
@@ -199,39 +206,94 @@ class PendaftaranController extends Controller
      */
     public function updateStatus(Request $request, string $id)
     {
-        $request->validate([
+        $validated = $request->validate([
             'status' => 'required|in:diterima,ditolak,selesai',
         ]);
 
-        $pendaftaran = Pendaftaran::find($id);
+        $result = DB::transaction(function () use ($request, $validated, $id) {
+            $pendaftaran = Pendaftaran::query()
+                ->with(['mahasiswa.user', 'lowongan.mitra'])
+                ->lockForUpdate()
+                ->find($id);
 
-        if (! $pendaftaran) {
-            return response()->json(['message' => 'Data pendaftaran tidak ditemukan'], 404);
-        }
-
-        // Restore kuota jika status baru = ditolak (dan sebelumnya bukan ditolak)
-        if ($request->status == 'ditolak' && $pendaftaran->status != 'ditolak') {
-            $lowongan = Lowongan::find($pendaftaran->id_lowongan);
-            if ($lowongan) {
-                $lowongan->increment('kuota');
+            if (! $pendaftaran) {
+                return ['error' => 'Data pendaftaran tidak ditemukan', 'status' => 404];
             }
+
+            $mitra = $request->user()->mitra;
+            if (
+                ! $mitra
+                || ! $pendaftaran->lowongan
+                || $pendaftaran->lowongan->id_mitra !== $mitra->id_mitra
+            ) {
+                return [
+                    'error' => 'Anda tidak memiliki akses ke pendaftaran ini.',
+                    'status' => 403,
+                ];
+            }
+
+            $oldStatus = $pendaftaran->status;
+            $newStatus = $validated['status'];
+            $changed = $oldStatus !== $newStatus;
+
+            if ($changed) {
+                $lowongan = Lowongan::query()
+                    ->whereKey($pendaftaran->id_lowongan)
+                    ->lockForUpdate()
+                    ->first();
+
+                if ($oldStatus !== 'ditolak' && $newStatus === 'ditolak') {
+                    $lowongan?->increment('kuota');
+                } elseif ($oldStatus === 'ditolak' && $newStatus !== 'ditolak') {
+                    if (! $lowongan || $lowongan->kuota < 1) {
+                        return ['error' => 'Kuota lowongan sudah penuh.', 'status' => 409];
+                    }
+                    $lowongan->decrement('kuota');
+                }
+
+                $pendaftaran->status = $newStatus;
+                $pendaftaran->save();
+            }
+
+            return compact('pendaftaran', 'changed');
+        }, 3);
+
+        if (isset($result['error'])) {
+            return response()->json(['message' => $result['error']], $result['status']);
         }
 
-        $pendaftaran->status = $request->status;
-        $pendaftaran->save();
-        $this->notifySafely(
-            $pendaftaran->mahasiswa?->user,
-            new ApiNotification(
-                'status_pendaftaran',
-                'Status lamaran diperbarui',
-                'Status lamaran Anda menjadi '.$request->status.'.',
-                ['id_pendaftaran' => $pendaftaran->id_pendaftaran, 'status' => $request->status]
-            ),
-            'pendaftaran.status_updated',
-        );
+        $pendaftaran = $result['pendaftaran'];
+        $status = $pendaftaran->status;
+
+        if ($result['changed']) {
+            $title = match ($status) {
+                'diterima' => 'Lamaran diterima',
+                'ditolak' => 'Lamaran ditolak',
+                default => 'Status lamaran diperbarui',
+            };
+
+            $this->notifySafely(
+                $pendaftaran->mahasiswa?->user,
+                new ApiNotification(
+                    'status_pendaftaran',
+                    $title,
+                    'Status lamaran Anda menjadi '.$status.'.',
+                    [
+                        'id_pendaftaran' => $pendaftaran->id_pendaftaran,
+                        'id_lowongan' => $pendaftaran->id_lowongan,
+                        'status' => $status,
+                        'category' => 'update',
+                        'requires_action' => false,
+                    ]
+                ),
+                'pendaftaran.status_updated',
+            );
+        }
 
         return response()->json([
-            'message' => 'Status pendaftaran berhasil diubah menjadi '.$request->status,
+            'message' => $result['changed']
+                ? 'Status pendaftaran berhasil diubah menjadi '.$status
+                : 'Status pendaftaran tidak berubah.',
             'data' => $pendaftaran,
         ], 200);
     }
@@ -239,45 +301,48 @@ class PendaftaranController extends Controller
     /**
      * GET /api/lowongan/{id_lowongan}/pelamar  — list pelamar untuk lowongan tertentu (mitra)
      */
-    public function getPelamar(string $id_lowongan)
+    public function getPelamar(Request $request, string $id_lowongan)
     {
-        $pelamar = DB::table('pendaftaran')
-            ->join('mahasiswa', 'pendaftaran.id_mahasiswa', '=', 'mahasiswa.id_mahasiswa')
-            ->select(
-                'pendaftaran.id_pendaftaran',
-                'pendaftaran.status',
-                'pendaftaran.berkas_cv',
-                'pendaftaran.motivasi',
-                'pendaftaran.portofolio',
-                'pendaftaran.portfolio_link',
-                'pendaftaran.created_at as tanggal_daftar',
-                'mahasiswa.id_mahasiswa as nim',
-                'mahasiswa.nama as nama_mahasiswa',
-                'mahasiswa.jurusan'
-            )
-            ->where('pendaftaran.id_lowongan', $id_lowongan)
-            ->get();
-
-        if ($pelamar->isEmpty()) {
-            return response()->json([
-                'message' => 'Belum ada pelamar untuk lowongan ini.',
-                'data' => [],
-            ], 200);
+        $lowongan = Lowongan::with('mitra')->find($id_lowongan);
+        if (! $lowongan) {
+            return response()->json(['message' => 'Lowongan tidak ditemukan.'], 404);
         }
 
-        $pelamar->transform(function ($item) {
-            $item->url_cv = $item->berkas_cv ? asset('storage/'.$item->berkas_cv) : null;
-            $item->portfolio = [
-                'file_url' => $item->portofolio ? asset('storage/'.$item->portofolio) : null,
-                'link' => $item->portfolio_link,
-            ];
-            unset($item->berkas_cv, $item->portofolio, $item->portfolio_link);
+        $mitra = $request->user()->mitra;
+        if (! $mitra || $lowongan->id_mitra !== $mitra->id_mitra) {
+            return response()->json([
+                'message' => 'Anda tidak memiliki akses ke pelamar lowongan ini.',
+            ], 403);
+        }
 
-            return $item;
-        });
+        $pelamar = Pendaftaran::query()
+            ->where('id_lowongan', $lowongan->id_lowongan)
+            ->with(['mahasiswa.user', 'lowongan'])
+            ->latest('created_at')
+            ->get()
+            ->map(fn (Pendaftaran $item) => [
+                'id_pendaftaran' => $item->id_pendaftaran,
+                'id_lowongan' => $item->id_lowongan,
+                'nama_mahasiswa' => $item->mahasiswa?->nama,
+                'nim' => $item->id_mahasiswa,
+                'jurusan' => $item->mahasiswa?->jurusan,
+                'email' => $item->mahasiswa?->user?->email_or_nim,
+                'no_telp' => $item->mahasiswa?->user?->phone,
+                'semester' => $item->mahasiswa?->user?->semester !== null
+                    ? (int) $item->mahasiswa->user->semester
+                    : null,
+                'motivasi' => $item->motivasi,
+                'status' => $item->status,
+                'tanggal_daftar' => $item->created_at?->toISOString(),
+                'url_cv' => $this->publicFileUrl($item->berkas_cv),
+                'url_portofolio' => $this->publicFileUrl($item->portofolio),
+                'portofolio_link' => $item->portfolio_link,
+            ]);
 
         return response()->json([
-            'message' => 'Berhasil mengambil daftar pelamar',
+            'message' => $pelamar->isEmpty()
+                ? 'Belum ada pelamar untuk lowongan ini.'
+                : 'Berhasil mengambil daftar pelamar',
             'data' => $pelamar,
         ], 200);
     }
@@ -315,5 +380,19 @@ class PendaftaranController extends Controller
             'message' => 'Laporan Akhir berhasil diunggah',
             'data' => $pendaftaran,
         ], 200);
+    }
+
+    private function publicFileUrl(?string $path): ?string
+    {
+        if (! $path) {
+            return null;
+        }
+
+        $storageUrl = Storage::disk('public')->url($path);
+        $absoluteUrl = Str::startsWith($storageUrl, ['http://', 'https://'])
+            ? $storageUrl
+            : url($storageUrl);
+
+        return Str::replaceStart('http://', 'https://', $absoluteUrl);
     }
 }

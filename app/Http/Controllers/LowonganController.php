@@ -151,20 +151,22 @@ class LowonganController extends Controller
     /**
      * GET /api/admin/lowongan  — list lowongan pending untuk approval
      */
-    public function adminListPending()
+    public function adminListPending(Request $request)
     {
-        $list = Lowongan::with('mitra')
-            ->pending()
+        $validated = $request->validate([
+            'status' => 'nullable|in:pending,approved,rejected',
+        ]);
+
+        $query = Lowongan::query()->with('mitra');
+        if ($status = $validated['status'] ?? null) {
+            $query->where('status_approval', $status);
+        }
+
+        $list = $query
+            ->orderByRaw("CASE WHEN status_approval = 'pending' THEN 0 ELSE 1 END")
+            ->latest('created_at')
             ->get()
-            ->map(function ($item) {
-                return [
-                    'id_lowongan' => $item->id_lowongan,
-                    'company_name' => $item->mitra->nama_perusahaan ?? null,
-                    'company_category' => $item->kategori,
-                    'request_description' => $item->deskripsi,
-                    'status_approval' => $item->status_approval,
-                ];
-            });
+            ->map(fn (Lowongan $item) => self::formatLowongan($item));
 
         return response()->json(['data' => $list]);
     }
@@ -181,7 +183,14 @@ class LowonganController extends Controller
         }
 
         if ($lowongan->status_approval === 'approved') {
-            return response()->json(['message' => 'Lowongan sudah di-approve sebelumnya.'], 400);
+            return response()->json([
+                'message' => 'Lowongan sudah di-approve sebelumnya.',
+                'data' => $lowongan,
+            ]);
+        }
+
+        if ($lowongan->status_approval !== 'pending') {
+            return response()->json(['message' => 'Lowongan tidak dalam status pending.'], 409);
         }
 
         $lowongan->status_approval = 'approved';
@@ -218,8 +227,15 @@ class LowonganController extends Controller
             return response()->json(['message' => 'Lowongan tidak ditemukan'], 404);
         }
 
+        if ($lowongan->status_approval === 'rejected') {
+            return response()->json([
+                'message' => 'Lowongan sudah di-reject sebelumnya.',
+                'data' => $lowongan,
+            ]);
+        }
+
         if ($lowongan->status_approval !== 'pending') {
-            return response()->json(['message' => 'Lowongan tidak dalam status pending.'], 400);
+            return response()->json(['message' => 'Lowongan tidak dalam status pending.'], 409);
         }
 
         $lowongan->status_approval = 'rejected';
@@ -287,6 +303,8 @@ class LowonganController extends Controller
             'kuota' => (int) $lowongan->kuota,
             'batas_waktu' => $lowongan->batas_waktu?->toDateString(),
             'status_approval' => $lowongan->status_approval,
+            'created_at' => $lowongan->created_at?->toISOString(),
+            'updated_at' => $lowongan->updated_at?->toISOString(),
         ];
     }
 }

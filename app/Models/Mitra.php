@@ -7,7 +7,9 @@ use Illuminate\Database\Eloquent\Model;
 class Mitra extends Model
 {
     protected $table = 'mitra';
+
     protected $primaryKey = 'id_mitra';
+
     protected $fillable = ['id_user', 'nama_perusahaan'];
 
     public function user()
@@ -17,6 +19,6 @@ class Mitra extends Model
 
     public function lowongan()
     {
-        return $this->hasMany(Lowongan::class, 'id_mitra');
+        return $this->hasMany(Lowongan::class, 'id_mitra', 'id_mitra');
     }
 }

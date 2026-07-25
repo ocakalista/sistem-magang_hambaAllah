@@ -28,7 +28,7 @@ class DosenBimbinganController extends Controller
 
         // Ambil semua bimbingan untuk dosen ini + relasi yang dibutuhkan
         $bimbingans = Bimbingan::with([
-            'pendaftaran.mahasiswa',
+            'pendaftaran.mahasiswa.user',
             'pendaftaran.logbook',
             'pendaftaran.lowongan.mitra',
         ])->where('nidn', $nidn)->get();
@@ -73,8 +73,11 @@ class DosenBimbinganController extends Controller
             })->values();
 
             return [
-                'id' => $mahasiswa ? $mahasiswa->id_mahasiswa : null,
-                'name' => $mahasiswa ? $mahasiswa->nama : '(Tanpa Nama)',
+                'id' => $mahasiswa?->id_mahasiswa,
+                'name' => $mahasiswa?->nama,
+                'email' => $mahasiswa?->user?->email_or_nim,
+                'phone' => $mahasiswa?->user?->phone,
+                'study_program' => $mahasiswa?->jurusan,
                 'position' => $pendaftaran->lowongan->judul_posisi ?? null,
                 'company' => $pendaftaran->lowongan->mitra->nama_perusahaan ?? null,
                 'currentWeek' => $currentWeek,

@@ -29,6 +29,19 @@ class AdminController extends Controller
             return response()->json(['message' => 'Lowongan tidak ditemukan'], 404);
         }
 
+        if ($lowongan->status_approval === $validated['status_approval']) {
+            return response()->json([
+                'message' => 'Status lowongan tidak berubah.',
+                'data' => $lowongan,
+            ]);
+        }
+
+        if ($lowongan->status_approval !== 'pending') {
+            return response()->json([
+                'message' => 'Lowongan tidak dalam status pending.',
+            ], 409);
+        }
+
         $lowongan->status_approval = $validated['status_approval'];
         $lowongan->save();
 
@@ -157,12 +170,165 @@ class AdminController extends Controller
      */
     public function usersList()
     {
-        $users = User::select('id', 'name', 'email_or_nim', 'phone', 'role')
-            ->get();
+        $users = User::query()
+            ->select('id', 'name', 'email_or_nim', 'phone', 'role', 'created_at')
+            ->latest('created_at')
+            ->get()
+            ->map(fn (User $user) => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email_or_nim,
+                'email_or_nim' => $user->email_or_nim,
+                'phone' => $user->phone,
+                'role' => $user->role,
+                'created_at' => $user->created_at?->toISOString(),
+            ]);
 
         return response()->json([
             'data' => $users,
         ]);
+    }
+
+    public function enrollments(Request $request)
+    {
+        $validated = $request->validate([
+            'status' => 'nullable|in:pending,diterima,ditolak,selesai',
+            'search' => 'nullable|string|max:255',
+            'page' => 'nullable|integer|min:1',
+            'per_page' => 'nullable|integer|min:1|max:100',
+        ]);
+
+        $query = Pendaftaran::query()
+            ->with(['mahasiswa.user', 'lowongan.mitra', 'bimbingan.dosen'])
+            ->withCount('logbook')
+            ->latest('created_at');
+
+        if ($status = $validated['status'] ?? null) {
+            $query->where('status', $status);
+        }
+
+        if ($search = $validated['search'] ?? null) {
+            $query->where(function ($builder) use ($search) {
+                $builder
+                    ->where('id_mahasiswa', 'like', '%'.$search.'%')
+                    ->orWhereHas('mahasiswa', fn ($mahasiswa) => $mahasiswa
+                        ->where('nama', 'like', '%'.$search.'%'))
+                    ->orWhereHas('lowongan', fn ($lowongan) => $lowongan
+                        ->where('judul_posisi', 'like', '%'.$search.'%')
+                        ->orWhereHas('mitra', fn ($mitra) => $mitra
+                            ->where('nama_perusahaan', 'like', '%'.$search.'%')));
+            });
+        }
+
+        $paginator = $query->paginate($validated['per_page'] ?? 20)->withQueryString();
+
+        return response()->json([
+            'data' => $paginator->getCollection()
+                ->map(fn (Pendaftaran $item) => $this->formatEnrollment($item)),
+            'meta' => [
+                'current_page' => $paginator->currentPage(),
+                'last_page' => $paginator->lastPage(),
+                'per_page' => $paginator->perPage(),
+                'total' => $paginator->total(),
+            ],
+        ]);
+    }
+
+    public function showUser(string $id)
+    {
+        $user = User::query()
+            ->with([
+                'mahasiswa.pendaftaran.lowongan.mitra',
+                'mahasiswa.pendaftaran.bimbingan.dosen',
+                'mahasiswa.pendaftaran.logbook',
+                'dosen.bimbingan.pendaftaran.mahasiswa',
+                'dosen.bimbingan.pendaftaran.lowongan.mitra',
+                'dosen.bimbingan.pendaftaran.logbook',
+                'mitra.lowongan.pendaftaran.mahasiswa',
+            ])
+            ->find($id);
+
+        if (! $user) {
+            return response()->json(['message' => 'Pengguna tidak ditemukan.'], 404);
+        }
+
+        $data = [
+            'id' => $user->id,
+            'name' => $user->name,
+            'email' => $user->email_or_nim,
+            'email_or_nim' => $user->email_or_nim,
+            'phone' => $user->phone,
+            'role' => $user->role,
+            'created_at' => $user->created_at?->toISOString(),
+            'profile' => (object) [],
+            'applications' => [],
+            'supervised_students' => [],
+            'vacancies' => [],
+            'applicants' => [],
+        ];
+
+        if ($user->role === 'mahasiswa' && $user->mahasiswa) {
+            $student = $user->mahasiswa;
+            $data['profile'] = [
+                'nim' => $student->id_mahasiswa,
+                'nama' => $student->nama,
+                'jurusan' => $student->jurusan,
+                'semester' => $user->semester !== null ? (int) $user->semester : null,
+            ];
+            $data['applications'] = $student->pendaftaran
+                ->map(fn (Pendaftaran $item) => $this->formatEnrollment($item))
+                ->values();
+        } elseif ($user->role === 'dosen' && $user->dosen) {
+            $lecturer = $user->dosen;
+            $data['profile'] = [
+                'nidn' => $lecturer->nidn,
+                'nama' => $lecturer->nama,
+                'program_studi' => $user->konsentrasi,
+            ];
+            $data['supervised_students'] = $lecturer->bimbingan
+                ->map(function ($guidance) {
+                    $application = $guidance->pendaftaran;
+                    $logbookCount = $application?->logbook->count() ?? 0;
+
+                    return [
+                        'id_bimbingan' => $guidance->id_bimbingan,
+                        'id_pendaftaran' => $application?->id_pendaftaran,
+                        'id_mahasiswa' => $application?->id_mahasiswa,
+                        'nama_mahasiswa' => $application?->mahasiswa?->nama,
+                        'judul_posisi' => $application?->lowongan?->judul_posisi,
+                        'nama_perusahaan' => $application?->lowongan?->mitra?->nama_perusahaan,
+                        'status' => $application?->status,
+                        'jumlah_logbook' => $logbookCount,
+                        'progress' => $this->progress($logbookCount),
+                    ];
+                })->values();
+        } elseif ($user->role === 'mitra' && $user->mitra) {
+            $partner = $user->mitra;
+            $data['profile'] = [
+                'id_mitra' => $partner->id_mitra,
+                'nama_perusahaan' => $partner->nama_perusahaan,
+            ];
+            $data['vacancies'] = $partner->lowongan->map(fn (Lowongan $item) => [
+                'id_lowongan' => $item->id_lowongan,
+                'judul_posisi' => $item->judul_posisi,
+                'status_approval' => $item->status_approval,
+                'kuota' => (int) $item->kuota,
+                'jumlah_pendaftar' => $item->pendaftaran->count(),
+            ])->values();
+            $data['applicants'] = $partner->lowongan
+                ->flatMap(fn (Lowongan $vacancy) => $vacancy->pendaftaran->map(
+                    fn (Pendaftaran $item) => [
+                        'id_pendaftaran' => $item->id_pendaftaran,
+                        'id_lowongan' => $item->id_lowongan,
+                        'judul_posisi' => $vacancy->judul_posisi,
+                        'id_mahasiswa' => $item->id_mahasiswa,
+                        'nama_mahasiswa' => $item->mahasiswa?->nama,
+                        'status' => $item->status,
+                    ]
+                ))->values();
+        }
+
+        return response()->json(['data' => $data]);
     }
 
     /**
@@ -218,5 +384,33 @@ class AdminController extends Controller
         }
 
         return round((($current - $prior) / $prior) * 100, 1);
+    }
+
+    private function formatEnrollment(Pendaftaran $item): array
+    {
+        $logbookCount = isset($item->logbook_count)
+            ? (int) $item->logbook_count
+            : $item->logbook->count();
+
+        return [
+            'id_pendaftaran' => $item->id_pendaftaran,
+            'id_mahasiswa' => $item->id_mahasiswa,
+            'nama_mahasiswa' => $item->mahasiswa?->nama,
+            'email' => $item->mahasiswa?->user?->email_or_nim,
+            'avatar_url' => null,
+            'id_lowongan' => $item->id_lowongan,
+            'judul_posisi' => $item->lowongan?->judul_posisi,
+            'nama_perusahaan' => $item->lowongan?->mitra?->nama_perusahaan,
+            'status' => $item->status,
+            'tanggal_daftar' => $item->created_at?->toISOString(),
+            'dosen_pembimbing' => $item->bimbingan?->dosen?->nama,
+            'jumlah_logbook' => $logbookCount,
+            'progress' => $this->progress($logbookCount),
+        ];
+    }
+
+    private function progress(int $logbookCount): int
+    {
+        return min(100, (int) round(($logbookCount / 12) * 100));
     }
 }

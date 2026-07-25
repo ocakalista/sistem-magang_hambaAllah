@@ -115,6 +115,61 @@ class LogbookWorkflowTest extends TestCase
             ->assertJsonPath('data.0.weeklyReports.0.feedback_dosen', 'Perlu perbaikan.');
     }
 
+    public function test_supervision_response_contains_real_profile_and_only_assigned_students(): void
+    {
+        $data = $this->scenario();
+        $this->logbook($data['pendaftaran']);
+        $data['student']->update(['phone' => '081234567890']);
+
+        Mahasiswa::create([
+            'id_mahasiswa' => $data['otherStudent']->email_or_nim,
+            'id_user' => $data['otherStudent']->id,
+            'nama' => $data['otherStudent']->name,
+            'jurusan' => 'Sistem Informasi',
+        ]);
+        $otherApplication = Pendaftaran::create([
+            'id_mahasiswa' => $data['otherStudent']->email_or_nim,
+            'id_lowongan' => $data['pendaftaran']->id_lowongan,
+            'status' => 'diterima',
+        ]);
+        Bimbingan::create([
+            'id_pendaftaran' => $otherApplication->id_pendaftaran,
+            'nidn' => '002',
+            'status_verifikasi' => 'disetujui',
+        ]);
+
+        Sanctum::actingAs($data['supervisor']);
+        $this->getJson('/api/dosen/bimbingan')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $data['student']->email_or_nim)
+            ->assertJsonPath('data.0.name', $data['student']->name)
+            ->assertJsonPath('data.0.email', $data['student']->email_or_nim)
+            ->assertJsonPath('data.0.phone', '081234567890')
+            ->assertJsonPath('data.0.study_program', 'Informatika')
+            ->assertJsonStructure([
+                'data' => [[
+                    'id',
+                    'name',
+                    'email',
+                    'phone',
+                    'study_program',
+                    'position',
+                    'company',
+                    'currentWeek',
+                    'totalWeeks',
+                    'progress',
+                    'weeklyReports',
+                ]],
+            ]);
+
+        Sanctum::actingAs($data['otherLecturer']);
+        $this->getJson('/api/dosen/bimbingan')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $data['otherStudent']->email_or_nim);
+    }
+
     private function scenario(): array
     {
         $student = $this->user('Mahasiswa', '22.11.0001', 'mahasiswa');

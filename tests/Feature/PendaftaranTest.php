@@ -47,6 +47,15 @@ class PendaftaranTest extends TestCase
         ]);
         $this->assertDatabaseCount('notifications', 1);
         $this->assertDatabaseCount('pendaftaran_drafts', 0);
+
+        $notification = User::where('role', 'mitra')->first()->notifications()->first();
+        $this->assertSame('pelamar_baru', $notification->data['type']);
+        $this->assertSame(
+            $this->app['db']->table('pendaftaran')->value('id_pendaftaran'),
+            $notification->data['metadata']['id_pendaftaran'],
+        );
+        $this->assertSame('approval', $notification->data['metadata']['category']);
+        $this->assertTrue($notification->data['metadata']['requires_action']);
     }
 
     public function test_semester_must_be_between_one_and_fourteen(): void
