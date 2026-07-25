@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../models/application_model.dart';
 import '../../models/mitra_model.dart';
 import '../../models/mitra_provider.dart';
 import '../../models/nexus_app_state.dart';
 import '../../theme/app_theme.dart';
+import '../../config/api_config.dart';
 
 class PendaftarDetailScreen extends StatefulWidget {
   static const routeName = '/mitra/pendaftar-detail';
@@ -55,13 +57,28 @@ class _PendaftarDetailScreenState extends State<PendaftarDetailScreen> {
               const SizedBox(height: 20),
               _buildTimeline(context),
               const SizedBox(height: 20),
+              _buildPersonalData(context),
+              const SizedBox(height: 20),
               _buildDocumentRow(
                 context,
                 widget.applicant.cvUrl == null
                     ? 'CV tidak tersedia'
                     : 'CV tersedia di server',
                 Icons.description_rounded,
+                onTap:
+                    widget.applicant.cvUrl == null
+                        ? null
+                        : () => _openDocument(widget.applicant.cvUrl!),
               ),
+              if (widget.applicant.portfolioUrl != null) ...[
+                const SizedBox(height: 12),
+                _buildDocumentRow(
+                  context,
+                  'Lihat portofolio',
+                  Icons.folder_open_rounded,
+                  onTap: () => _openDocument(widget.applicant.portfolioUrl!),
+                ),
+              ],
               const SizedBox(height: 20),
               _buildMotivationSection(context),
             ],
@@ -82,11 +99,7 @@ class _PendaftarDetailScreenState extends State<PendaftarDetailScreen> {
                     Expanded(
                       child: OutlinedButton(
                         onPressed:
-                            () => _setStatus(
-                              context,
-                              state,
-                              ApplicationStatus.accepted,
-                            ),
+                            () => _setStatus(state, ApplicationStatus.accepted),
                         child: const Text('Terima'),
                       ),
                     ),
@@ -260,30 +273,109 @@ class _PendaftarDetailScreenState extends State<PendaftarDetailScreen> {
     );
   }
 
-  Widget _buildDocumentRow(BuildContext context, String label, IconData icon) {
+  Widget _buildDocumentRow(
+    BuildContext context,
+    String label,
+    IconData icon, {
+    VoidCallback? onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        decoration: BoxDecoration(
+          color: AppColors.white,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: AppColors.primary),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Text(
+                label,
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600),
+              ),
+            ),
+            const Icon(Icons.chevron_right_rounded, color: AppColors.neutral),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPersonalData(BuildContext context) {
+    final applicant = widget.applicant;
+    final values = <(IconData, String, String?)>[
+      (Icons.badge_outlined, 'NIM', applicant.nim),
+      (Icons.school_outlined, 'Program Studi', applicant.major),
+      (Icons.email_outlined, 'Email', applicant.email),
+      (Icons.phone_outlined, 'Telepon', applicant.phone),
+      (Icons.calendar_view_week_outlined, 'Semester', applicant.semester),
+    ];
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: AppColors.white,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(24),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: AppColors.primary),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Text(
-              label,
-              style: Theme.of(
-                context,
-              ).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600),
+          Text(
+            'Data Diri Mahasiswa',
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 10),
+          ...values.map(
+            (item) => Padding(
+              padding: const EdgeInsets.symmetric(vertical: 7),
+              child: Row(
+                children: [
+                  Icon(item.$1, color: AppColors.primary, size: 20),
+                  const SizedBox(width: 12),
+                  Expanded(child: Text(item.$2)),
+                  Flexible(
+                    child: Text(
+                      item.$3?.trim().isNotEmpty == true ? item.$3! : '-',
+                      textAlign: TextAlign.end,
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
-          const Icon(Icons.chevron_right_rounded, color: AppColors.neutral),
         ],
       ),
     );
+  }
+
+  Future<void> _openDocument(String rawUrl) async {
+    final uri = _documentUri(rawUrl);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+      return;
+    }
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Dokumen tidak dapat dibuka.')),
+    );
+  }
+
+  Uri _documentUri(String value) {
+    final parsed = Uri.tryParse(value);
+    if (parsed != null && parsed.hasScheme) return parsed;
+    final apiUri = Uri.parse(ApiConfig.baseUrl);
+    final path = value.startsWith('/') ? value : '/storage/$value';
+    return apiUri.replace(path: path.replaceFirst('/api/', '/'));
   }
 
   Widget _buildMotivationSection(BuildContext context) {
@@ -305,7 +397,9 @@ class _PendaftarDetailScreenState extends State<PendaftarDetailScreen> {
           ),
           const SizedBox(height: 12),
           Text(
-            'Motivasi belum tersedia pada respons daftar pelamar dari server.',
+            widget.applicant.motivation?.trim().isNotEmpty == true
+                ? widget.applicant.motivation!
+                : 'Motivasi belum tersedia pada respons daftar pelamar dari server.',
             style: Theme.of(
               context,
             ).textTheme.bodyMedium?.copyWith(color: AppColors.neutral),
@@ -330,8 +424,8 @@ class _PendaftarDetailScreenState extends State<PendaftarDetailScreen> {
             TextButton(
               onPressed: () async {
                 Navigator.of(context).pop();
-                await _setStatus(context, state, ApplicationStatus.rejected);
-                if (mounted) Navigator.of(context).pop();
+                await _setStatus(state, ApplicationStatus.rejected);
+                if (mounted) Navigator.of(this.context).pop();
               },
               child: const Text('Tolak', style: TextStyle(color: Colors.red)),
             ),
@@ -341,11 +435,7 @@ class _PendaftarDetailScreenState extends State<PendaftarDetailScreen> {
     );
   }
 
-  Future<void> _setStatus(
-    BuildContext context,
-    MitraProvider state,
-    ApplicationStatus status,
-  ) async {
+  Future<void> _setStatus(MitraProvider state, ApplicationStatus status) async {
     final token = NexusScope.of(context).authToken;
     if (token == null) return;
     try {

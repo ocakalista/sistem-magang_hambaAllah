@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../models/dosen_model.dart';
 import '../../models/nexus_app_state.dart';
 import '../../theme/app_theme.dart';
+import 'student_profile_screen.dart';
 
 class WeeklyReportDetailScreen extends StatefulWidget {
   static const routeName = '/dosen/weekly-report-detail';
@@ -27,8 +28,9 @@ class _WeeklyReportDetailScreenState extends State<WeeklyReportDetailScreen> {
   @override
   void initState() {
     super.initState();
-    _feedbackController =
-        TextEditingController(text: widget.report.lecturerFeedback ?? '');
+    _feedbackController = TextEditingController(
+      text: widget.report.lecturerFeedback ?? '',
+    );
   }
 
   @override
@@ -55,43 +57,47 @@ class _WeeklyReportDetailScreenState extends State<WeeklyReportDetailScreen> {
   void _showApprovalDialog() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Approve Weekly Report'),
-        content: Text(
-            'Approve this week\'s report for ${widget.student.name}?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              if (_feedbackController.text.isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Please add feedback before approving'),
-                  ),
-                );
-                return;
-              }
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Approve Weekly Report'),
+            content: Text(
+              'Approve this week\'s report for ${widget.student.name}?',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  if (_feedbackController.text.isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Please add feedback before approving'),
+                      ),
+                    );
+                    return;
+                  }
 
-              final state = NexusScope.of(context);
-              state.approveDosenReport(
-                studentId: widget.student.id,
-                reportId: widget.report.id,
-                feedback: _feedbackController.text,
-              );
+                  final state = NexusScope.of(context);
+                  state.approveDosenReport(
+                    studentId: widget.student.id,
+                    reportId: widget.report.id,
+                    feedback: _feedbackController.text,
+                  );
 
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Report approved successfully')),
-              );
-              Navigator.pop(context);
-            },
-            child: const Text('Approve'),
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Report approved successfully'),
+                    ),
+                  );
+                  Navigator.pop(context);
+                },
+                child: const Text('Approve'),
+              ),
+            ],
           ),
-        ],
-      ),
     );
   }
 
@@ -100,53 +106,52 @@ class _WeeklyReportDetailScreenState extends State<WeeklyReportDetailScreen> {
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Reject Weekly Report'),
-        content: TextField(
-          controller: reasonController,
-          minLines: 3,
-          maxLines: 5,
-          decoration: const InputDecoration(
-            hintText: 'Enter rejection reason...',
-            border: OutlineInputBorder(),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Reject Weekly Report'),
+            content: TextField(
+              controller: reasonController,
+              minLines: 3,
+              maxLines: 5,
+              decoration: const InputDecoration(
+                hintText: 'Enter rejection reason...',
+                border: OutlineInputBorder(),
+              ),
             ),
-            onPressed: () {
-              if (reasonController.text.isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Please provide a rejection reason'),
-                  ),
-                );
-                return;
-              }
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                onPressed: () {
+                  if (reasonController.text.isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Please provide a rejection reason'),
+                      ),
+                    );
+                    return;
+                  }
 
-              final state = NexusScope.of(context);
-              state.rejectDosenReport(
-                studentId: widget.student.id,
-                reportId: widget.report.id,
-                reason: reasonController.text,
-              );
+                  final state = NexusScope.of(context);
+                  state.rejectDosenReport(
+                    studentId: widget.student.id,
+                    reportId: widget.report.id,
+                    reason: reasonController.text,
+                  );
 
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Report rejected')),
-              );
-              Navigator.pop(context);
-            },
-            child: const Text('Reject'),
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Report rejected')),
+                  );
+                  Navigator.pop(context);
+                },
+                child: const Text('Reject'),
+              ),
+            ],
           ),
-        ],
-      ),
     );
   }
 
@@ -217,23 +222,31 @@ class _WeeklyReportDetailScreenState extends State<WeeklyReportDetailScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                widget.student.name,
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .titleMedium
-                                    ?.copyWith(
-                                      fontWeight: FontWeight.w700,
+                              InkWell(
+                                onTap:
+                                    () => Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder:
+                                            (_) => StudentProfileScreen(
+                                              student: widget.student,
+                                            ),
+                                      ),
                                     ),
+                                child: Text(
+                                  widget.student.name,
+                                  style: Theme.of(
+                                    context,
+                                  ).textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.w700,
+                                    color: AppColors.primary,
+                                  ),
+                                ),
                               ),
                               Text(
                                 widget.student.internshipPosition,
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .bodySmall
-                                    ?.copyWith(
-                                      color: AppColors.neutral,
-                                    ),
+                                style: Theme.of(context).textTheme.bodySmall
+                                    ?.copyWith(color: AppColors.neutral),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                               ),
@@ -251,13 +264,12 @@ class _WeeklyReportDetailScreenState extends State<WeeklyReportDetailScreen> {
                           ),
                           child: Text(
                             'Week ${widget.student.currentWeek}',
-                            style: Theme.of(context)
-                                .textTheme
-                                .labelSmall
-                                ?.copyWith(
-                                  color: AppColors.primary,
-                                  fontWeight: FontWeight.w600,
-                                ),
+                            style: Theme.of(
+                              context,
+                            ).textTheme.labelSmall?.copyWith(
+                              color: AppColors.primary,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         ),
                       ],
@@ -316,12 +328,8 @@ class _WeeklyReportDetailScreenState extends State<WeeklyReportDetailScreen> {
                         Expanded(
                           child: Text(
                             'Week ${widget.report.weekNumber} Report',
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleMedium
-                                ?.copyWith(
-                                  fontWeight: FontWeight.w700,
-                                ),
+                            style: Theme.of(context).textTheme.titleMedium
+                                ?.copyWith(fontWeight: FontWeight.w700),
                           ),
                         ),
                       ],
@@ -344,7 +352,8 @@ class _WeeklyReportDetailScreenState extends State<WeeklyReportDetailScreen> {
               const SizedBox(height: 20),
 
               // Feedback Section
-              if (widget.report.isApproved && widget.report.lecturerFeedback != null)
+              if (widget.report.isApproved &&
+                  widget.report.lecturerFeedback != null)
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
@@ -359,18 +368,19 @@ class _WeeklyReportDetailScreenState extends State<WeeklyReportDetailScreen> {
                     children: [
                       Row(
                         children: [
-                          const Icon(Icons.check_circle_rounded,
-                              color: Colors.green),
+                          const Icon(
+                            Icons.check_circle_rounded,
+                            color: Colors.green,
+                          ),
                           const SizedBox(width: 8),
                           Text(
                             'Approved',
-                            style: Theme.of(context)
-                                .textTheme
-                                .labelMedium
-                                ?.copyWith(
-                                  color: Colors.green,
-                                  fontWeight: FontWeight.w700,
-                                ),
+                            style: Theme.of(
+                              context,
+                            ).textTheme.labelMedium?.copyWith(
+                              color: Colors.green,
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
                         ],
                       ),
@@ -388,8 +398,7 @@ class _WeeklyReportDetailScreenState extends State<WeeklyReportDetailScreen> {
                   children: [
                     Text(
                       'Lecturer Feedback',
-                      style:
-                          Theme.of(context).textTheme.titleMedium?.copyWith(
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w700,
                       ),
                     ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../models/application_model.dart';
 import '../../models/nexus_app_state.dart';
+import '../../services/api_service.dart';
 import '../../theme/app_theme.dart';
 import 'dashboard_mahasiswa.dart';
 import '../notifications_screen.dart';
@@ -112,7 +113,7 @@ class _InternshipProgressScreenState extends State<InternshipProgressScreen> {
           const SizedBox(height: 18),
           _UploadSection(
             selectedReportFile: _selectedReportFile,
-            onBrowse: _pickReportFile,
+            onBrowse: () => _showLogbookForm(app),
           ),
           const SizedBox(height: 18),
           if (feedbackReports.isNotEmpty)
@@ -126,14 +127,79 @@ class _InternshipProgressScreenState extends State<InternshipProgressScreen> {
     );
   }
 
-  void _pickReportFile() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text(
-          'Backend logbook menerima deskripsi kegiatan, bukan file. Fitur upload file belum tersedia di API.',
-        ),
-      ),
+  Future<void> _showLogbookForm(Application application) async {
+    final descriptionController = TextEditingController();
+    final weekController = TextEditingController(
+      text: ((application.currentWeek ?? 0) + 1).toString(),
     );
+    final submitted = await showDialog<bool>(
+      context: context,
+      builder:
+          (dialogContext) => AlertDialog(
+            title: const Text('Isi Logbook Mingguan'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: weekController,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(labelText: 'Minggu ke'),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: descriptionController,
+                  minLines: 3,
+                  maxLines: 6,
+                  decoration: const InputDecoration(
+                    labelText: 'Deskripsi kegiatan',
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext, false),
+                child: const Text('Batal'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(dialogContext, true),
+                child: const Text('Kirim'),
+              ),
+            ],
+          ),
+    );
+    if (submitted != true || !mounted) return;
+    final week = int.tryParse(weekController.text);
+    final description = descriptionController.text.trim();
+    if (week == null || week < 1 || description.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Minggu dan deskripsi wajib diisi.')),
+      );
+      return;
+    }
+    final state = NexusScope.of(context);
+    final token = state.authToken;
+    if (token == null) return;
+    try {
+      await ApiService.createLogbook(
+        token: token,
+        applicationId: application.id,
+        week: week,
+        date: DateTime.now(),
+        description: description,
+      );
+      await state.loadStudentApplications();
+      if (!mounted) return;
+      setState(() {});
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Logbook berhasil dikirim.')),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Logbook gagal: $error')));
+    }
   }
 
   void _handleNav(BuildContext context, int index) {
@@ -518,14 +584,14 @@ class _UploadSection extends StatelessWidget {
                 ),
                 const SizedBox(height: 10),
                 Text(
-                  'Drag & Drop report here',
+                  'Catat aktivitas mingguan',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w700,
                   ),
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  'Supported formats: PDF, DOCX, or DOC',
+                  'Isi minggu, tanggal, dan deskripsi kegiatan',
                   style: Theme.of(
                     context,
                   ).textTheme.bodySmall?.copyWith(color: AppColors.neutral),
@@ -544,7 +610,7 @@ class _UploadSection extends StatelessWidget {
                   width: double.infinity,
                   child: ElevatedButton(
                     onPressed: onBrowse,
-                    child: const Text('Browse Files'),
+                    child: const Text('Isi Logbook'),
                   ),
                 ),
               ],

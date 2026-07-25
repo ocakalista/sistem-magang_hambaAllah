@@ -1,16 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../models/application_model.dart';
+import '../models/dosen_model.dart';
 import '../models/nexus_app_state.dart';
 import '../models/notification_model.dart';
+import '../models/mitra_provider.dart';
 import '../theme/app_theme.dart';
 import '../widgets/bottom_nav.dart';
 import '../widgets/mitra_bottom_nav.dart';
 import '../widgets/dosen_bottom_nav.dart';
-import 'admin/admin_dashboard_screen.dart';
 import 'dosen/dosen_dashboard_screen.dart';
 import 'dosen/profile_screen.dart';
 import 'dosen/students_screen.dart';
+import 'dosen/weekly_report_detail_screen.dart';
 import 'mahasiswa/application_status_screen.dart';
 import 'mahasiswa/dashboard_mahasiswa.dart';
 import 'mahasiswa/profile_screen.dart';
@@ -18,6 +21,7 @@ import 'mahasiswa/internship_progress_screen.dart';
 import 'mitra/kelola_lowongan_screen.dart';
 import 'mitra/mitra_dashboard_screen.dart';
 import 'mitra/profile_screen.dart';
+import 'mitra/pendaftar_detail_screen.dart';
 
 enum _NotificationFilter { all, updates, approvals }
 
@@ -32,6 +36,31 @@ class NotificationsScreen extends StatefulWidget {
 
 class _NotificationsScreenState extends State<NotificationsScreen> {
   _NotificationFilter _selectedFilter = _NotificationFilter.all;
+  bool _isLoading = true;
+  String? _loadError;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadNotifications());
+  }
+
+  Future<void> _loadNotifications() async {
+    if (!mounted) return;
+    setState(() {
+      _isLoading = true;
+      _loadError = null;
+    });
+    try {
+      await NexusScope.of(context).loadNotifications();
+    } catch (error) {
+      _loadError = error.toString().replaceFirst('Exception: ', '');
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -88,12 +117,16 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               ),
             ),
           ),
-          const Padding(
+          Padding(
             padding: EdgeInsets.only(right: 20),
-            child: CircleAvatar(
-              radius: 18,
-              backgroundColor: AppColors.primary,
-              child: Icon(Icons.person, color: Colors.white, size: 20),
+            child: IconButton(
+              tooltip: 'Profil',
+              onPressed: () => _openProfile(context, role),
+              icon: const CircleAvatar(
+                radius: 18,
+                backgroundColor: AppColors.primary,
+                child: Icon(Icons.person, color: Colors.white, size: 20),
+              ),
             ),
           ),
         ],
@@ -115,51 +148,62 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               const SizedBox(height: 18),
               Expanded(
                 child:
-                    filteredNotifications.isEmpty
-                        ? const _EmptyState()
-                        : ListView(
-                          padding: const EdgeInsets.only(bottom: 20),
-                          children: [
-                            if (newNotifications.isNotEmpty) ...[
-                              _SectionHeader(
-                                title: 'New Notifications',
-                                count: unreadCount,
-                                emphasis: true,
-                              ),
-                              const SizedBox(height: 12),
-                              ...newNotifications.map(
-                                (notification) => _NotificationCard(
-                                  notification: notification,
-                                  onTap:
-                                      () => _handleNotificationTap(
-                                        context,
-                                        state,
-                                        notification,
-                                      ),
-                                ),
-                              ),
-                              const SizedBox(height: 12),
-                            ],
-                            if (earlierNotifications.isNotEmpty) ...[
-                              const _SectionHeader(
-                                title: 'Earlier Today',
-                                emphasis: false,
-                              ),
-                              const SizedBox(height: 12),
-                              ...earlierNotifications.map(
-                                (notification) => _NotificationCard(
-                                  notification: notification,
-                                  mutedIconStyle: true,
-                                  onTap:
-                                      () => _handleNotificationTap(
-                                        context,
-                                        state,
-                                        notification,
-                                      ),
-                                ),
-                              ),
-                            ],
-                          ],
+                    _isLoading
+                        ? const Center(child: CircularProgressIndicator())
+                        : _loadError != null && filteredNotifications.isEmpty
+                        ? _NotificationError(
+                          message: _loadError!,
+                          onRetry: _loadNotifications,
+                        )
+                        : RefreshIndicator(
+                          onRefresh: _loadNotifications,
+                          child:
+                              filteredNotifications.isEmpty
+                                  ? const _EmptyState()
+                                  : ListView(
+                                    padding: const EdgeInsets.only(bottom: 20),
+                                    children: [
+                                      if (newNotifications.isNotEmpty) ...[
+                                        _SectionHeader(
+                                          title: 'New Notifications',
+                                          count: unreadCount,
+                                          emphasis: true,
+                                        ),
+                                        const SizedBox(height: 12),
+                                        ...newNotifications.map(
+                                          (notification) => _NotificationCard(
+                                            notification: notification,
+                                            onTap:
+                                                () => _handleNotificationTap(
+                                                  context,
+                                                  state,
+                                                  notification,
+                                                ),
+                                          ),
+                                        ),
+                                        const SizedBox(height: 12),
+                                      ],
+                                      if (earlierNotifications.isNotEmpty) ...[
+                                        const _SectionHeader(
+                                          title: 'Earlier Today',
+                                          emphasis: false,
+                                        ),
+                                        const SizedBox(height: 12),
+                                        ...earlierNotifications.map(
+                                          (notification) => _NotificationCard(
+                                            notification: notification,
+                                            mutedIconStyle: true,
+                                            onTap:
+                                                () => _handleNotificationTap(
+                                                  context,
+                                                  state,
+                                                  notification,
+                                                ),
+                                          ),
+                                        ),
+                                      ],
+                                    ],
+                                  ),
                         ),
               ),
             ],
@@ -216,19 +260,138 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     }
   }
 
-  void _handleNotificationTap(
+  Future<void> _handleNotificationTap(
     BuildContext context,
     NexusAppState state,
     AppNotification notification,
-  ) {
+  ) async {
     if (!notification.isRead) {
-      state.markNotificationAsRead(notification.id);
+      try {
+        await state.markNotificationAsRead(notification.id);
+      } catch (error) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Gagal menandai notifikasi: '
+                '${error.toString().replaceFirst('Exception: ', '')}',
+              ),
+            ),
+          );
+        }
+      }
+    }
+
+    if (state.currentUserRole == UserRole.mitra &&
+        notification.category == NotificationCategory.approval) {
+      final applicationId =
+          (notification.data['id_pendaftaran'] ??
+                  notification.data['application_id'])
+              ?.toString();
+      if (applicationId != null &&
+          applicationId.isNotEmpty &&
+          context.mounted) {
+        final provider = context.read<MitraProvider>();
+        final index = provider.pendaftarTerbaru.indexWhere(
+          (item) => item.id == applicationId,
+        );
+        if (index != -1 && context.mounted) {
+          await Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder:
+                  (_) => PendaftarDetailScreen(
+                    applicant: provider.pendaftarTerbaru[index],
+                  ),
+            ),
+          );
+          return;
+        }
+      }
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Data pendaftar belum ditemukan. Muat ulang Home.'),
+          ),
+        );
+      }
+      return;
+    }
+
+    if (state.currentUserRole == UserRole.dosen &&
+        notification.category == NotificationCategory.approval) {
+      final reportId =
+          (notification.data['id_logbook'] ??
+                  notification.data['logbook_id'] ??
+                  notification.data['id'])
+              ?.toString();
+      if (reportId == null || reportId.isEmpty) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Notifikasi belum memiliki ID logbook.'),
+            ),
+          );
+        }
+        return;
+      }
+
+      MahasiswaBimbingan? student;
+      WeeklyReportDosen? report;
+      for (final item in state.mahasiswaBimbingan) {
+        for (final weeklyReport in item.weeklyReports) {
+          if (weeklyReport.id == reportId) {
+            student = item;
+            report = weeklyReport;
+            break;
+          }
+        }
+        if (report != null) break;
+      }
+      if (report == null) {
+        try {
+          await state.loadMahasiswaBimbingan();
+        } catch (_) {
+          // Pesan yang sama di bawah cukup menjelaskan jika data tak ditemukan.
+        }
+        for (final item in state.mahasiswaBimbingan) {
+          for (final weeklyReport in item.weeklyReports) {
+            if (weeklyReport.id == reportId) {
+              student = item;
+              report = weeklyReport;
+              break;
+            }
+          }
+          if (report != null) break;
+        }
+      }
+      if (context.mounted && student != null && report != null) {
+        await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder:
+                (_) => WeeklyReportDetailScreen(
+                  report: report!,
+                  student: student!,
+                ),
+          ),
+        );
+      } else if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Logbook tidak ditemukan pada daftar mahasiswa bimbingan.',
+            ),
+          ),
+        );
+      }
+      return;
     }
 
     if (notification.title == 'Internship Offer' ||
         notification.title == 'Logbook Approved') {
       final application = state.currentApplication;
-      if (application != null) {
+      if (application != null && context.mounted) {
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -236,6 +399,23 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           ),
         );
       }
+    }
+  }
+
+  void _openProfile(BuildContext context, UserRole role) {
+    switch (role) {
+      case UserRole.dosen:
+        Navigator.pushNamed(context, DosenProfileScreen.routeName);
+        break;
+      case UserRole.mitra:
+        Navigator.pushNamed(context, MitraProfileScreen.routeName);
+        break;
+      case UserRole.student:
+        Navigator.pushNamed(context, DashboardMahasiswaProfileScreen.routeName);
+        break;
+      case UserRole.admin:
+        Navigator.pop(context);
+        break;
     }
   }
 
@@ -565,24 +745,60 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      children: [
+        SizedBox(
+          height: MediaQuery.sizeOf(context).height * 0.55,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: const [
+              Icon(
+                Icons.notifications_off_outlined,
+                size: 48,
+                color: AppColors.neutral,
+              ),
+              SizedBox(height: 12),
+              Text(
+                'Tidak ada notifikasi baru',
+                style: TextStyle(
+                  color: AppColors.neutral,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _NotificationError extends StatelessWidget {
+  const _NotificationError({required this.message, required this.onRetry});
+
+  final String message;
+  final Future<void> Function() onRetry;
+
+  @override
+  Widget build(BuildContext context) {
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: const [
-          Icon(
-            Icons.notifications_off_outlined,
-            size: 48,
-            color: AppColors.neutral,
-          ),
-          SizedBox(height: 12),
-          Text(
-            'Tidak ada notifikasi baru',
-            style: TextStyle(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.cloud_off_rounded,
+              size: 48,
               color: AppColors.neutral,
-              fontWeight: FontWeight.w600,
             ),
-          ),
-        ],
+            const SizedBox(height: 12),
+            Text(message, textAlign: TextAlign.center),
+            const SizedBox(height: 16),
+            OutlinedButton(onPressed: onRetry, child: const Text('Coba lagi')),
+          ],
+        ),
       ),
     );
   }

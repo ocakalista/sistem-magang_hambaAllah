@@ -6,6 +6,7 @@ import '../../theme/app_theme.dart';
 import '../notifications_screen.dart';
 import '../../widgets/dosen_bottom_nav.dart';
 import 'profile_screen.dart';
+import 'student_profile_screen.dart';
 import 'students_screen.dart';
 import 'weekly_report_detail_screen.dart';
 
@@ -93,29 +94,46 @@ class _DosenDashboardScreenState extends State<DosenDashboardScreen> {
       appBar: AppBar(
         automaticallyImplyLeading: false,
         titleSpacing: 20,
-        title: Row(
-          children: [
-            const CircleAvatar(
-              radius: 18,
-              backgroundColor: AppColors.primary,
-              child: Icon(Icons.person, color: Colors.white, size: 20),
+        title: InkWell(
+          onTap:
+              () => Navigator.pushNamed(context, DosenProfileScreen.routeName),
+          borderRadius: BorderRadius.circular(24),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const CircleAvatar(
+                  radius: 18,
+                  backgroundColor: AppColors.primary,
+                  child: Icon(Icons.person, color: Colors.white, size: 20),
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  'Nexus',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(width: 12),
-            Text(
-              'Nexus',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                color: AppColors.primary,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ],
+          ),
         ),
-        actions: const [
+        actions: [
           Padding(
-            padding: EdgeInsets.only(right: 20),
-            child: Icon(
-              Icons.notifications_none_rounded,
-              color: Colors.black87,
+            padding: const EdgeInsets.only(right: 8),
+            child: IconButton(
+              tooltip: 'Notifikasi',
+              onPressed:
+                  () => Navigator.pushNamed(
+                    context,
+                    NotificationsScreen.routeName,
+                  ),
+              icon: const Icon(
+                Icons.notifications_none_rounded,
+                color: Colors.black87,
+              ),
             ),
           ),
         ],
@@ -191,7 +209,10 @@ class _DosenDashboardScreenState extends State<DosenDashboardScreen> {
                           ),
                         )
                         : Text(
-                          '${dosenStats.totalApprovalNeeded.toString().padLeft(2, '0')}',
+                          dosenStats.totalApprovalNeeded.toString().padLeft(
+                            2,
+                            '0',
+                          ),
                           style: Theme.of(
                             context,
                           ).textTheme.headlineLarge?.copyWith(
@@ -373,7 +394,7 @@ class _DosenDashboardScreenState extends State<DosenDashboardScreen> {
                     ),
                   ),
                   GestureDetector(
-                    onTap: () => setState(() => _selectedIndex = 1),
+                    onTap: _navigateToStudents,
                     child: Text(
                       'View All',
                       style: Theme.of(context).textTheme.labelMedium?.copyWith(
@@ -441,12 +462,30 @@ class _DosenDashboardScreenState extends State<DosenDashboardScreen> {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text(
-                                      student.name,
-                                      style: Theme.of(
-                                        context,
-                                      ).textTheme.titleSmall?.copyWith(
-                                        fontWeight: FontWeight.w700,
+                                    InkWell(
+                                      onTap:
+                                          () => Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder:
+                                                  (_) => StudentProfileScreen(
+                                                    student: student,
+                                                  ),
+                                            ),
+                                          ),
+                                      child: Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                          vertical: 2,
+                                        ),
+                                        child: Text(
+                                          student.name,
+                                          style: Theme.of(
+                                            context,
+                                          ).textTheme.titleSmall?.copyWith(
+                                            fontWeight: FontWeight.w700,
+                                            color: AppColors.primary,
+                                          ),
+                                        ),
                                       ),
                                     ),
                                     Text(
@@ -720,7 +759,6 @@ class _DosenDashboardScreenState extends State<DosenDashboardScreen> {
 
   Future<void> _loadData() async {
     final state = NexusScope.of(context);
-    if (state.mahasiswaBimbingan.isNotEmpty) return;
     setState(() {
       _isLoading = true;
       _loadError = null;
@@ -728,22 +766,26 @@ class _DosenDashboardScreenState extends State<DosenDashboardScreen> {
 
     try {
       await state.loadMahasiswaBimbingan();
-      setState(() {
-        _isLoading = false;
-        _loadError = null;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _loadError = null;
+        });
+      }
     } catch (e) {
-      setState(() {
-        _isLoading = false;
-        _loadError = e.toString();
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _loadError = e.toString();
+        });
+      }
     }
   }
 
   void _navigateToStudents() {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => Scaffold(body: StudentsScreen())),
+      MaterialPageRoute(builder: (context) => StudentsScreen()),
     ).then((_) => setState(() => _selectedIndex = 0));
   }
 }

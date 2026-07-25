@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'models/mitra_provider.dart';
 import 'models/nexus_app_state.dart';
 import 'screens/mahasiswa/dashboard_mahasiswa.dart';
+import 'screens/mahasiswa/all_internships_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/mahasiswa/profile_screen.dart';
 import 'screens/mitra/kelola_lowongan_screen.dart';
@@ -11,6 +12,7 @@ import 'screens/mitra/mitra_dashboard_screen.dart';
 import 'screens/mitra/profile_screen.dart';
 import 'screens/mitra/tambah_lowongan_screen.dart';
 import 'screens/notifications_screen.dart';
+import 'screens/notification_settings_screen.dart';
 import 'screens/admin/admin_dashboard_screen.dart';
 import 'screens/dosen/dosen_dashboard_screen.dart';
 import 'screens/dosen/profile_screen.dart';
@@ -56,6 +58,11 @@ class _NexusAppState extends State<NexusApp> {
             OnboardingScreen.routeName: (_) => const OnboardingScreen(),
             LoginScreen.routeName: (_) => const LoginScreen(),
             DashboardMahasiswa.routeName: (_) => const DashboardMahasiswa(),
+            AllInternshipsScreen.routeName:
+                (_) => const RoleGuard(
+                  requiredRole: UserRole.student,
+                  child: AllInternshipsScreen(),
+                ),
             AdminDashboardScreen.routeName:
                 (_) => const RoleGuard(
                   requiredRole: UserRole.admin,
@@ -84,6 +91,8 @@ class _NexusAppState extends State<NexusApp> {
                   },
                 ),
             NotificationsScreen.routeName: (_) => const NotificationsScreen(),
+            NotificationSettingsScreen.routeName:
+                (_) => const NotificationSettingsScreen(),
             DashboardMahasiswaProfileScreen.routeName:
                 (_) => const DashboardMahasiswaProfileScreen(),
             DosenProfileScreen.routeName: (_) => const DosenProfileScreen(),

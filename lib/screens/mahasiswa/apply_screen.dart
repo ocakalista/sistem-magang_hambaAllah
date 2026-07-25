@@ -1,5 +1,9 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../models/application_model.dart';
 import '../../models/nexus_app_state.dart';
@@ -40,11 +44,47 @@ class _ApplyScreenState extends State<ApplyScreen> {
   @override
   void initState() {
     super.initState();
+    _restoreDraft();
     _fullNameController.addListener(() => setState(() {}));
     _phoneController.addListener(() => setState(() {}));
     _semesterController.addListener(() => setState(() {}));
     _portfolioController.addListener(() => setState(() {}));
     _motivationController.addListener(() => setState(() {}));
+  }
+
+  String get _draftKey => 'application_draft_${widget.internship.id}';
+
+  Future<void> _saveDraft() async {
+    final preferences = await SharedPreferences.getInstance();
+    await preferences.setString(
+      _draftKey,
+      jsonEncode({
+        'fullName': _fullNameController.text,
+        'phone': _phoneController.text,
+        'semester': _semesterController.text,
+        'portfolioLink': _portfolioController.text,
+        'motivation': _motivationController.text,
+      }),
+    );
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Draft tersimpan. Buka lowongan ini lagi untuk melanjutkan; file perlu dipilih ulang.',
+        ),
+      ),
+    );
+  }
+
+  Future<void> _restoreDraft() async {
+    final raw = (await SharedPreferences.getInstance()).getString(_draftKey);
+    if (raw == null) return;
+    final draft = jsonDecode(raw) as Map<String, dynamic>;
+    _fullNameController.text = draft['fullName']?.toString() ?? '';
+    _phoneController.text = draft['phone']?.toString() ?? '';
+    _semesterController.text = draft['semester']?.toString() ?? '';
+    _portfolioController.text = draft['portfolioLink']?.toString() ?? '';
+    _motivationController.text = draft['motivation']?.toString() ?? '';
   }
 
   @override
@@ -154,13 +194,7 @@ class _ApplyScreenState extends State<ApplyScreen> {
           children: [
             Expanded(
               child: OutlinedButton(
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Draft saved locally for later review.'),
-                    ),
-                  );
-                },
+                onPressed: _saveDraft,
                 child: const Text('Save Draft'),
               ),
             ),
@@ -295,15 +329,20 @@ class _ApplyScreenState extends State<ApplyScreen> {
             const SizedBox(height: 14),
             TextFormField(
               controller: _semesterController,
+              keyboardType: TextInputType.number,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
               decoration: const InputDecoration(
                 labelText: 'University Semester',
-                hintText: 'e.g. Semester 6',
+                hintText: 'e.g. 6',
               ),
-              validator:
-                  (value) =>
-                      (value == null || value.trim().isEmpty)
-                          ? 'Please enter your semester'
-                          : null,
+              validator: (value) {
+                final semester = int.tryParse(value?.trim() ?? '');
+                if (semester == null) return 'Semester harus berupa angka';
+                if (semester < 1 || semester > 14) {
+                  return 'Semester harus antara 1 dan 14';
+                }
+                return null;
+              },
             ),
             const SizedBox(height: 16),
             Container(
@@ -465,7 +504,7 @@ class _ApplyScreenState extends State<ApplyScreen> {
     try {
       FilePickerResult? result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
-        allowedExtensions: ['pdf', 'doc', 'docx', 'png', 'jpg', 'jpeg'],
+        allowedExtensions: ['pdf', 'doc', 'docx'],
         withData: true, // WAJIB ADA agar bisa dibaca di Flutter Web
       );
 
@@ -540,7 +579,7 @@ class _ApplyScreenState extends State<ApplyScreen> {
                     FilePickerResult? result = await FilePicker.platform
                         .pickFiles(
                           type: FileType.custom,
-                          allowedExtensions: ['pdf', 'png', 'jpg', 'jpeg'],
+                          allowedExtensions: ['pdf', 'doc', 'docx'],
                           withData:
                               true, // WAJIB ADA agar bisa dibaca di Flutter Web
                         );
@@ -554,7 +593,7 @@ class _ApplyScreenState extends State<ApplyScreen> {
                           _portfolioController.clear();
                         });
                       } else {
-                        if (!mounted) return;
+                        if (!context.mounted) return;
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
                             content: Text('Gagal membaca isi file portofolio.'),
@@ -564,7 +603,7 @@ class _ApplyScreenState extends State<ApplyScreen> {
                       }
                     }
                   } catch (e) {
-                    if (!mounted) return;
+                    if (!context.mounted) return;
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text('Gagal buka file manager: $e'),
@@ -605,11 +644,13 @@ class _ApplyScreenState extends State<ApplyScreen> {
       portfolioLink: _portfolioController.text.trim(),
     );
 
+    if (!mounted) return;
     setState(() => _isSubmitting = false);
-
     if (result['success'] == true) {
+      final preferences = await SharedPreferences.getInstance();
+      await preferences.remove(_draftKey);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(this.context).showSnackBar(
         const SnackBar(content: Text('Lamaran berhasil dikirim!')),
       );
 
@@ -617,7 +658,7 @@ class _ApplyScreenState extends State<ApplyScreen> {
         await state.loadStudentApplications();
       } catch (e) {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
+        ScaffoldMessenger.of(this.context).showSnackBar(
           SnackBar(
             content: Text(
               'Lamaran tersimpan, tetapi sinkronisasi ulang gagal: $e',
@@ -630,14 +671,14 @@ class _ApplyScreenState extends State<ApplyScreen> {
       if (application == null || !mounted) return;
 
       Navigator.pushReplacement(
-        context,
+        this.context,
         MaterialPageRoute(
           builder: (_) => ApplicationStatusScreen(application: application),
         ),
       );
     } else {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(this.context).showSnackBar(
         SnackBar(
           content: Text(result['message']), // Tampilkan error asli
           backgroundColor: Colors.red,

@@ -6,6 +6,7 @@ import '../../services/api_service.dart'; // INJEKSI 1: Import ApiService
 import 'application_status_screen.dart';
 import 'internship_detail_screen.dart';
 import 'internship_progress_screen.dart';
+import 'all_internships_screen.dart';
 import 'profile_screen.dart';
 import '../../theme/app_theme.dart';
 
@@ -21,6 +22,7 @@ class DashboardMahasiswa extends StatefulWidget {
 class _DashboardMahasiswaState extends State<DashboardMahasiswa> {
   int _selectedIndex = 0;
   String _query = '';
+  String? _categoryFilter;
 
   // Data katalog selalu berasal dari API.
   List<Internship> _recommended = [];
@@ -61,12 +63,21 @@ class _DashboardMahasiswaState extends State<DashboardMahasiswa> {
   Widget build(BuildContext context) {
     final appState = NexusScope.of(context);
     final recommendations =
-        _recommended.where((item) {
-          final query = _query.toLowerCase();
-          return query.isEmpty ||
-              item.position.toLowerCase().contains(query) ||
-              item.company.toLowerCase().contains(query);
-        }).toList();
+        _recommended
+            .where((item) {
+              final query = _query.toLowerCase();
+              return query.isEmpty ||
+                  item.position.toLowerCase().contains(query) ||
+                  item.company.toLowerCase().contains(query);
+            })
+            .where((item) {
+              return _categoryFilter == null ||
+                  item.tags.any(
+                    (tag) =>
+                        tag.toLowerCase() == _categoryFilter!.toLowerCase(),
+                  );
+            })
+            .toList();
     final activeApplications =
         appState.applications
             .where((item) => item.status != ApplicationStatus.rejected)
@@ -145,7 +156,7 @@ class _DashboardMahasiswaState extends State<DashboardMahasiswa> {
                   hintText: 'Search internships...',
                   prefixIcon: const Icon(Icons.search_rounded),
                   suffixIcon: IconButton(
-                    onPressed: () {},
+                    onPressed: _showFilter,
                     icon: const Icon(Icons.tune_rounded),
                   ),
                 ),
@@ -227,7 +238,14 @@ class _DashboardMahasiswaState extends State<DashboardMahasiswa> {
                       fontWeight: FontWeight.w700,
                     ),
                   ),
-                  TextButton(onPressed: () {}, child: const Text('See all')),
+                  TextButton(
+                    onPressed:
+                        () => Navigator.pushNamed(
+                          context,
+                          AllInternshipsScreen.routeName,
+                        ),
+                    child: const Text('See all'),
+                  ),
                 ],
               ),
               const SizedBox(height: 12),
@@ -273,7 +291,7 @@ class _DashboardMahasiswaState extends State<DashboardMahasiswa> {
                     ),
                   )
                   : SizedBox(
-                    height: 178,
+                    height: 236,
                     child: ListView.separated(
                       scrollDirection: Axis.horizontal,
                       itemCount: recommendations.length,
@@ -379,6 +397,47 @@ class _DashboardMahasiswaState extends State<DashboardMahasiswa> {
     );
   }
 
+  Future<void> _showFilter() async {
+    final categories =
+        _recommended.expand((item) => item.tags).toSet().toList()..sort();
+    final selected = await showModalBottomSheet<String?>(
+      context: context,
+      builder:
+          (context) => SafeArea(
+            child: ListView(
+              shrinkWrap: true,
+              padding: const EdgeInsets.all(20),
+              children: [
+                Text(
+                  'Filter kategori',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+                ListTile(
+                  title: const Text('Semua kategori'),
+                  trailing:
+                      _categoryFilter == null
+                          ? const Icon(Icons.check, color: AppColors.primary)
+                          : null,
+                  onTap: () => Navigator.pop(context, ''),
+                ),
+                ...categories.map(
+                  (category) => ListTile(
+                    title: Text(category),
+                    trailing:
+                        category == _categoryFilter
+                            ? const Icon(Icons.check, color: AppColors.primary)
+                            : null,
+                    onTap: () => Navigator.pop(context, category),
+                  ),
+                ),
+              ],
+            ),
+          ),
+    );
+    if (!mounted || selected == null) return;
+    setState(() => _categoryFilter = selected.isEmpty ? null : selected);
+  }
+
   String _formatDate(DateTime date) {
     if (date.millisecondsSinceEpoch == 0) return '-';
     return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
@@ -435,6 +494,8 @@ class _RecommendationCard extends StatelessWidget {
             const SizedBox(height: 14),
             Text(
               internship.position,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
               style: Theme.of(
                 context,
               ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
@@ -442,6 +503,8 @@ class _RecommendationCard extends StatelessWidget {
             const SizedBox(height: 6),
             Text(
               internship.company,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: Theme.of(
                 context,
               ).textTheme.bodyMedium?.copyWith(color: AppColors.neutral),
@@ -449,6 +512,8 @@ class _RecommendationCard extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               internship.location,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: Theme.of(
                 context,
               ).textTheme.labelMedium?.copyWith(color: AppColors.primary),
@@ -459,6 +524,7 @@ class _RecommendationCard extends StatelessWidget {
               runSpacing: 8,
               children:
                   internship.tags
+                      .take(2)
                       .map(
                         (tag) => Container(
                           padding: const EdgeInsets.symmetric(

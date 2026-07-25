@@ -180,19 +180,17 @@ class _LoginScreenState extends State<LoginScreen> {
                                   }
 
                                   // Tembak API Backend
+                                  final state = NexusScope.of(context);
                                   final response = await ApiService.login(
                                     emailOrNim,
                                     password,
                                   );
 
-                                  setState(() => _isLoading = false);
-
                                   if (!mounted) return;
+                                  setState(() => _isLoading = false);
 
                                   // Cek apakah berhasil mendapat token
                                   if (response.containsKey('token')) {
-                                    final state = NexusScope.of(context);
-
                                     // Ambil role dari database
                                     final roleStr =
                                         response['role'] ?? 'mahasiswa';
@@ -208,51 +206,49 @@ class _LoginScreenState extends State<LoginScreen> {
                                       role = UserRole.student;
                                     }
 
-                                    state.setAuthToken(
+                                    await state.setAuthToken(
                                       response['token'] as String?,
                                     );
-                                    state.setUserRole(role);
+                                    await state.setUserRole(role);
                                     await state.syncForCurrentRole();
 
                                     if (!mounted) return;
 
-                                    if (mounted) {
-                                      ScaffoldMessenger.of(
-                                        context,
-                                      ).showSnackBar(
-                                        const SnackBar(
-                                          content: Text('Login Berhasil!'),
-                                        ),
-                                      );
+                                    ScaffoldMessenger.of(
+                                      this.context,
+                                    ).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('Login Berhasil!'),
+                                      ),
+                                    );
 
-                                      // Arahkan ke dashboard yang sesuai
-                                      if (role == UserRole.admin) {
-                                        Navigator.pushReplacementNamed(
-                                          context,
-                                          AdminDashboardScreen.routeName,
-                                        );
-                                      } else if (role == UserRole.dosen) {
-                                        Navigator.pushReplacementNamed(
-                                          context,
-                                          DosenDashboardScreen.routeName,
-                                        );
-                                      } else if (role == UserRole.mitra) {
-                                        Navigator.pushReplacementNamed(
-                                          context,
-                                          MitraDashboardScreen.routeName,
-                                        );
-                                      } else {
-                                        Navigator.pushReplacementNamed(
-                                          context,
-                                          DashboardMahasiswa.routeName,
-                                        );
-                                      }
+                                    // Arahkan ke dashboard yang sesuai
+                                    if (role == UserRole.admin) {
+                                      Navigator.pushReplacementNamed(
+                                        this.context,
+                                        AdminDashboardScreen.routeName,
+                                      );
+                                    } else if (role == UserRole.dosen) {
+                                      Navigator.pushReplacementNamed(
+                                        this.context,
+                                        DosenDashboardScreen.routeName,
+                                      );
+                                    } else if (role == UserRole.mitra) {
+                                      Navigator.pushReplacementNamed(
+                                        this.context,
+                                        MitraDashboardScreen.routeName,
+                                      );
+                                    } else {
+                                      Navigator.pushReplacementNamed(
+                                        this.context,
+                                        DashboardMahasiswa.routeName,
+                                      );
                                     }
                                   } else {
                                     // Tampilkan error message
                                     if (mounted) {
                                       ScaffoldMessenger.of(
-                                        context,
+                                        this.context,
                                       ).showSnackBar(
                                         SnackBar(
                                           content: Text(

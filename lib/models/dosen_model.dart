@@ -75,6 +75,10 @@ class MahasiswaBimbingan {
   final String id;
   final String name;
   final String internshipPosition;
+  final String? company;
+  final String? email;
+  final String? phone;
+  final String? studyProgram;
   final String? avatarUrl;
   final int currentWeek;
   final int totalWeeks;
@@ -85,6 +89,10 @@ class MahasiswaBimbingan {
     required this.id,
     required this.name,
     required this.internshipPosition,
+    this.company,
+    this.email,
+    this.phone,
+    this.studyProgram,
     this.avatarUrl,
     required this.currentWeek,
     required this.totalWeeks,
@@ -96,6 +104,10 @@ class MahasiswaBimbingan {
     String? id,
     String? name,
     String? internshipPosition,
+    String? company,
+    String? email,
+    String? phone,
+    String? studyProgram,
     String? avatarUrl,
     int? currentWeek,
     int? totalWeeks,
@@ -106,6 +118,10 @@ class MahasiswaBimbingan {
       id: id ?? this.id,
       name: name ?? this.name,
       internshipPosition: internshipPosition ?? this.internshipPosition,
+      company: company ?? this.company,
+      email: email ?? this.email,
+      phone: phone ?? this.phone,
+      studyProgram: studyProgram ?? this.studyProgram,
       avatarUrl: avatarUrl ?? this.avatarUrl,
       currentWeek: currentWeek ?? this.currentWeek,
       totalWeeks: totalWeeks ?? this.totalWeeks,

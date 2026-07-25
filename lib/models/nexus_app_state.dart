@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'application_model.dart';
 import 'admin_model.dart';
@@ -12,7 +13,11 @@ class NexusAppState extends ChangeNotifier {
   NexusAppState() {
     _initAdminData();
     _initDosenData();
+    _restoreSession();
   }
+
+  static const _tokenKey = 'auth_token';
+  static const _roleKey = 'user_role';
 
   Application? _currentApplication;
   UserRole currentUserRole = UserRole.student;
@@ -131,7 +136,17 @@ class NexusAppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  void markNotificationAsRead(String id) {
+  Future<void> loadNotifications() async {
+    final token = authToken;
+    if (token == null || token.isEmpty) return;
+    final fetched = await ApiService.fetchNotifications(token);
+    _notifications
+      ..clear()
+      ..addAll(fetched.map(AppNotification.fromJson));
+    notifyListeners();
+  }
+
+  Future<void> markNotificationAsRead(String id) async {
     final index = _notifications.indexWhere(
       (notification) => notification.id == id,
     );
@@ -139,24 +154,105 @@ class NexusAppState extends ChangeNotifier {
       return;
     }
 
-    _notifications[index].isRead = true;
+    _notifications[index] = _notifications[index].copyWith(
+      isRead: true,
+      group: 'Earlier Today',
+    );
     notifyListeners();
+    final token = authToken;
+    if (token == null || token.isEmpty) return;
+    try {
+      await ApiService.markNotificationAsRead(token, id);
+    } catch (_) {
+      _notifications[index] = _notifications[index].copyWith(
+        isRead: false,
+        group: 'New Notifications',
+      );
+      notifyListeners();
+      rethrow;
+    }
   }
 
-  void markAllNotificationsAsRead() {
+  Future<void> markAllNotificationsAsRead() async {
+    final unreadIds =
+        _notifications
+            .where((notification) => !notification.isRead)
+            .map((notification) => notification.id)
+            .toSet();
     for (final notification in _notifications) {
-      notification.isRead = true;
+      final index = _notifications.indexOf(notification);
+      _notifications[index] = notification.copyWith(
+        isRead: true,
+        group: 'Earlier Today',
+      );
     }
     notifyListeners();
+    final token = authToken;
+    if (token == null || token.isEmpty) return;
+    try {
+      await ApiService.markAllNotificationsAsRead(token);
+    } catch (_) {
+      for (final notification in _notifications) {
+        if (unreadIds.contains(notification.id)) {
+          final index = _notifications.indexOf(notification);
+          _notifications[index] = notification.copyWith(
+            isRead: false,
+            group: 'New Notifications',
+          );
+        }
+      }
+      notifyListeners();
+      rethrow;
+    }
   }
 
-  void setUserRole(UserRole role) {
+  Future<void> setUserRole(UserRole role) async {
     currentUserRole = role;
+    notifyListeners();
+    final preferences = await SharedPreferences.getInstance();
+    await preferences.setString(_roleKey, role.name);
+  }
+
+  Future<void> setAuthToken(String? token) async {
+    authToken = token;
+    notifyListeners();
+    final preferences = await SharedPreferences.getInstance();
+    if (token == null || token.isEmpty) {
+      await preferences.remove(_tokenKey);
+    } else {
+      await preferences.setString(_tokenKey, token);
+    }
+  }
+
+  Future<void> _restoreSession() async {
+    final preferences = await SharedPreferences.getInstance();
+    final savedToken = preferences.getString(_tokenKey);
+    final savedRole = preferences.getString(_roleKey);
+    authToken = savedToken;
+    currentUserRole = UserRole.values.firstWhere(
+      (role) => role.name == savedRole,
+      orElse: () => UserRole.student,
+    );
     notifyListeners();
   }
 
-  void setAuthToken(String? token) {
-    authToken = token;
+  Future<void> logout() async {
+    final token = authToken;
+    if (token != null && token.isNotEmpty) {
+      try {
+        await ApiService.logout(token);
+      } catch (_) {
+        // Sesi lokal tetap harus dihapus ketika perangkat sedang offline.
+      }
+    }
+    final preferences = await SharedPreferences.getInstance();
+    await preferences.remove(_tokenKey);
+    await preferences.remove(_roleKey);
+    authToken = null;
+    currentUser = null;
+    currentUserRole = UserRole.student;
+    applications.clear();
+    _currentApplication = null;
     notifyListeners();
   }
 
@@ -168,12 +264,17 @@ class NexusAppState extends ChangeNotifier {
     notifyListeners();
     try {
       currentUser = await ApiService.fetchCurrentUser(token);
+      await loadNotifications();
       switch (currentUserRole) {
         case UserRole.student:
           await loadStudentApplications();
           break;
         case UserRole.admin:
-          await Future.wait([loadAdminLowongan(), loadAdminDashboard()]);
+          await Future.wait([
+            loadAdminLowongan(),
+            loadAdminDashboard(),
+            loadAdminEnrollments(),
+          ]);
           break;
         case UserRole.dosen:
           await loadMahasiswaBimbingan();
@@ -242,6 +343,16 @@ class NexusAppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> loadAdminEnrollments() async {
+    final token = authToken;
+    if (token == null || token.isEmpty) return;
+    final fetched = await ApiService.fetchAdminEnrollments(token);
+    studentEnrollments
+      ..clear()
+      ..addAll(fetched);
+    notifyListeners();
+  }
+
   void _syncCompletedReportNotifications(Application application) {
     for (final report in application.weeklyReports) {
       if (report.status == 'completed' &&
@@ -281,10 +392,17 @@ class NexusAppState extends ChangeNotifier {
     }
 
     try {
-      final fetched = await ApiService.fetchAdminLowongan(token);
+      final results = await Future.wait([
+        ApiService.fetchAdminLowongan(token),
+        ApiService.fetchPublicLowonganForAdmin(),
+      ]);
+      final byId = <String, PendingLowongan>{};
+      for (final item in [...results[0], ...results[1]]) {
+        byId[item.id] = item;
+      }
       pendingLowongan
         ..clear()
-        ..addAll(fetched);
+        ..addAll(byId.values);
       notifyListeners();
     } catch (_) {
       // Biarkan kosong jika fetch gagal
@@ -395,7 +513,12 @@ class NexusAppState extends ChangeNotifier {
                       'Magang')
                   .toString();
           final avatar =
-              (m['avatar'] ?? m['avatar_url'] ?? m['photo'] ?? null)
+              (m['avatar'] ?? m['avatar_url'] ?? m['photo'])?.toString();
+          final company = (m['company'] ?? m['nama_perusahaan'])?.toString();
+          final email = m['email']?.toString();
+          final phone = (m['phone'] ?? m['no_telp'])?.toString();
+          final studyProgram =
+              (m['study_program'] ?? m['program_studi'] ?? m['prodi'])
                   ?.toString();
           final currentWeek =
               int.tryParse(
@@ -485,6 +608,10 @@ class NexusAppState extends ChangeNotifier {
               id: id,
               name: name,
               internshipPosition: position,
+              company: company,
+              email: email,
+              phone: phone,
+              studyProgram: studyProgram,
               avatarUrl: avatar,
               currentWeek: currentWeek,
               totalWeeks: totalWeeks,
@@ -549,7 +676,12 @@ class NexusAppState extends ChangeNotifier {
   }) async {
     final token = authToken;
     if (token == null) throw Exception('Sesi login tidak tersedia.');
-    await ApiService.updateLogbookStatus(token, reportId, 'disetujui');
+    await ApiService.updateLogbookStatus(
+      token,
+      reportId,
+      'disetujui',
+      feedback,
+    );
     for (var student in mahasiswaBimbingan) {
       if (student.id == studentId) {
         final reportIndex = student.weeklyReports.indexWhere(
@@ -583,7 +715,7 @@ class NexusAppState extends ChangeNotifier {
   }) async {
     final token = authToken;
     if (token == null) throw Exception('Sesi login tidak tersedia.');
-    await ApiService.updateLogbookStatus(token, reportId, 'revisi');
+    await ApiService.updateLogbookStatus(token, reportId, 'revisi', reason);
     for (var student in mahasiswaBimbingan) {
       if (student.id == studentId) {
         final reportIndex = student.weeklyReports.indexWhere(

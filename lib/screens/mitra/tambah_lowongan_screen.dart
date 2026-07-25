@@ -6,6 +6,8 @@ import '../../models/mitra_model.dart';
 import '../../models/mitra_provider.dart';
 import '../../models/nexus_app_state.dart';
 import '../../theme/app_theme.dart';
+import '../../services/lowongan_draft_service.dart';
+import 'lowongan_drafts_screen.dart';
 
 class TambahLowonganScreen extends StatefulWidget {
   static const routeName = '/mitra/tambah-lowongan';
@@ -70,6 +72,19 @@ class _TambahLowonganScreenState extends State<TambahLowonganScreen> {
             fontWeight: FontWeight.w700,
           ),
         ),
+        actions: [
+          IconButton(
+            tooltip: 'Lihat draft',
+            onPressed:
+                () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const LowonganDraftsScreen(),
+                  ),
+                ),
+            icon: const Icon(Icons.drafts_outlined),
+          ),
+        ],
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded),
           onPressed: () => Navigator.pop(context),
@@ -228,10 +243,28 @@ class _TambahLowonganScreenState extends State<TambahLowonganScreen> {
           children: [
             Expanded(
               child: OutlinedButton(
-                onPressed: () {
+                onPressed: () async {
+                  await LowonganDraftService.save({
+                    'judul_posisi': _judulController.text.trim(),
+                    'nama_perusahaan': _namaPerusahaanController.text.trim(),
+                    'kategori': _selectedKategori,
+                    'lokasi': _lokasiController.text.trim(),
+                    'tipe_kerja': _selectedTipeKerja,
+                    'tipe_kontrak': _selectedTipeKontrak,
+                    'periode_mulai': _periodeMulai?.toIso8601String(),
+                    'periode_selesai': _periodeSelesai?.toIso8601String(),
+                    'kuota': _kuota,
+                    'deskripsi': _deskripsiController.text.trim(),
+                    'persyaratan': _requirements,
+                    'benefit': _benefits,
+                    'saved_at': DateTime.now().toIso8601String(),
+                  });
+                  if (!context.mounted) return;
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
-                      content: Text('Draft disimpan secara lokal.'),
+                      content: Text(
+                        'Draft disimpan. Buka ikon draft di kanan atas.',
+                      ),
                     ),
                   );
                 },
@@ -290,7 +323,7 @@ class _TambahLowonganScreenState extends State<TambahLowonganScreen> {
 
   Widget _buildDropdown(BuildContext context) {
     return DropdownButtonFormField<String>(
-      value: _selectedKategori,
+      initialValue: _selectedKategori,
       items: const [
         DropdownMenuItem(value: 'Engineering', child: Text('Engineering')),
         DropdownMenuItem(value: 'Design', child: Text('Design')),
@@ -509,14 +542,14 @@ class _TambahLowonganScreenState extends State<TambahLowonganScreen> {
     if (!_formKey.currentState!.validate() ||
         _periodeMulai == null ||
         _periodeSelesai == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(this.context).showSnackBar(
         const SnackBar(content: Text('Lengkapi semua data yang wajib diisi.')),
       );
       return;
     }
 
     if (_requirements.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(this.context).showSnackBar(
         const SnackBar(content: Text('Tambahkan setidaknya satu persyaratan.')),
       );
       return;
@@ -541,7 +574,7 @@ class _TambahLowonganScreenState extends State<TambahLowonganScreen> {
 
     final token = NexusScope.of(context).authToken;
     if (token == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(this.context).showSnackBar(
         const SnackBar(content: Text('Sesi login tidak tersedia.')),
       );
       return;
@@ -561,7 +594,7 @@ class _TambahLowonganScreenState extends State<TambahLowonganScreen> {
       });
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(this.context).showSnackBar(
         SnackBar(
           content: Text(e.toString().replaceFirst('Exception: ', '')),
           backgroundColor: Colors.red,
@@ -571,7 +604,7 @@ class _TambahLowonganScreenState extends State<TambahLowonganScreen> {
     }
     if (!mounted) return;
     showDialog<void>(
-      context: context,
+      context: this.context,
       builder: (context) {
         return AlertDialog(
           title: const Text('Lowongan berhasil diajukan!'),

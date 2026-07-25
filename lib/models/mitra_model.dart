@@ -47,6 +47,11 @@ class PendaftarTerbaru {
   final String? nim;
   final String? major;
   final String? cvUrl;
+  final String? email;
+  final String? phone;
+  final String? semester;
+  final String? motivation;
+  final String? portfolioUrl;
 
   PendaftarTerbaru({
     required this.id,
@@ -58,6 +63,11 @@ class PendaftarTerbaru {
     this.nim,
     this.major,
     this.cvUrl,
+    this.email,
+    this.phone,
+    this.semester,
+    this.motivation,
+    this.portfolioUrl,
   });
 }
 

@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../theme/app_theme.dart';
+import '../../widgets/logout_button.dart';
 import '../../widgets/mitra_bottom_nav.dart';
 import '../../models/mitra_provider.dart';
 import '../../screens/mitra/mitra_dashboard_screen.dart';
 import '../../screens/mitra/kelola_lowongan_screen.dart';
 import '../../screens/notifications_screen.dart';
+import '../notification_settings_screen.dart';
 
 class MitraProfileScreen extends StatelessWidget {
   static const routeName = '/mitra/profile';
@@ -108,7 +110,14 @@ class MitraProfileScreen extends StatelessWidget {
                     context,
                     Icons.settings_outlined,
                     'Pengaturan Notifikasi',
+                    onTap:
+                        () => Navigator.pushNamed(
+                          context,
+                          NotificationSettingsScreen.routeName,
+                        ),
                   ),
+                  const SizedBox(height: 12),
+                  const LogoutButton(),
                 ],
               ),
             );
@@ -182,10 +191,15 @@ class MitraProfileScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildActionTile(BuildContext context, IconData icon, String label) {
+  Widget _buildActionTile(
+    BuildContext context,
+    IconData icon,
+    String label, {
+    VoidCallback? onTap,
+  }) {
     return InkWell(
       borderRadius: BorderRadius.circular(22),
-      onTap: () {},
+      onTap: onTap,
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(

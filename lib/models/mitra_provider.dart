@@ -56,8 +56,17 @@ class MitraProvider extends ChangeNotifier {
       final fetched = await ApiService.fetchMitraLowongan(token);
       lowonganList = fetched;
       final applicants = <PendaftarTerbaru>[];
-      for (final lowongan in fetched) {
-        final rows = await ApiService.fetchApplicants(token, lowongan.id);
+      final applicantRows = await Future.wait(
+        fetched.map(
+          (lowongan) async => (
+            lowongan: lowongan,
+            rows: await ApiService.fetchApplicants(token, lowongan.id),
+          ),
+        ),
+      );
+      for (final result in applicantRows) {
+        final lowongan = result.lowongan;
+        final rows = result.rows;
         for (final row in rows) {
           applicants.add(
             PendaftarTerbaru(
@@ -71,7 +80,21 @@ class MitraProvider extends ChangeNotifier {
               status: Application.statusFromApi(row['status']),
               nim: row['nim']?.toString(),
               major: row['jurusan']?.toString(),
-              cvUrl: row['url_cv']?.toString(),
+              cvUrl:
+                  (row['url_cv'] ??
+                          row['cv_url'] ??
+                          row['berkas_cv_url'] ??
+                          row['berkas_cv'])
+                      ?.toString(),
+              email: row['email']?.toString(),
+              phone: (row['no_telp'] ?? row['phone'])?.toString(),
+              semester: row['semester']?.toString(),
+              motivation: (row['motivasi'] ?? row['motivation'])?.toString(),
+              portfolioUrl:
+                  (row['portofolio_link'] ??
+                          row['portfolio_url'] ??
+                          row['berkas_portofolio_url'])
+                      ?.toString(),
             ),
           );
         }
@@ -139,6 +162,11 @@ class MitraProvider extends ChangeNotifier {
       nim: pendaftarTerbaru[index].nim,
       major: pendaftarTerbaru[index].major,
       cvUrl: pendaftarTerbaru[index].cvUrl,
+      email: pendaftarTerbaru[index].email,
+      phone: pendaftarTerbaru[index].phone,
+      semester: pendaftarTerbaru[index].semester,
+      motivation: pendaftarTerbaru[index].motivation,
+      portfolioUrl: pendaftarTerbaru[index].portfolioUrl,
     );
     notifyListeners();
   }

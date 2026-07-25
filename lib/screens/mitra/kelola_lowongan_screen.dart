@@ -9,6 +9,8 @@ import '../../widgets/mitra_bottom_nav.dart';
 import '../mitra/mitra_dashboard_screen.dart';
 import '../mitra/profile_screen.dart';
 import '../../screens/notifications_screen.dart';
+import 'lowongan_detail_screen.dart';
+import 'lowongan_drafts_screen.dart';
 
 class MitraKelolaLowonganScreen extends StatefulWidget {
   static const routeName = '/mitra/kelola-lowongan';
@@ -39,7 +41,7 @@ class _MitraKelolaLowonganScreenState extends State<MitraKelolaLowonganScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        titleSpacing: 0,
+        titleSpacing: 20,
         title: Text(
           'Kelola Lowongan',
           style: Theme.of(context).textTheme.titleLarge?.copyWith(
@@ -47,6 +49,20 @@ class _MitraKelolaLowonganScreenState extends State<MitraKelolaLowonganScreen> {
             fontWeight: FontWeight.w700,
           ),
         ),
+        actions: [
+          IconButton(
+            tooltip: 'Draft lowongan',
+            onPressed:
+                () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const LowonganDraftsScreen(),
+                  ),
+                ),
+            icon: const Icon(Icons.drafts_outlined),
+          ),
+          const SizedBox(width: 8),
+        ],
       ),
       body: SafeArea(
         child: Padding(
@@ -262,13 +278,15 @@ class _MitraKelolaLowonganScreenState extends State<MitraKelolaLowonganScreen> {
                 ),
               ),
               TextButton(
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Fitur detail belum tersedia.'),
+                onPressed:
+                    () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder:
+                            (_) =>
+                                MitraLowonganDetailScreen(lowongan: lowongan),
+                      ),
                     ),
-                  );
-                },
                 child: const Text('Lihat Detail'),
               ),
             ],

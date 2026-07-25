@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../../models/dosen_model.dart';
 import '../../models/nexus_app_state.dart';
 import '../../theme/app_theme.dart';
-import 'weekly_report_detail_screen.dart';
+import 'student_profile_screen.dart';
 
 class StudentsScreen extends StatefulWidget {
   const StudentsScreen({super.key});
@@ -95,8 +95,12 @@ class _StudentsScreenState extends State<StudentsScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        automaticallyImplyLeading: false,
-        titleSpacing: 20,
+        leading: IconButton(
+          tooltip: 'Kembali',
+          onPressed: () => Navigator.maybePop(context),
+          icon: const Icon(Icons.arrow_back_ios_new_rounded),
+        ),
+        titleSpacing: 0,
         title: Text(
           'Mahasiswa Bimbingan',
           style: Theme.of(
@@ -180,23 +184,16 @@ class _StudentsScreenState extends State<StudentsScreen> {
                                   : '?';
 
                           return GestureDetector(
-                            onTap: () {
-                              final latestReport =
-                                  student.getLatestUnapprovedReport() ??
-                                  (student.weeklyReports.isNotEmpty
-                                      ? student.weeklyReports.last
-                                      : null);
-                              if (latestReport != null) {
-                                Navigator.pushNamed(
+                            onTap:
+                                () => Navigator.push(
                                   context,
-                                  WeeklyReportDetailScreen.routeName,
-                                  arguments: {
-                                    'report': latestReport,
-                                    'student': student,
-                                  },
-                                );
-                              }
-                            },
+                                  MaterialPageRoute(
+                                    builder:
+                                        (_) => StudentProfileScreen(
+                                          student: student,
+                                        ),
+                                  ),
+                                ),
                             child: Container(
                               margin: const EdgeInsets.only(bottom: 12),
                               padding: const EdgeInsets.all(16),

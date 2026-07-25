@@ -7,6 +7,9 @@ import 'admin_bottom_nav.dart';
 import 'lowongan_screen.dart';
 import 'pengguna_screen.dart';
 import 'profile_screen.dart';
+import '../notifications_screen.dart';
+import 'enrollments_screen.dart';
+import 'lowongan_detail_screen.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   static const routeName = '/admin';
@@ -28,6 +31,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       _hasLoadedLowongan = true;
       final state = NexusScope.of(context);
       state.loadAdminLowongan();
+      state.loadAdminEnrollments().catchError((_) {});
     }
   }
 
@@ -65,7 +69,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           Stack(
             children: [
               IconButton(
-                onPressed: () {},
+                onPressed:
+                    () => Navigator.pushNamed(
+                      context,
+                      NotificationsScreen.routeName,
+                    ),
                 icon: const Icon(Icons.notifications_none_rounded),
               ),
               Positioned(
@@ -82,12 +90,22 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               ),
             ],
           ),
-          const Padding(
+          Padding(
             padding: EdgeInsets.only(right: 16),
-            child: CircleAvatar(
-              radius: 18,
-              backgroundColor: AppColors.primary,
-              child: Icon(Icons.person, color: Colors.white, size: 20),
+            child: IconButton(
+              tooltip: 'Profil admin',
+              onPressed:
+                  () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const AdminProfileScreen(),
+                    ),
+                  ),
+              icon: const CircleAvatar(
+                radius: 18,
+                backgroundColor: AppColors.primary,
+                child: Icon(Icons.person, color: Colors.white, size: 20),
+              ),
             ),
           ),
         ],
@@ -132,7 +150,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               _SectionHeaderWithAction(
                 title: 'Student Enrollment',
                 actionLabel: 'View All',
-                onAction: () {},
+                onAction:
+                    () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const AdminEnrollmentsScreen(),
+                      ),
+                    ),
               ),
               const SizedBox(height: 12),
               Container(
@@ -222,6 +246,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 ...pending.map(
                   (p) => _PendingCard(
                     pending: p,
+                    onTap:
+                        () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder:
+                                (_) => AdminLowonganDetailScreen(lowongan: p),
+                          ),
+                        ),
                     onApprove: () async {
                       try {
                         await state.approveLowongan(p.id);
@@ -532,89 +564,94 @@ class _PendingCard extends StatelessWidget {
     required this.pending,
     required this.onApprove,
     required this.onReject,
+    required this.onTap,
   });
 
   final PendingLowongan pending;
   final VoidCallback onApprove;
   final VoidCallback onReject;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 8),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Icon(Icons.business, color: AppColors.primary),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      pending.companyName,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      pending.companyCategory,
-                      style: Theme.of(
-                        context,
-                      ).textTheme.bodySmall?.copyWith(color: AppColors.neutral),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            pending.requestDescription,
-            maxLines: 3,
-            overflow: TextOverflow.ellipsis,
-            style: Theme.of(
-              context,
-            ).textTheme.bodySmall?.copyWith(color: AppColors.neutral),
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: onApprove,
-                  child: const Text('Approve'),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: onReject,
-                  style: OutlinedButton.styleFrom(
-                    backgroundColor: Colors.white,
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 8),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: AppColors.white,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Text('Reject'),
+                  child: const Icon(Icons.business, color: AppColors.primary),
                 ),
-              ),
-            ],
-          ),
-        ],
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        pending.companyName,
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.w700),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        pending.companyCategory,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: AppColors.neutral,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              pending.requestDescription,
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: AppColors.neutral),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: onApprove,
+                    child: const Text('Approve'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: onReject,
+                    style: OutlinedButton.styleFrom(
+                      backgroundColor: Colors.white,
+                    ),
+                    child: const Text('Reject'),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

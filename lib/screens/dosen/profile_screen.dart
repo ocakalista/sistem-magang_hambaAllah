@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../../theme/app_theme.dart';
+import '../../widgets/logout_button.dart';
 import '../../models/nexus_app_state.dart';
+import '../notification_settings_screen.dart';
 
 class DosenProfileScreen extends StatelessWidget {
   static const routeName = '/dosen/profile';
@@ -101,7 +103,14 @@ class DosenProfileScreen extends StatelessWidget {
                 context,
                 Icons.settings_outlined,
                 'Pengaturan Notifikasi',
+                onTap:
+                    () => Navigator.pushNamed(
+                      context,
+                      NotificationSettingsScreen.routeName,
+                    ),
               ),
+              const SizedBox(height: 12),
+              const LogoutButton(),
               const SizedBox(height: 24),
               Text(
                 'Profil Dosen ini akan dikembangkan lebih lanjut untuk menampilkan data bimbingan dan jumlah mahasiswa.',
@@ -153,10 +162,21 @@ class DosenProfileScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildActionTile(BuildContext context, IconData icon, String label) {
+  Widget _buildActionTile(
+    BuildContext context,
+    IconData icon,
+    String label, {
+    VoidCallback? onTap,
+  }) {
     return InkWell(
       borderRadius: BorderRadius.circular(22),
-      onTap: () {},
+      onTap:
+          onTap ??
+          () => ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Fitur ini belum tersedia di backend.'),
+            ),
+          ),
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(

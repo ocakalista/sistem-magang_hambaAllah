@@ -4,6 +4,7 @@ import '../../models/admin_model.dart';
 import '../../models/nexus_app_state.dart';
 import '../../services/api_service.dart';
 import '../../theme/app_theme.dart';
+import 'user_detail_screen.dart';
 
 class PenggunaScreen extends StatelessWidget {
   const PenggunaScreen({super.key});
@@ -124,70 +125,80 @@ class PenggunaScreen extends StatelessWidget {
 
   Widget _buildUserCard(BuildContext context, UserAccount user) {
     final roleLabel = user.role.isNotEmpty ? user.role : 'Pengguna';
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(22),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  user.name,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
+    return InkWell(
+      onTap:
+          () => Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => AdminUserDetailScreen(user: user),
+            ),
+          ),
+      borderRadius: BorderRadius.circular(22),
+      child: Container(
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          color: AppColors.white,
+          borderRadius: BorderRadius.circular(22),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    user.name,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: Text(
-                  roleLabel.toUpperCase(),
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: AppColors.primary,
-                    fontWeight: FontWeight.w700,
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    roleLabel.toUpperCase(),
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              user.email,
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: AppColors.neutral),
+            ),
+            if (user.phone != null && user.phone!.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Text(
+                'Telp: ${user.phone}',
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: AppColors.neutral),
               ),
             ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            user.email,
-            style: Theme.of(
-              context,
-            ).textTheme.bodyMedium?.copyWith(color: AppColors.neutral),
-          ),
-          if (user.phone != null && user.phone!.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            Text(
-              'Telp: ${user.phone}',
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(color: AppColors.neutral),
-            ),
+            if (user.username != null && user.username!.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Text(
+                'Username: ${user.username}',
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: AppColors.neutral),
+              ),
+            ],
           ],
-          if (user.username != null && user.username!.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            Text(
-              'Username: ${user.username}',
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(color: AppColors.neutral),
-            ),
-          ],
-        ],
+        ),
       ),
     );
   }

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../models/admin_model.dart';
 import '../../models/nexus_app_state.dart';
 import '../../theme/app_theme.dart';
+import 'lowongan_detail_screen.dart';
 
 class LowonganScreen extends StatelessWidget {
   const LowonganScreen({super.key});
@@ -85,111 +86,125 @@ class LowonganScreen extends StatelessWidget {
     NexusAppState state,
   ) {
     final isPending = request.status == LowonganApprovalStatus.pending;
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(22),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  request.companyName,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  color: _statusColor(request.status).withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: Text(
-                  request.status.name.toUpperCase(),
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: _statusColor(request.status),
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-            ],
+    return InkWell(
+      onTap:
+          () => Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => AdminLowonganDetailScreen(lowongan: request),
+            ),
           ),
-          const SizedBox(height: 8),
-          Text(
-            request.companyCategory,
-            style: Theme.of(
-              context,
-            ).textTheme.bodyMedium?.copyWith(color: AppColors.neutral),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            request.requestDescription,
-            style: Theme.of(
-              context,
-            ).textTheme.bodySmall?.copyWith(color: AppColors.neutral),
-          ),
-          if (isPending) ...[
-            const SizedBox(height: 16),
+      borderRadius: BorderRadius.circular(22),
+      child: Container(
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          color: AppColors.white,
+          borderRadius: BorderRadius.circular(22),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
             Row(
               children: [
                 Expanded(
-                  child: ElevatedButton(
-                    onPressed: () async {
-                      try {
-                        await state.approveLowongan(request.id);
-                        if (!context.mounted) return;
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Lowongan disetujui.')),
-                        );
-                      } catch (e) {
-                        if (!context.mounted) return;
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Approve gagal: $e')),
-                        );
-                      }
-                    },
-                    child: const Text('Approve'),
+                  child: Text(
+                    request.companyName,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () async {
-                      final messenger = ScaffoldMessenger.of(context);
-                      final navigator = Navigator.of(context);
-                      final reason = await _showRejectDialog(context);
-                      if (!navigator.mounted) return;
-                      if (reason != null && reason.isNotEmpty) {
-                        try {
-                          await state.rejectLowongan(request.id, reason);
-                          if (!context.mounted) return;
-                          messenger.showSnackBar(
-                            const SnackBar(content: Text('Lowongan ditolak.')),
-                          );
-                        } catch (e) {
-                          if (!context.mounted) return;
-                          messenger.showSnackBar(
-                            SnackBar(content: Text('Reject gagal: $e')),
-                          );
-                        }
-                      }
-                    },
-                    child: const Text('Reject'),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: _statusColor(request.status).withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    request.status.name.toUpperCase(),
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: _statusColor(request.status),
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
               ],
             ),
+            const SizedBox(height: 8),
+            Text(
+              request.companyCategory,
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: AppColors.neutral),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              request.requestDescription,
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: AppColors.neutral),
+            ),
+            if (isPending) ...[
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () async {
+                        try {
+                          await state.approveLowongan(request.id);
+                          if (!context.mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Lowongan disetujui.'),
+                            ),
+                          );
+                        } catch (e) {
+                          if (!context.mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Approve gagal: $e')),
+                          );
+                        }
+                      },
+                      child: const Text('Approve'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () async {
+                        final messenger = ScaffoldMessenger.of(context);
+                        final navigator = Navigator.of(context);
+                        final reason = await _showRejectDialog(context);
+                        if (!navigator.mounted) return;
+                        if (reason != null && reason.isNotEmpty) {
+                          try {
+                            await state.rejectLowongan(request.id, reason);
+                            if (!context.mounted) return;
+                            messenger.showSnackBar(
+                              const SnackBar(
+                                content: Text('Lowongan ditolak.'),
+                              ),
+                            );
+                          } catch (e) {
+                            if (!context.mounted) return;
+                            messenger.showSnackBar(
+                              SnackBar(content: Text('Reject gagal: $e')),
+                            );
+                          }
+                        }
+                      },
+                      child: const Text('Reject'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }

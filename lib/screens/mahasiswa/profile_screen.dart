@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../theme/app_theme.dart';
+import '../../widgets/logout_button.dart';
 import '../../models/nexus_app_state.dart';
 
 class DashboardMahasiswaProfileScreen extends StatelessWidget {
@@ -104,6 +105,8 @@ class DashboardMahasiswaProfileScreen extends StatelessWidget {
                 Icons.settings_outlined,
                 'Pengaturan Notifikasi',
               ),
+              const SizedBox(height: 12),
+              const LogoutButton(),
               const SizedBox(height: 24),
               Text(
                 'Profil ini akan dikembangkan lebih lanjut untuk Mahasiswa.',

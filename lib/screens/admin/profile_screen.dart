@@ -4,6 +4,8 @@ import '../../models/admin_model.dart';
 import '../../models/nexus_app_state.dart';
 import '../../services/api_service.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/logout_button.dart';
+import '../notification_settings_screen.dart';
 
 class AdminProfileScreen extends StatefulWidget {
   const AdminProfileScreen({super.key});
@@ -226,7 +228,14 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
             context,
             Icons.settings_outlined,
             'Pengaturan Notifikasi',
+            onTap:
+                () => Navigator.pushNamed(
+                  context,
+                  NotificationSettingsScreen.routeName,
+                ),
           ),
+          const SizedBox(height: 12),
+          const LogoutButton(),
         ],
       ),
     );
@@ -275,10 +284,15 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
     );
   }
 
-  Widget _buildActionTile(BuildContext context, IconData icon, String label) {
+  Widget _buildActionTile(
+    BuildContext context,
+    IconData icon,
+    String label, {
+    VoidCallback? onTap,
+  }) {
     return InkWell(
       borderRadius: BorderRadius.circular(22),
-      onTap: () {},
+      onTap: onTap,
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(

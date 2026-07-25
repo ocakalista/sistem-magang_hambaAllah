@@ -45,13 +45,7 @@ class InternshipDetailScreen extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _HeroHeader(internship: internship),
-            Transform.translate(
-              offset: const Offset(0, -52),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: _CompanyCard(internship: internship),
-              ),
-            ),
+            const SizedBox(height: 20),
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
               child: Column(
@@ -280,6 +274,8 @@ class _HeroHeader extends StatelessWidget {
                       children: [
                         Text(
                           internship.position,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                           style: Theme.of(
                             context,
                           ).textTheme.titleLarge?.copyWith(
@@ -290,6 +286,8 @@ class _HeroHeader extends StatelessWidget {
                         const SizedBox(height: 4),
                         Text(
                           internship.company,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: Theme.of(
                             context,
                           ).textTheme.bodyMedium?.copyWith(
@@ -339,78 +337,6 @@ class _HeroHeader extends StatelessWidget {
                   ),
                 ],
               ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _CompanyCard extends StatelessWidget {
-  const _CompanyCard({required this.internship});
-
-  final Internship internship;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(28),
-        boxShadow: const [
-          BoxShadow(
-            blurRadius: 30,
-            offset: Offset(0, 14),
-            color: Color(0x18000000),
-          ),
-        ],
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 56,
-            height: 56,
-            decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(18),
-            ),
-            child: const Icon(Icons.layers_rounded, color: AppColors.primary),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  internship.position,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  internship.company,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppColors.primary,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children:
-                      internship.tags.isEmpty
-                          ? []
-                          : internship.tags
-                              .map((tag) => _TagChip(label: tag))
-                              .toList(),
-                ),
-              ],
             ),
           ),
         ],
@@ -553,30 +479,6 @@ class _BulletRow extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-class _TagChip extends StatelessWidget {
-  const _TagChip({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF2ECFF),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        label,
-        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-          color: AppColors.primary,
-          fontWeight: FontWeight.w700,
-        ),
-      ),
     );
   }
 }

@@ -11,6 +11,7 @@ import '../../screens/notifications_screen.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/mitra_bottom_nav.dart';
 import '../../models/nexus_app_state.dart';
+import 'applicants_screen.dart';
 
 class MitraDashboardScreen extends StatefulWidget {
   static const routeName = '/mitra/dashboard';
@@ -43,22 +44,28 @@ class _MitraDashboardScreenState extends State<MitraDashboardScreen> {
       backgroundColor: AppColors.background,
       appBar: AppBar(
         titleSpacing: 20,
-        title: Row(
-          children: [
-            const CircleAvatar(
-              radius: 18,
-              backgroundColor: AppColors.primary,
-              child: Icon(Icons.person, color: Colors.white, size: 20),
-            ),
-            const SizedBox(width: 12),
-            Text(
-              'Nexus',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                color: AppColors.primary,
-                fontWeight: FontWeight.w700,
+        title: InkWell(
+          onTap:
+              () => Navigator.pushNamed(context, MitraProfileScreen.routeName),
+          borderRadius: BorderRadius.circular(24),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const CircleAvatar(
+                radius: 18,
+                backgroundColor: AppColors.primary,
+                child: Icon(Icons.person, color: Colors.white, size: 20),
               ),
-            ),
-          ],
+              const SizedBox(width: 12),
+              Text(
+                'Nexus',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  color: AppColors.primary,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
         ),
         actions: [
           IconButton(
@@ -132,7 +139,13 @@ class _MitraDashboardScreenState extends State<MitraDashboardScreen> {
                     ),
                   ),
                   TextButton(
-                    onPressed: () {},
+                    onPressed:
+                        () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const MitraApplicantsScreen(),
+                          ),
+                        ),
                     child: const Text(
                       'Lihat Semua',
                       style: TextStyle(
@@ -224,17 +237,25 @@ class _MitraDashboardScreenState extends State<MitraDashboardScreen> {
               ],
             ),
           ),
-          Container(
-            width: 60,
-            height: 60,
-            decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: 0.14),
-              borderRadius: BorderRadius.circular(18),
-            ),
-            child: const Icon(
-              Icons.work_outline_rounded,
-              color: AppColors.primary,
-              size: 28,
+          InkWell(
+            onTap:
+                () => Navigator.pushNamed(
+                  context,
+                  MitraKelolaLowonganScreen.routeName,
+                ),
+            borderRadius: BorderRadius.circular(18),
+            child: Container(
+              width: 60,
+              height: 60,
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.14),
+                borderRadius: BorderRadius.circular(18),
+              ),
+              child: const Icon(
+                Icons.work_outline_rounded,
+                color: AppColors.primary,
+                size: 28,
+              ),
             ),
           ),
         ],

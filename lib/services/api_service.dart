@@ -1,31 +1,14 @@
 import 'dart:convert';
-import 'dart:developer' as developer;
 import 'package:http/http.dart' as http;
-import 'package:flutter/foundation.dart'
-    show TargetPlatform, defaultTargetPlatform, kIsWeb;
 
+import '../config/api_config.dart';
 import '../models/admin_model.dart';
 import '../models/mitra_model.dart';
 import '../models/application_model.dart';
 
 class ApiService {
-  // Backend production sudah ter-deploy di Railway dan tersambung sebelumnya.
-  // Digunakan untuk semua platform karena emulator/device dapat langsung
-  // menghubungi Railway. Jika ingin kembali ke localhost untuk debugging,
-  // cukup ganti baris di getBaseUrlForPlatform di bawah.
-  static final String productionUrl =
-      'https://sistem-maganghambaallah-production.up.railway.app/api';
-
-  static String getBaseUrlForPlatform(TargetPlatform platform) {
-    return productionUrl;
-  }
-
-  static String get baseUrl {
-    if (kIsWeb) {
-      return productionUrl;
-    }
-    return getBaseUrlForPlatform(defaultTargetPlatform);
-  }
+  static const String baseUrl = ApiConfig.baseUrl;
+  static const Duration _timeout = Duration(seconds: 20);
 
   static Map<String, String> _headers(String? token) => {
     'Accept': 'application/json',
@@ -71,35 +54,81 @@ class ApiService {
     throw Exception('Format profil pengguna tidak sesuai.');
   }
 
+  static Future<List<Map<String, dynamic>>> fetchNotifications(
+    String token,
+  ) async {
+    final response = await http
+        .get(ApiConfig.uri('/notifications'), headers: _headers(token))
+        .timeout(_timeout);
+    return _dataList(
+      _decode(response),
+    ).whereType<Map>().map((item) => item.cast<String, dynamic>()).toList();
+  }
+
+  static Future<void> markNotificationAsRead(
+    String token,
+    String notificationId,
+  ) async {
+    final response = await http
+        .patch(
+          ApiConfig.uri('/notifications/$notificationId/read'),
+          headers: _headers(token),
+        )
+        .timeout(_timeout);
+    _decode(response);
+  }
+
+  static Future<void> markAllNotificationsAsRead(String token) async {
+    final response = await http
+        .patch(
+          ApiConfig.uri('/notifications/read-all'),
+          headers: _headers(token),
+        )
+        .timeout(_timeout);
+    _decode(response);
+  }
+
   static Future<Map<String, dynamic>> login(
     String emailOrNim,
     String password,
   ) async {
-    final url = Uri.parse('$baseUrl/login');
+    final url = ApiConfig.uri('/login');
     try {
       final response = await http.post(
         url,
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
+        headers: _headers(null),
         body: jsonEncode({'email_or_nim': emailOrNim, 'password': password}),
       );
-      return jsonDecode(response.body);
+      final decoded = _decode(response);
+      if (decoded is Map<String, dynamic>) return decoded;
+      if (decoded is Map) return decoded.cast<String, dynamic>();
+      throw Exception('Format respons login tidak sesuai.');
     } catch (e) {
-      return {'message': 'Gagal terhubung ke server: $e'};
+      return {'message': e.toString().replaceFirst('Exception: ', '')};
     }
   }
 
-  static Future<List<LowonganMitra>> fetchMitraLowongan(String? token) async {
-    // Try multiple possible endpoints in case backend route differs
-    final candidatePaths = [
-      '/mitra/lowongan',
-      '/mitra/lowongans',
-      '/lowongan',
-      '/mitra/lowongan-list',
-    ];
+  static Future<Map<String, dynamic>> register(
+    Map<String, dynamic> payload,
+  ) async {
+    final response = await http.post(
+      ApiConfig.uri('/register'),
+      headers: _headers(null),
+      body: jsonEncode(payload),
+    );
+    final decoded = _decode(response);
+    if (decoded is Map<String, dynamic>) return decoded;
+    if (decoded is Map) return decoded.cast<String, dynamic>();
+    throw Exception('Format respons register tidak sesuai.');
+  }
 
+  static Future<List<Map<String, dynamic>>> fetchMitra() async {
+    return _dataList(
+      _decode(await http.get(ApiConfig.uri('/mitra'), headers: _headers(null))),
+    ).whereType<Map>().map((item) => item.cast<String, dynamic>()).toList();
+  }
+
+  static Future<List<LowonganMitra>> fetchMitraLowongan(String? token) async {
     // Helper: try to find a List anywhere in the decoded payload
     List<Map<String, dynamic>>? extractList(dynamic node) {
       if (node == null) return null;
@@ -132,89 +161,15 @@ class ApiService {
       return null;
     }
 
-    Exception? lastException;
-    const int maxAttempts = 3;
-
-    for (final path in candidatePaths) {
-      final url = Uri.parse('$baseUrl$path');
-
-      for (int attempt = 1; attempt <= maxAttempts; attempt++) {
-        try {
-          final response = await http.get(
-            url,
-            headers: {
-              'Content-Type': 'application/json',
-              'Accept': 'application/json',
-              if (token != null) 'Authorization': 'Bearer $token',
-            },
-          );
-
-          if (response.statusCode == 404) {
-            // route not found for this candidate path -> try next path
-            developer.log(
-              'fetchMitraLowongan: 404 for $path',
-              name: 'ApiService',
-            );
-            break;
-          }
-
-          if (response.statusCode < 200 || response.statusCode >= 300) {
-            // Log details for debugging but do not expose raw body to UI
-            developer.log(
-              'fetchMitraLowongan: unexpected status ${response.statusCode} for $path. Body: ${response.body}',
-              name: 'ApiService',
-            );
-            lastException = Exception(
-              'Gagal memuat lowongan (kode ${response.statusCode}).',
-            );
-            // retry unless last attempt
-            if (attempt < maxAttempts) {
-              await Future.delayed(
-                Duration(milliseconds: 200 * (1 << (attempt - 1))),
-              );
-              continue;
-            }
-            break; // try next path
-          }
-
-          final decoded = jsonDecode(response.body);
-          final list = extractList(decoded);
-          if (list != null) {
-            return list.map(LowonganMitra.fromJson).toList();
-          }
-
-          // No list found - log payload and set generic error
-          developer.log(
-            'fetchMitraLowongan: no list found in response for $path. Body: ${response.body}',
-            name: 'ApiService',
-          );
-          lastException = Exception(
-            'Gagal memuat lowongan. Respons server tidak sesuai.',
-          );
-          break; // try next path
-        } catch (e, st) {
-          developer.log(
-            'fetchMitraLowongan: request failed for $path (attempt $attempt): $e',
-            name: 'ApiService',
-            error: e,
-            stackTrace: st,
-          );
-          lastException = Exception('Koneksi gagal saat memuat lowongan.');
-          if (attempt < maxAttempts) {
-            await Future.delayed(
-              Duration(milliseconds: 200 * (1 << (attempt - 1))),
-            );
-            continue;
-          }
-          // move to next path after exhausting attempts
-          break;
-        }
-      }
+    final response = await http
+        .get(ApiConfig.uri('/mitra/lowongan'), headers: _headers(token))
+        .timeout(_timeout);
+    final decoded = _decode(response);
+    final list = extractList(decoded);
+    if (list == null) {
+      throw Exception('Format daftar lowongan mitra tidak sesuai.');
     }
-
-    // Surface a generic message to UI; detailed info is sent to logs.
-    throw lastException ??
-        Exception('Gagal memuat lowongan. Silakan coba lagi.');
+    return list.map(LowonganMitra.fromJson).toList();
   }
 
   static Future<List<PendingLowongan>> fetchAdminLowongan(String? token) async {
@@ -243,6 +198,41 @@ class ApiService {
     } catch (e) {
       rethrow;
     }
+  }
+
+  static Future<List<PendingLowongan>> fetchPublicLowonganForAdmin() async {
+    final response = await http
+        .get(ApiConfig.uri('/lowongan'), headers: _headers(null))
+        .timeout(_timeout);
+    return _dataList(_decode(response)).whereType<Map>().map((item) {
+      final data = item.cast<String, dynamic>();
+      return PendingLowongan.fromJson({...data, 'status_approval': 'approved'});
+    }).toList();
+  }
+
+  static Future<List<StudentEnrollment>> fetchAdminEnrollments(
+    String token,
+  ) async {
+    final response = await http
+        .get(ApiConfig.uri('/admin/enrollments'), headers: _headers(token))
+        .timeout(_timeout);
+    return _dataList(_decode(response))
+        .whereType<Map>()
+        .map((item) => StudentEnrollment.fromJson(item.cast<String, dynamic>()))
+        .toList();
+  }
+
+  static Future<Map<String, dynamic>> fetchAdminUserDetail(
+    String token,
+    String id,
+  ) async {
+    final response = await http
+        .get(ApiConfig.uri('/admin/users/$id'), headers: _headers(token))
+        .timeout(_timeout);
+    final decoded = _decode(response);
+    final data = decoded is Map ? decoded['data'] ?? decoded : decoded;
+    if (data is Map) return data.cast<String, dynamic>();
+    throw Exception('Format detail pengguna tidak sesuai.');
   }
 
   static Future<AdminProfile> fetchAdminProfile(String? token) async {
@@ -304,7 +294,7 @@ class ApiService {
   static Future<void> approveLowongan(String? token, String id) async {
     final url = Uri.parse('$baseUrl/admin/lowongan/$id/approve');
     try {
-      final response = await http.post(
+      var response = await http.post(
         url,
         headers: {
           'Content-Type': 'application/json',
@@ -312,6 +302,13 @@ class ApiService {
           if (token != null) 'Authorization': 'Bearer $token',
         },
       );
+      if (response.statusCode == 404) {
+        response = await http.put(
+          ApiConfig.uri('/admin/lowongan/$id/validasi'),
+          headers: _headers(token),
+          body: jsonEncode({'status_approval': 'approved'}),
+        );
+      }
       if (response.statusCode < 200 || response.statusCode >= 300) {
         throw Exception('Failed to approve lowongan: ${response.statusCode}');
       }
@@ -327,7 +324,7 @@ class ApiService {
   ) async {
     final url = Uri.parse('$baseUrl/admin/lowongan/$id/reject');
     try {
-      final response = await http.post(
+      var response = await http.post(
         url,
         headers: {
           'Content-Type': 'application/json',
@@ -336,6 +333,13 @@ class ApiService {
         },
         body: jsonEncode({'reason': reason}),
       );
+      if (response.statusCode == 404) {
+        response = await http.put(
+          ApiConfig.uri('/admin/lowongan/$id/validasi'),
+          headers: _headers(token),
+          body: jsonEncode({'status_approval': 'rejected'}),
+        );
+      }
       if (response.statusCode < 200 || response.statusCode >= 300) {
         throw Exception('Failed to reject lowongan: ${response.statusCode}');
       }
@@ -424,10 +428,12 @@ class ApiService {
     String token,
     String lowonganId,
   ) async {
-    final response = await http.get(
-      Uri.parse('$baseUrl/lowongan/$lowonganId/pelamar'),
-      headers: _headers(token),
-    );
+    final response = await http
+        .get(
+          Uri.parse('$baseUrl/lowongan/$lowonganId/pelamar'),
+          headers: _headers(token),
+        )
+        .timeout(_timeout);
     return _dataList(_decode(response))
         .whereType<Map>()
         .map(
@@ -456,11 +462,12 @@ class ApiService {
     String token,
     String logbookId,
     String status,
+    String feedback,
   ) async {
     final response = await http.put(
       Uri.parse('$baseUrl/logbook/$logbookId/status'),
       headers: _headers(token),
-      body: jsonEncode({'status_validasi': status}),
+      body: jsonEncode({'status_validasi': status, 'feedback_dosen': feedback}),
     );
     _decode(response);
   }
@@ -503,87 +510,10 @@ class ApiService {
   }
 
   static Future<List<dynamic>> fetchMahasiswaBimbingan(String? token) async {
-    // Backend route (lihat routes/api.php): /dosen/bimbingan
-    final candidatePaths = [
-      '/dosen/bimbingan',
-      '/dosen/mahasiswa',
-      '/dosen/mahasiswa-bimbingan',
-      '/dosen/students',
-      '/mahasiswa/dosen',
-    ];
-
-    Exception? lastException;
-    const int maxAttempts = 2;
-
-    for (final path in candidatePaths) {
-      final url = Uri.parse('$baseUrl$path');
-
-      for (int attempt = 1; attempt <= maxAttempts; attempt++) {
-        try {
-          final response = await http.get(
-            url,
-            headers: {
-              'Accept': 'application/json',
-              if (token != null) 'Authorization': 'Bearer $token',
-            },
-          );
-
-          if (response.statusCode == 404) {
-            // try next candidate
-            break;
-          }
-
-          if (response.statusCode < 200 || response.statusCode >= 300) {
-            developer.log(
-              'fetchMahasiswaBimbingan: unexpected status ${response.statusCode} for $path',
-              name: 'ApiService',
-            );
-            lastException = Exception('Gagal memuat data mahasiswa.');
-            if (attempt < maxAttempts) {
-              await Future.delayed(
-                Duration(milliseconds: 150 * (1 << (attempt - 1))),
-              );
-              continue;
-            }
-            break;
-          }
-
-          final decoded = jsonDecode(response.body);
-          final data =
-              decoded is Map && decoded.containsKey('data')
-                  ? decoded['data']
-                  : decoded;
-          if (data is List) return data;
-
-          // try to find list inside object
-          if (decoded is Map) {
-            for (final v in decoded.values) {
-              if (v is List) return v;
-            }
-          }
-
-          lastException = Exception('Respons server tidak sesuai.');
-          break;
-        } catch (e, st) {
-          developer.log(
-            'fetchMahasiswaBimbingan: request failed for $path: $e',
-            name: 'ApiService',
-            error: e,
-            stackTrace: st,
-          );
-          lastException = Exception('Koneksi gagal saat memuat mahasiswa.');
-          if (attempt < maxAttempts) {
-            await Future.delayed(
-              Duration(milliseconds: 150 * (1 << (attempt - 1))),
-            );
-            continue;
-          }
-          break;
-        }
-      }
-    }
-
-    throw lastException ?? Exception('Gagal memuat mahasiswa.');
+    final response = await http
+        .get(ApiConfig.uri('/dosen/bimbingan'), headers: _headers(token))
+        .timeout(_timeout);
+    return _dataList(_decode(response));
   }
 
   // Fungsi untuk mengirim lamaran dan menangkap pesan error asli dari Laravel
@@ -639,7 +569,7 @@ class ApiService {
         );
       }
 
-      final response = await request.send();
+      final response = await request.send().timeout(_timeout);
       final responseString = await response.stream.bytesToString();
 
       if (response.statusCode == 200 || response.statusCode == 201) {
