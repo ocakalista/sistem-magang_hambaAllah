@@ -1,5 +1,27 @@
 import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/bottom_nav.dart';
+import 'admin_dashboard_screen.dart';
+import 'lowongan_screen.dart';
+import 'pengguna_screen.dart';
+import 'profile_screen.dart';
+
+void navigateAdminTab(
+  BuildContext context, {
+  required int currentIndex,
+  required int destinationIndex,
+}) {
+  if (currentIndex == destinationIndex) return;
+  final Widget page = switch (destinationIndex) {
+    0 => const AdminDashboardScreen(),
+    1 => const LowonganScreen(),
+    2 => const PenggunaScreen(),
+    _ => const AdminProfileScreen(),
+  };
+  Navigator.of(
+    context,
+  ).pushAndRemoveUntil(nexusTabRoute(page), (route) => route.isFirst);
+}
 
 class AdminBottomNav extends StatelessWidget {
   const AdminBottomNav({

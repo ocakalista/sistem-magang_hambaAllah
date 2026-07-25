@@ -4,8 +4,6 @@ import '../../models/nexus_app_state.dart';
 import '../../models/admin_model.dart';
 import '../../theme/app_theme.dart';
 import 'admin_bottom_nav.dart';
-import 'lowongan_screen.dart';
-import 'pengguna_screen.dart';
 import 'profile_screen.dart';
 import '../notifications_screen.dart';
 import 'enrollments_screen.dart';
@@ -21,7 +19,6 @@ class AdminDashboardScreen extends StatefulWidget {
 }
 
 class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
-  int _selectedIndex = 0;
   bool _hasLoadedLowongan = false;
 
   @override
@@ -302,31 +299,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         ),
       ),
       bottomNavigationBar: AdminBottomNav(
-        selectedIndex: _selectedIndex,
+        selectedIndex: 0,
         onDestinationSelected: (index) {
-          setState(() => _selectedIndex = index);
-          switch (index) {
-            case 0:
-              break;
-            case 1:
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const LowonganScreen()),
-              );
-              break;
-            case 2:
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const PenggunaScreen()),
-              );
-              break;
-            case 3:
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const AdminProfileScreen()),
-              );
-              break;
-          }
+          navigateAdminTab(context, currentIndex: 0, destinationIndex: index);
         },
       ),
     );
@@ -502,55 +477,82 @@ class _StudentRow extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 10),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          if (student.avatarUrl != null)
+            CircleAvatar(
+              backgroundImage: NetworkImage(student.avatarUrl!),
+              radius: 22,
+            )
+          else
+            CircleAvatar(
+              radius: 22,
+              backgroundColor: AppColors.primary,
+              child: Text(
+                initials,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          const SizedBox(width: 12),
           Expanded(
-            child: Row(
+            flex: 4,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (student.avatarUrl != null)
-                  CircleAvatar(
-                    backgroundImage: NetworkImage(student.avatarUrl!),
-                    radius: 22,
-                  )
-                else
-                  CircleAvatar(
-                    radius: 22,
-                    backgroundColor: AppColors.primary,
-                    child: Text(
-                      initials,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        student.name,
-                        style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(fontWeight: FontWeight.w700),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        student.email,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: AppColors.neutral,
-                        ),
-                      ),
-                    ],
-                  ),
+                Text(
+                  student.name,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  student.email,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: AppColors.neutral),
                 ),
               ],
             ),
           ),
-          Text(
-            student.program,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: AppColors.primary,
-              fontWeight: FontWeight.w700,
+          const SizedBox(width: 12),
+          Expanded(
+            flex: 5,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  student.program.isEmpty
+                      ? 'Program belum tersedia'
+                      : student.program,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.end,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                if (student.company.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    student.company,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.end,
+                    style: Theme.of(
+                      context,
+                    ).textTheme.labelSmall?.copyWith(color: AppColors.neutral),
+                  ),
+                ],
+              ],
             ),
           ),
         ],

@@ -5,9 +5,26 @@ import '../../models/nexus_app_state.dart';
 import '../../services/api_service.dart';
 import '../../theme/app_theme.dart';
 import 'user_detail_screen.dart';
+import 'admin_bottom_nav.dart';
 
-class PenggunaScreen extends StatelessWidget {
+class PenggunaScreen extends StatefulWidget {
   const PenggunaScreen({super.key});
+
+  @override
+  State<PenggunaScreen> createState() => _PenggunaScreenState();
+}
+
+class _PenggunaScreenState extends State<PenggunaScreen> {
+  String _query = '';
+  late Future<List<UserAccount>> _usersFuture;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _usersFuture = ApiService.fetchUsers(
+      NexusScope.of(context).authToken ?? '',
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -42,7 +59,7 @@ class PenggunaScreen extends StatelessWidget {
                   ),
                 )
                 : FutureBuilder<List<UserAccount>>(
-                  future: ApiService.fetchUsers(token),
+                  future: _usersFuture,
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.waiting) {
                       return const Center(child: CircularProgressIndicator());
@@ -71,13 +88,34 @@ class PenggunaScreen extends StatelessWidget {
 
                     return TabBarView(
                       children: [
-                        _buildUserList(context, mahasiswa),
-                        _buildUserList(context, dosen),
-                        _buildUserList(context, mitra),
+                        _buildUserList(
+                          context,
+                          _filterUsers(mahasiswa),
+                          'Cari nama atau NIM mahasiswa...',
+                        ),
+                        _buildUserList(
+                          context,
+                          _filterUsers(dosen),
+                          'Cari nama atau NIDN dosen...',
+                        ),
+                        _buildUserList(
+                          context,
+                          _filterUsers(mitra),
+                          'Cari nama perusahaan mitra...',
+                        ),
                       ],
                     );
                   },
                 ),
+        bottomNavigationBar: AdminBottomNav(
+          selectedIndex: 2,
+          onDestinationSelected:
+              (index) => navigateAdminTab(
+                context,
+                currentIndex: 2,
+                destinationIndex: index,
+              ),
+        ),
       ),
     );
   }
@@ -99,25 +137,59 @@ class PenggunaScreen extends StatelessWidget {
     return normalized == 'mitra' || normalized == 'partner';
   }
 
-  Widget _buildUserList(BuildContext context, List<UserAccount> users) {
-    if (users.isEmpty) {
-      return Center(
-        child: Text(
-          'Belum ada pengguna di kategori ini.',
-          style: Theme.of(
-            context,
-          ).textTheme.bodyMedium?.copyWith(color: AppColors.neutral),
-          textAlign: TextAlign.center,
-        ),
-      );
-    }
+  List<UserAccount> _filterUsers(List<UserAccount> users) {
+    final query = _query.trim().toLowerCase();
+    if (query.isEmpty) return users;
+    return users.where((user) {
+      return user.name.toLowerCase().contains(query) ||
+          user.email.toLowerCase().contains(query) ||
+          (user.username ?? '').toLowerCase().contains(query);
+    }).toList();
+  }
 
+  Widget _buildUserList(
+    BuildContext context,
+    List<UserAccount> users,
+    String hint,
+  ) {
     return ListView.separated(
       padding: const EdgeInsets.all(20),
-      itemCount: users.length,
+      itemCount: users.length + 1,
       separatorBuilder: (_, __) => const SizedBox(height: 16),
       itemBuilder: (context, index) {
-        final user = users[index];
+        if (index == 0) {
+          return TextField(
+            onChanged: (value) => setState(() => _query = value),
+            decoration: InputDecoration(
+              hintText: hint,
+              prefixIcon: const Icon(Icons.search_rounded),
+              suffixIcon:
+                  _query.isEmpty
+                      ? null
+                      : IconButton(
+                        tooltip: 'Hapus pencarian',
+                        onPressed: () => setState(() => _query = ''),
+                        icon: const Icon(Icons.close_rounded),
+                      ),
+            ),
+          );
+        }
+        if (users.isEmpty) {
+          return Padding(
+            padding: const EdgeInsets.only(top: 80),
+            child: Center(
+              child: Text(
+                _query.isEmpty
+                    ? 'Belum ada pengguna di kategori ini.'
+                    : 'Pengguna tidak ditemukan.',
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyMedium?.copyWith(color: AppColors.neutral),
+              ),
+            ),
+          );
+        }
+        final user = users[index - 1];
         return _buildUserCard(context, user);
       },
     );

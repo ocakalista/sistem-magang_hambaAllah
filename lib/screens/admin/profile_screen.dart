@@ -6,6 +6,7 @@ import '../../services/api_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/logout_button.dart';
 import '../notification_settings_screen.dart';
+import 'admin_bottom_nav.dart';
 
 class AdminProfileScreen extends StatefulWidget {
   const AdminProfileScreen({super.key});
@@ -76,6 +77,15 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
           padding: const EdgeInsets.all(20),
           child: _buildBody(context),
         ),
+      ),
+      bottomNavigationBar: AdminBottomNav(
+        selectedIndex: 3,
+        onDestinationSelected:
+            (index) => navigateAdminTab(
+              context,
+              currentIndex: 3,
+              destinationIndex: index,
+            ),
       ),
     );
   }

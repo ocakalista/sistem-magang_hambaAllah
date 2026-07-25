@@ -4,6 +4,7 @@ import '../../models/admin_model.dart';
 import '../../models/nexus_app_state.dart';
 import '../../theme/app_theme.dart';
 import 'lowongan_detail_screen.dart';
+import 'admin_bottom_nav.dart';
 
 class LowonganScreen extends StatelessWidget {
   const LowonganScreen({super.key});
@@ -48,6 +49,15 @@ class LowonganScreen extends StatelessWidget {
             _buildList(context, approvedRequests, state),
             _buildList(context, rejectedRequests, state),
           ],
+        ),
+        bottomNavigationBar: AdminBottomNav(
+          selectedIndex: 1,
+          onDestinationSelected:
+              (index) => navigateAdminTab(
+                context,
+                currentIndex: 1,
+                destinationIndex: index,
+              ),
         ),
       ),
     );
