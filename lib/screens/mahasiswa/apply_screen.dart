@@ -624,9 +624,20 @@ class _ApplyScreenState extends State<ApplyScreen> {
   Future<void> _submitApplication(BuildContext context) async {
     if (_cvBytes == null) return;
 
+    final state = NexusScope.of(context);
+    if (state.hasAcceptedApplication) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Kamu masih memiliki magang aktif. Lamaran baru tidak dapat dikirim.',
+          ),
+        ),
+      );
+      return;
+    }
+
     setState(() => _isSubmitting = true);
 
-    final state = NexusScope.of(context);
     final token = state.authToken;
 
     // Mengirim ke API Laravel

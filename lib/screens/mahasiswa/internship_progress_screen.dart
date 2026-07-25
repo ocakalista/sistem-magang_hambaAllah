@@ -4,7 +4,9 @@ import '../../models/application_model.dart';
 import '../../models/nexus_app_state.dart';
 import '../../services/api_service.dart';
 import '../../theme/app_theme.dart';
+import 'application_history_screen.dart';
 import 'dashboard_mahasiswa.dart';
+import 'profile_screen.dart';
 import '../notifications_screen.dart';
 import '../../widgets/bottom_nav.dart';
 
@@ -48,10 +50,10 @@ class _InternshipProgressScreenState extends State<InternshipProgressScreen> {
 
     final reports = app.weeklyReports;
     final currentWeek = app.currentWeek ?? 0;
-    final totalWeeks = app.totalWeeks ?? (currentWeek == 0 ? 1 : currentWeek);
+    final totalWeeks = (app.totalWeeks ?? 12).clamp(8, 52);
     final completedReports =
         reports.where((report) => report.status == 'completed').length;
-    final progress = reports.isEmpty ? 0.0 : completedReports / reports.length;
+    final progress = completedReports / totalWeeks;
     final remainingWeeks = (totalWeeks - currentWeek).clamp(0, totalWeeks);
     final feedbackReports =
         reports
@@ -63,28 +65,59 @@ class _InternshipProgressScreenState extends State<InternshipProgressScreen> {
       appBar: AppBar(
         automaticallyImplyLeading: false,
         titleSpacing: 20,
-        title: Row(
-          children: [
-            const CircleAvatar(
-              radius: 16,
-              backgroundColor: AppColors.primary,
-              child: Icon(Icons.person, color: Colors.white, size: 18),
-            ),
-            const SizedBox(width: 10),
-            Text(
-              'Nexus',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                color: AppColors.primary,
-                fontWeight: FontWeight.w700,
+        title: InkWell(
+          borderRadius: BorderRadius.circular(20),
+          onTap:
+              () => Navigator.pushNamed(
+                context,
+                DashboardMahasiswaProfileScreen.routeName,
               ),
-            ),
-          ],
-        ),
-        actions: const [
-          Padding(
-            padding: EdgeInsets.only(right: 16),
-            child: Icon(Icons.notifications_none_rounded),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const CircleAvatar(
+                radius: 16,
+                backgroundColor: AppColors.primary,
+                child: Icon(Icons.person, color: Colors.white, size: 18),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                'Nexus',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  color: AppColors.primary,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
           ),
+        ),
+        actions: [
+          IconButton(
+            tooltip: 'Riwayat Lamaran',
+            onPressed:
+                () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder:
+                        (_) => const ApplicationHistoryScreen(
+                          showBackButton: true,
+                        ),
+                  ),
+                ),
+            icon: const Icon(Icons.history_rounded),
+          ),
+          IconButton(
+            tooltip: 'Alerts',
+            onPressed:
+                () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const NotificationsScreen(),
+                  ),
+                ),
+            icon: const Icon(Icons.notifications_none_rounded),
+          ),
+          const SizedBox(width: 8),
         ],
       ),
       body: ListView(
@@ -97,11 +130,38 @@ class _InternshipProgressScreenState extends State<InternshipProgressScreen> {
             remainingWeeks: remainingWeeks,
             progress: progress,
           ),
-          const SizedBox(height: 18),
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton.icon(
+              onPressed:
+                  () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder:
+                          (_) => const ApplicationHistoryScreen(
+                            showBackButton: true,
+                          ),
+                    ),
+                  ),
+              icon: const Icon(Icons.history_rounded),
+              label: const Text('Riwayat Lamaran'),
+            ),
+          ),
+          const SizedBox(height: 6),
           _SectionTitleWithAction(
             title: 'Weekly Timeline',
             actionLabel: 'View History',
-            onAction: () {},
+            onAction:
+                () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder:
+                        (_) => WeeklyHistoryScreen(
+                          reports: reports,
+                          totalWeeks: totalWeeks,
+                        ),
+                  ),
+                ),
           ),
           const SizedBox(height: 10),
           reports.isEmpty
@@ -212,6 +272,14 @@ class _InternshipProgressScreenState extends State<InternshipProgressScreen> {
       Navigator.push(
         context,
         MaterialPageRoute(builder: (_) => const NotificationsScreen()),
+      );
+      return;
+    }
+
+    if (index == 3) {
+      Navigator.pushNamed(
+        context,
+        DashboardMahasiswaProfileScreen.routeName,
       );
     }
   }
@@ -452,13 +520,18 @@ class _WeeklyTimeline extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          'Week ${report.weekNumber} - ${report.title}',
-                          style: Theme.of(context).textTheme.titleMedium
-                              ?.copyWith(fontWeight: FontWeight.w700),
+                        Expanded(
+                          child: Text(
+                            'Week ${report.weekNumber} - ${report.title}',
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.titleMedium
+                                ?.copyWith(fontWeight: FontWeight.w700),
+                          ),
                         ),
+                        const SizedBox(width: 8),
                         Container(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 10,
@@ -472,7 +545,8 @@ class _WeeklyTimeline extends StatelessWidget {
                             borderRadius: BorderRadius.circular(999),
                           ),
                           child: Text(
-                            isCurrent ? 'ONGOING' : 'COMPLETED',
+                            _statusLabel(report.status),
+                            maxLines: 1,
                             style: Theme.of(
                               context,
                             ).textTheme.labelSmall?.copyWith(
@@ -535,6 +609,98 @@ class _WeeklyTimeline extends StatelessWidget {
       'Dec',
     ];
     return '${date.day} ${months[date.month - 1]} ${date.year}';
+  }
+
+  String _statusLabel(String status) {
+    switch (status) {
+      case 'completed':
+        return 'APPROVED';
+      case 'revision':
+        return 'REVISION';
+      case 'ongoing':
+        return 'ONGOING';
+      default:
+        return 'WAITING';
+    }
+  }
+}
+
+class WeeklyHistoryScreen extends StatelessWidget {
+  const WeeklyHistoryScreen({
+    super.key,
+    required this.reports,
+    required this.totalWeeks,
+  });
+
+  final List<WeeklyReport> reports;
+  final int totalWeeks;
+
+  @override
+  Widget build(BuildContext context) {
+    final reportsByWeek = {
+      for (final report in reports) report.weekNumber: report,
+    };
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      appBar: AppBar(title: const Text('Riwayat Weekly Logbook')),
+      body: ListView.builder(
+        padding: const EdgeInsets.all(20),
+        itemCount: totalWeeks,
+        itemBuilder: (context, index) {
+          final week = index + 1;
+          final report = reportsByWeek[week];
+          final approved = report?.status == 'completed';
+          final revision = report?.status == 'revision';
+          final status =
+              report == null
+                  ? 'Belum dikirim'
+                  : approved
+                  ? 'Disetujui dosen'
+                  : revision
+                  ? 'Perlu revisi'
+                  : 'Menunggu persetujuan dosen';
+          return Card(
+            margin: const EdgeInsets.only(bottom: 10),
+            child: ListTile(
+              leading: CircleAvatar(
+                backgroundColor:
+                    approved
+                        ? Colors.green.withValues(alpha: 0.14)
+                        : AppColors.primary.withValues(alpha: 0.10),
+                child:
+                    approved
+                        ? const Icon(Icons.check, color: Colors.green)
+                        : Text('$week'),
+              ),
+              title: Text('Minggu $week'),
+              subtitle: Text(
+                report == null || report.description.isEmpty
+                    ? status
+                    : '${report.description}\n$status',
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+              ),
+              isThreeLine: report != null && report.description.isNotEmpty,
+              trailing: Icon(
+                approved
+                    ? Icons.verified_rounded
+                    : revision
+                    ? Icons.edit_note_rounded
+                    : report == null
+                    ? Icons.lock_clock_outlined
+                    : Icons.hourglass_top_rounded,
+                color:
+                    approved
+                        ? Colors.green
+                        : revision
+                        ? Colors.orange
+                        : AppColors.neutral,
+              ),
+            ),
+          );
+        },
+      ),
+    );
   }
 }
 

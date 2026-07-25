@@ -176,6 +176,16 @@ class InternshipDetailScreen extends StatelessWidget {
                 ),
                 child: ElevatedButton.icon(
                   onPressed: () {
+                    if (state.hasAcceptedApplication) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            'Kamu masih memiliki magang aktif. Selesaikan magang tersebut sebelum mendaftar lagi.',
+                          ),
+                        ),
+                      );
+                      return;
+                    }
                     Navigator.push(
                       context,
                       MaterialPageRoute(
@@ -184,7 +194,11 @@ class InternshipDetailScreen extends StatelessWidget {
                     );
                   },
                   icon: const Icon(Icons.arrow_forward_rounded),
-                  label: const Text('Apply Now'),
+                  label: Text(
+                    state.hasAcceptedApplication
+                        ? 'Magang Sedang Aktif'
+                        : 'Apply Now',
+                  ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.transparent,
                     shadowColor: Colors.transparent,

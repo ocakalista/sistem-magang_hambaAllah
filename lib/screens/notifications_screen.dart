@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../models/application_model.dart';
 import '../models/dosen_model.dart';
 import '../models/nexus_app_state.dart';
 import '../models/notification_model.dart';
@@ -14,7 +13,7 @@ import 'dosen/dosen_dashboard_screen.dart';
 import 'dosen/profile_screen.dart';
 import 'dosen/students_screen.dart';
 import 'dosen/weekly_report_detail_screen.dart';
-import 'mahasiswa/application_status_screen.dart';
+import 'mahasiswa/application_history_screen.dart';
 import 'mahasiswa/dashboard_mahasiswa.dart';
 import 'mahasiswa/profile_screen.dart';
 import 'mahasiswa/internship_progress_screen.dart';
@@ -390,7 +389,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
     if (notification.title == 'Internship Offer' ||
         notification.title == 'Logbook Approved') {
-      final application = state.currentApplication;
+      final application =
+          state.activeInternship ?? state.currentApplication;
       if (application != null && context.mounted) {
         Navigator.push(
           context,
@@ -466,24 +466,26 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     } else if (role == UserRole.student) {
       switch (index) {
         case 0:
-          Navigator.pushReplacementNamed(context, DashboardMahasiswa.routeName);
+          var dashboardFound = false;
+          Navigator.of(context).popUntil((route) {
+            if (route.settings.name == DashboardMahasiswa.routeName) {
+              dashboardFound = true;
+              return true;
+            }
+            return route.isFirst;
+          });
+          if (!dashboardFound && context.mounted) {
+            Navigator.pushReplacementNamed(
+              context,
+              DashboardMahasiswa.routeName,
+            );
+          }
           break;
         case 1:
-          final application = state.currentApplication;
-          if (application == null) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Apply for an internship first.')),
-            );
-            return;
-          }
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
-              builder:
-                  (_) =>
-                      application.status == ApplicationStatus.accepted
-                          ? InternshipProgressScreen(application: application)
-                          : ApplicationStatusScreen(application: application),
+              builder: (_) => const ApplicationHistoryScreen(),
             ),
           );
           break;

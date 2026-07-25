@@ -42,6 +42,17 @@ class NexusAppState extends ChangeNotifier {
 
   Application? get currentApplication => _currentApplication;
 
+  Application? get activeInternship {
+    for (final application in applications) {
+      if (application.status == ApplicationStatus.accepted) {
+        return application;
+      }
+    }
+    return _currentApplication?.status == ApplicationStatus.accepted
+        ? _currentApplication
+        : null;
+  }
+
   List<AppNotification> get notifications {
     final items = List<AppNotification>.from(_notifications);
     items.sort((a, b) => b.timestamp.compareTo(a.timestamp));
@@ -57,7 +68,25 @@ class NexusAppState extends ChangeNotifier {
   bool get hasApplication => _currentApplication != null;
 
   bool get hasAcceptedApplication =>
-      _currentApplication?.status == ApplicationStatus.accepted;
+      activeInternship != null;
+
+  Future<void> updateStudentProfile({
+    required String name,
+    required int semester,
+    required String phone,
+  }) async {
+    final token = authToken;
+    if (token == null || token.isEmpty) {
+      throw Exception('Sesi login tidak ditemukan.');
+    }
+    currentUser = await ApiService.updateStudentProfile(
+      token: token,
+      name: name,
+      semester: semester,
+      phone: phone,
+    );
+    notifyListeners();
+  }
 
   void toggleSavedInternship(String internshipId) {
     if (_savedInternshipIds.contains(internshipId)) {
@@ -69,7 +98,8 @@ class NexusAppState extends ChangeNotifier {
   }
 
   void submitApplication(Application application) {
-    _currentApplication = application;
+    applications.insert(0, application);
+    _currentApplication = activeInternship ?? application;
     notifyListeners();
   }
 
@@ -309,7 +339,7 @@ class NexusAppState extends ChangeNotifier {
               .toList();
       parsed.add(
         Application.fromJson(
-          item,
+          {...item, 'total_weeks': item['total_weeks'] ?? 12},
           internship: Internship.fromJson(detail),
           weeklyReports: reports,
         ),
@@ -319,7 +349,14 @@ class NexusAppState extends ChangeNotifier {
     applications
       ..clear()
       ..addAll(parsed);
-    _currentApplication = parsed.isEmpty ? null : parsed.first;
+    _currentApplication = null;
+    for (final application in parsed) {
+      if (application.status == ApplicationStatus.accepted) {
+        _currentApplication = application;
+        break;
+      }
+    }
+    _currentApplication ??= parsed.isEmpty ? null : parsed.first;
     notifyListeners();
   }
 

@@ -154,6 +154,11 @@ class Application {
               : weeklyReports
                   .map((item) => item.weekNumber)
                   .reduce((a, b) => a > b ? a : b),
+      totalWeeks:
+          int.tryParse(
+            (json['total_weeks'] ?? json['totalWeeks'] ?? 12).toString(),
+          ) ??
+          12,
       weeklyReports: weeklyReports,
     );
   }
@@ -197,6 +202,9 @@ class WeeklyReport {
               ? 'revision'
               : 'submitted',
       dueDate: DateTime.tryParse(json['tanggal']?.toString() ?? ''),
+      feedbackFromLecturer:
+          (json['feedback_dosen'] ?? json['lecturer_feedback'])?.toString(),
+      lecturerName: (json['nama_dosen'] ?? json['lecturer_name'])?.toString(),
     );
   }
 }

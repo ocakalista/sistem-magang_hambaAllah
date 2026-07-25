@@ -4,10 +4,12 @@ import '../../models/application_model.dart';
 import '../../models/nexus_app_state.dart';
 import '../../services/api_service.dart'; // INJEKSI 1: Import ApiService
 import 'application_status_screen.dart';
+import 'application_history_screen.dart';
 import 'internship_detail_screen.dart';
 import 'internship_progress_screen.dart';
 import 'all_internships_screen.dart';
 import 'profile_screen.dart';
+import '../notifications_screen.dart';
 import '../../theme/app_theme.dart';
 
 class DashboardMahasiswa extends StatefulWidget {
@@ -88,20 +90,11 @@ class _DashboardMahasiswaState extends State<DashboardMahasiswa> {
             .length;
     final completion =
         activeApplications == 0 ? 0.0 : accepted / activeApplications;
-    final activities =
-        appState.applications
-            .map(
-              (application) => {
-                'title': 'Lamaran ${application.status.label}',
-                'desc':
-                    '${application.internship.position} - ${application.internship.company}',
-                'time': _formatDate(application.appliedDate),
-              },
-            )
-            .toList();
+    final activities = appState.applications;
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
+        automaticallyImplyLeading: false,
         titleSpacing: 20,
         title: Row(
           children: [
@@ -330,34 +323,25 @@ class _DashboardMahasiswaState extends State<DashboardMahasiswa> {
                   child: Center(child: Text('Belum ada riwayat lamaran.')),
                 ),
               ...activities.map(
-                (activity) => _ActivityTile(activity: activity),
+                (application) => _ActivityTile(
+                  application: application,
+                  onTap: () => _openApplication(context, application),
+                ),
               ),
             ],
           ),
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {},
-        backgroundColor: AppColors.primary,
-        foregroundColor: Colors.white,
-        child: const Icon(Icons.add_rounded),
-      ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _selectedIndex,
         onDestinationSelected: (index) {
           if (index == 1) {
-            final application = appState.currentApplication;
-            if (application == null) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Apply for an internship first.')),
-              );
-              return;
-            }
-            final route =
-                application.status == ApplicationStatus.accepted
-                    ? InternshipProgressScreen(application: application)
-                    : ApplicationStatusScreen(application: application);
-            Navigator.push(context, MaterialPageRoute(builder: (_) => route));
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const ApplicationHistoryScreen(),
+              ),
+            );
             return;
           }
 
@@ -365,6 +349,14 @@ class _DashboardMahasiswaState extends State<DashboardMahasiswa> {
             Navigator.pushNamed(
               context,
               DashboardMahasiswaProfileScreen.routeName,
+            );
+            return;
+          }
+
+          if (index == 2) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const NotificationsScreen()),
             );
             return;
           }
@@ -441,6 +433,14 @@ class _DashboardMahasiswaState extends State<DashboardMahasiswa> {
   String _formatDate(DateTime date) {
     if (date.millisecondsSinceEpoch == 0) return '-';
     return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
+  }
+
+  void _openApplication(BuildContext context, Application application) {
+    final route =
+        application.status == ApplicationStatus.accepted
+            ? InternshipProgressScreen(application: application)
+            : ApplicationStatusScreen(application: application);
+    Navigator.push(context, MaterialPageRoute(builder: (_) => route));
   }
 }
 
@@ -556,20 +556,24 @@ class _RecommendationCard extends StatelessWidget {
 }
 
 class _ActivityTile extends StatelessWidget {
-  const _ActivityTile({required this.activity});
+  const _ActivityTile({required this.application, required this.onTap});
 
-  final Map<String, String> activity;
+  final Application application;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF8F5FF),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Row(
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF8F5FF),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Row(
         children: [
           Container(
             width: 44,
@@ -586,12 +590,12 @@ class _ActivityTile extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  activity['title'] ?? '',
+                  'Lamaran ${application.status.label}',
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  activity['desc'] ?? '',
+                  '${application.internship.position} - ${application.internship.company}',
                   style: Theme.of(
                     context,
                   ).textTheme.bodySmall?.copyWith(color: AppColors.neutral),
@@ -601,13 +605,20 @@ class _ActivityTile extends StatelessWidget {
           ),
           const SizedBox(width: 10),
           Text(
-            activity['time'] ?? '',
+            _formatDate(application.appliedDate),
             style: Theme.of(
               context,
             ).textTheme.labelSmall?.copyWith(color: AppColors.neutral),
           ),
-        ],
+          ],
+        ),
       ),
     );
+  }
+
+  String _formatDate(DateTime date) {
+    if (date.millisecondsSinceEpoch == 0) return '-';
+    return '${date.day.toString().padLeft(2, '0')}/'
+        '${date.month.toString().padLeft(2, '0')}/${date.year}';
   }
 }

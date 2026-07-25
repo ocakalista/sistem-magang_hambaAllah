@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/logout_button.dart';
 import '../../models/nexus_app_state.dart';
+import '../notification_settings_screen.dart';
+import 'edit_profile_screen.dart';
 
 class DashboardMahasiswaProfileScreen extends StatelessWidget {
   static const routeName = '/mahasiswa/profile';
@@ -17,7 +19,23 @@ class DashboardMahasiswaProfileScreen extends StatelessWidget {
     final identifier = user['email_or_nim']?.toString() ?? '-';
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(title: const Text('Profile')),
+      appBar: AppBar(
+        title: const Text('Profile'),
+        actions: [
+          TextButton.icon(
+            onPressed:
+                () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const EditMahasiswaProfileScreen(),
+                  ),
+                ),
+            icon: const Icon(Icons.edit_outlined),
+            label: const Text('Edit'),
+          ),
+          const SizedBox(width: 8),
+        ],
+      ),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(20),
@@ -77,14 +95,14 @@ class DashboardMahasiswaProfileScreen extends StatelessWidget {
                 context,
                 Icons.school_rounded,
                 'Semester',
-                user['semester']?.toString() ?? '-',
+                (user['semester'] ?? '-')?.toString() ?? '-',
               ),
               const SizedBox(height: 12),
               _buildInfoTile(
                 context,
                 Icons.phone_rounded,
                 'Telepon',
-                user['phone']?.toString() ?? '-',
+                (user['phone'] ?? user['no_telp'] ?? '-')?.toString() ?? '-',
               ),
               const SizedBox(height: 24),
               Text(
@@ -98,12 +116,18 @@ class DashboardMahasiswaProfileScreen extends StatelessWidget {
                 context,
                 Icons.lock_outline_rounded,
                 'Ubah Kata Sandi',
+                onTap: () {},
               ),
               const SizedBox(height: 12),
               _buildActionTile(
                 context,
                 Icons.settings_outlined,
                 'Pengaturan Notifikasi',
+                onTap:
+                    () => Navigator.pushNamed(
+                      context,
+                      NotificationSettingsScreen.routeName,
+                    ),
               ),
               const SizedBox(height: 12),
               const LogoutButton(),
@@ -158,10 +182,15 @@ class DashboardMahasiswaProfileScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildActionTile(BuildContext context, IconData icon, String label) {
+  Widget _buildActionTile(
+    BuildContext context,
+    IconData icon,
+    String label, {
+    required VoidCallback onTap,
+  }) {
     return InkWell(
       borderRadius: BorderRadius.circular(22),
-      onTap: () {},
+      onTap: onTap,
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(

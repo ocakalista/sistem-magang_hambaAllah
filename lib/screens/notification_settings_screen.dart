@@ -60,7 +60,7 @@ class _NotificationSettingsScreenState
                 padding: const EdgeInsets.all(20),
                 children: [
                   Text(
-                    'Notifikasi Dosen',
+                    'Preferensi Notifikasi',
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.w700,
                     ),

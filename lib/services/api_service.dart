@@ -54,6 +54,27 @@ class ApiService {
     throw Exception('Format profil pengguna tidak sesuai.');
   }
 
+  static Future<Map<String, dynamic>> updateStudentProfile({
+    required String token,
+    required String name,
+    required int semester,
+    required String phone,
+  }) async {
+    final response = await http.put(
+      Uri.parse('$baseUrl/user/profile'),
+      headers: _headers(token),
+      body: jsonEncode({
+        'name': name,
+        'semester': semester,
+        'phone': phone,
+      }),
+    );
+    final decoded = _decode(response);
+    final data = decoded is Map ? decoded['data'] ?? decoded : decoded;
+    if (data is Map) return data.cast<String, dynamic>();
+    throw Exception('Format profil pengguna tidak sesuai.');
+  }
+
   static Future<List<Map<String, dynamic>>> fetchNotifications(
     String token,
   ) async {
