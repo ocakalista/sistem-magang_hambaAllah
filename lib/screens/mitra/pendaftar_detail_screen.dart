@@ -50,7 +50,15 @@ class _PendaftarDetailScreenState extends State<PendaftarDetailScreen> {
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
+          padding: EdgeInsets.fromLTRB(
+            20,
+            20,
+            20,
+            _status == ApplicationStatus.submitted ||
+                    _status == ApplicationStatus.underReview
+                ? 120
+                : 28,
+          ),
           child: Column(
             children: [
               _buildInfoCard(context),
@@ -70,15 +78,20 @@ class _PendaftarDetailScreenState extends State<PendaftarDetailScreen> {
                         ? null
                         : () => _openDocument(widget.applicant.cvUrl!),
               ),
-              if (widget.applicant.portfolioUrl != null) ...[
-                const SizedBox(height: 12),
-                _buildDocumentRow(
-                  context,
-                  'Lihat portofolio',
-                  Icons.folder_open_rounded,
-                  onTap: () => _openDocument(widget.applicant.portfolioUrl!),
-                ),
-              ],
+              const SizedBox(height: 12),
+              _buildDocumentRow(
+                context,
+                widget.applicant.portfolioUrl == null
+                    ? 'Portofolio tidak tersedia'
+                    : 'Lihat portofolio',
+                Icons.folder_open_rounded,
+                onTap:
+                    widget.applicant.portfolioUrl == null
+                        ? null
+                        : () => _openDocument(
+                          widget.applicant.portfolioUrl!,
+                        ),
+              ),
               const SizedBox(height: 20),
               _buildMotivationSection(context),
             ],
@@ -371,11 +384,17 @@ class _PendaftarDetailScreenState extends State<PendaftarDetailScreen> {
   }
 
   Uri _documentUri(String value) {
-    final parsed = Uri.tryParse(value);
+    final normalizedValue = value.trim().replaceAll('\\', '/');
+    final parsed = Uri.tryParse(normalizedValue);
     if (parsed != null && parsed.hasScheme) return parsed;
     final apiUri = Uri.parse(ApiConfig.baseUrl);
-    final path = value.startsWith('/') ? value : '/storage/$value';
-    return apiUri.replace(path: path.replaceFirst('/api/', '/'));
+    var path = normalizedValue.startsWith('/')
+        ? normalizedValue
+        : '/$normalizedValue';
+    if (!path.startsWith('/storage/')) {
+      path = '/storage${path.startsWith('/storage') ? path.substring(8) : path}';
+    }
+    return apiUri.replace(path: path);
   }
 
   Widget _buildMotivationSection(BuildContext context) {

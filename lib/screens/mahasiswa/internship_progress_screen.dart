@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:file_picker/file_picker.dart';
 
 import '../../models/application_model.dart';
 import '../../models/nexus_app_state.dart';
@@ -9,6 +10,7 @@ import 'dashboard_mahasiswa.dart';
 import 'profile_screen.dart';
 import '../notifications_screen.dart';
 import '../../widgets/bottom_nav.dart';
+import 'logbook_detail_screen.dart';
 
 class InternshipProgressScreen extends StatefulWidget {
   const InternshipProgressScreen({super.key, this.application});
@@ -192,48 +194,103 @@ class _InternshipProgressScreenState extends State<InternshipProgressScreen> {
     final weekController = TextEditingController(
       text: ((application.currentWeek ?? 0) + 1).toString(),
     );
+    List<int>? reportBytes;
+    String? reportFileName;
     final submitted = await showDialog<bool>(
       context: context,
       builder:
-          (dialogContext) => AlertDialog(
-            title: const Text('Isi Logbook Mingguan'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: weekController,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(labelText: 'Minggu ke'),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: descriptionController,
-                  minLines: 3,
-                  maxLines: 6,
-                  decoration: const InputDecoration(
-                    labelText: 'Deskripsi kegiatan',
+          (dialogContext) => StatefulBuilder(
+            builder:
+                (context, setDialogState) => AlertDialog(
+                  title: const Text('Isi Logbook Mingguan'),
+                  content: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        TextField(
+                          controller: weekController,
+                          keyboardType: TextInputType.number,
+                          decoration: const InputDecoration(
+                            labelText: 'Minggu ke',
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        TextField(
+                          controller: descriptionController,
+                          minLines: 3,
+                          maxLines: 6,
+                          decoration: const InputDecoration(
+                            labelText: 'Deskripsi kegiatan',
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                        OutlinedButton.icon(
+                          onPressed: () async {
+                            final result = await FilePicker.platform.pickFiles(
+                              type: FileType.custom,
+                              allowedExtensions: const ['pdf'],
+                              withData: true,
+                            );
+                            final file = result?.files.single;
+                            if (file?.bytes == null) return;
+                            if (file!.size > 5 * 1024 * 1024) {
+                              if (!context.mounted) return;
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Ukuran PDF maksimal 5 MB.',
+                                  ),
+                                ),
+                              );
+                              return;
+                            }
+                            setDialogState(() {
+                              reportBytes = file.bytes;
+                              reportFileName = file.name;
+                            });
+                          },
+                          icon: const Icon(Icons.picture_as_pdf_outlined),
+                          label: Text(
+                            reportFileName ?? 'Pilih PDF Logbook',
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          'Format PDF, maksimal 5 MB.',
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ],
+                    ),
                   ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(dialogContext, false),
+                      child: const Text('Batal'),
+                    ),
+                    ElevatedButton(
+                      onPressed:
+                          reportBytes == null
+                              ? null
+                              : () => Navigator.pop(dialogContext, true),
+                      child: const Text('Kirim'),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(dialogContext, false),
-                child: const Text('Batal'),
-              ),
-              ElevatedButton(
-                onPressed: () => Navigator.pop(dialogContext, true),
-                child: const Text('Kirim'),
-              ),
-            ],
           ),
     );
     if (submitted != true || !mounted) return;
     final week = int.tryParse(weekController.text);
     final description = descriptionController.text.trim();
-    if (week == null || week < 1 || description.isEmpty) {
+    if (week == null ||
+        week < 1 ||
+        description.isEmpty ||
+        reportBytes == null ||
+        reportFileName == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Minggu dan deskripsi wajib diisi.')),
+        const SnackBar(
+          content: Text('Minggu, deskripsi, dan PDF wajib diisi.'),
+        ),
       );
       return;
     }
@@ -247,6 +304,8 @@ class _InternshipProgressScreenState extends State<InternshipProgressScreen> {
         week: week,
         date: DateTime.now(),
         description: description,
+        reportBytes: reportBytes!,
+        reportFileName: reportFileName!,
       );
       await state.loadStudentApplications();
       if (!mounted) return;
@@ -269,17 +328,17 @@ class _InternshipProgressScreenState extends State<InternshipProgressScreen> {
     }
 
     if (index == 2) {
-      Navigator.push(
+      Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (_) => const NotificationsScreen()),
+        nexusTabRoute(const NotificationsScreen()),
       );
       return;
     }
 
     if (index == 3) {
-      Navigator.pushNamed(
+      Navigator.pushReplacement(
         context,
-        DashboardMahasiswaProfileScreen.routeName,
+        nexusTabRoute(const DashboardMahasiswaProfileScreen()),
       );
     }
   }
@@ -662,6 +721,15 @@ class WeeklyHistoryScreen extends StatelessWidget {
           return Card(
             margin: const EdgeInsets.only(bottom: 10),
             child: ListTile(
+              onTap:
+                  report == null
+                      ? null
+                      : () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => LogbookDetailScreen(report: report),
+                        ),
+                      ),
               leading: CircleAvatar(
                 backgroundColor:
                     approved
@@ -682,7 +750,9 @@ class WeeklyHistoryScreen extends StatelessWidget {
               ),
               isThreeLine: report != null && report.description.isNotEmpty,
               trailing: Icon(
-                approved
+                report != null
+                    ? Icons.chevron_right_rounded
+                    : approved
                     ? Icons.verified_rounded
                     : revision
                     ? Icons.edit_note_rounded
@@ -831,7 +901,9 @@ class _LecturerFeedbackCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      report.lecturerName ?? 'Dosen Pembimbing',
+                      report.lecturerName?.trim().isNotEmpty == true
+                          ? report.lecturerName!
+                          : 'Nama dosen belum tersedia',
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w700,
                       ),

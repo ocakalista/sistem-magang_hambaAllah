@@ -428,16 +428,32 @@ class ApiService {
     required int week,
     required DateTime date,
     required String description,
+    required List<int> reportBytes,
+    required String reportFileName,
   }) async {
-    final response = await http.post(
+    final request = http.MultipartRequest(
+      'POST',
       Uri.parse('$baseUrl/logbook'),
-      headers: _headers(token),
-      body: jsonEncode({
-        'id_pendaftaran': applicationId,
-        'minggu_ke': week,
-        'tanggal': date.toIso8601String().split('T').first,
-        'deskripsi_kegiatan': description,
-      }),
+    );
+    request.headers.addAll({
+      'Accept': 'application/json',
+      'Authorization': 'Bearer $token',
+    });
+    request.fields.addAll({
+      'id_pendaftaran': applicationId,
+      'minggu_ke': week.toString(),
+      'tanggal': date.toIso8601String().split('T').first,
+      'deskripsi_kegiatan': description,
+    });
+    request.files.add(
+      http.MultipartFile.fromBytes(
+        'berkas_logbook',
+        reportBytes,
+        filename: reportFileName,
+      ),
+    );
+    final response = await http.Response.fromStream(
+      await request.send().timeout(_timeout),
     );
     final decoded = _decode(response);
     return decoded is Map<String, dynamic>

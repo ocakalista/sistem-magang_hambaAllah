@@ -428,39 +428,63 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     if (role == UserRole.dosen) {
       switch (index) {
         case 0:
-          Navigator.pushReplacementNamed(
-            context,
-            DosenDashboardScreen.routeName,
-          );
+          var dashboardFound = false;
+          Navigator.of(context).popUntil((route) {
+            if (route.settings.name == DosenDashboardScreen.routeName) {
+              dashboardFound = true;
+              return true;
+            }
+            return route.isFirst;
+          });
+          if (!dashboardFound && context.mounted) {
+            Navigator.pushReplacement(
+              context,
+              nexusTabRoute(const DosenDashboardScreen()),
+            );
+          }
           break;
         case 1:
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(
-              builder: (_) => const Scaffold(body: StudentsScreen()),
-            ),
+            nexusTabRoute(const StudentsScreen()),
           );
           break;
         case 3:
-          Navigator.pushReplacementNamed(context, DosenProfileScreen.routeName);
+          Navigator.pushReplacement(
+            context,
+            nexusTabRoute(const DosenProfileScreen()),
+          );
           break;
       }
     } else if (role == UserRole.mitra) {
       switch (index) {
         case 0:
-          Navigator.pushReplacementNamed(
-            context,
-            MitraDashboardScreen.routeName,
-          );
+          var dashboardFound = false;
+          Navigator.of(context).popUntil((route) {
+            if (route.settings.name == MitraDashboardScreen.routeName) {
+              dashboardFound = true;
+              return true;
+            }
+            return route.isFirst;
+          });
+          if (!dashboardFound && context.mounted) {
+            Navigator.pushReplacement(
+              context,
+              nexusTabRoute(const MitraDashboardScreen()),
+            );
+          }
           break;
         case 1:
-          Navigator.pushReplacementNamed(
+          Navigator.pushReplacement(
             context,
-            MitraKelolaLowonganScreen.routeName,
+            nexusTabRoute(const MitraKelolaLowonganScreen()),
           );
           break;
         case 3:
-          Navigator.pushReplacementNamed(context, MitraProfileScreen.routeName);
+          Navigator.pushReplacement(
+            context,
+            nexusTabRoute(const MitraProfileScreen()),
+          );
           break;
       }
     } else if (role == UserRole.student) {
@@ -484,15 +508,13 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         case 1:
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(
-              builder: (_) => const ApplicationHistoryScreen(),
-            ),
+            nexusTabRoute(const ApplicationHistoryScreen()),
           );
           break;
         case 3:
-          Navigator.pushReplacementNamed(
+          Navigator.pushReplacement(
             context,
-            DashboardMahasiswaProfileScreen.routeName,
+            nexusTabRoute(const DashboardMahasiswaProfileScreen()),
           );
           break;
       }

@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/logout_button.dart';
 import '../../widgets/mitra_bottom_nav.dart';
+import '../../widgets/bottom_nav.dart';
 import '../../models/mitra_provider.dart';
 import '../../screens/mitra/mitra_dashboard_screen.dart';
 import '../../screens/mitra/kelola_lowongan_screen.dart';
@@ -129,21 +130,18 @@ class MitraProfileScreen extends StatelessWidget {
         onDestinationSelected: (index) {
           switch (index) {
             case 0:
-              Navigator.pushReplacementNamed(
-                context,
-                MitraDashboardScreen.routeName,
-              );
+              _openMitraHome(context);
               break;
             case 1:
-              Navigator.pushReplacementNamed(
+              Navigator.pushReplacement(
                 context,
-                MitraKelolaLowonganScreen.routeName,
+                nexusTabRoute(const MitraKelolaLowonganScreen()),
               );
               break;
             case 2:
-              Navigator.pushReplacementNamed(
+              Navigator.pushReplacement(
                 context,
-                NotificationsScreen.routeName,
+                nexusTabRoute(const NotificationsScreen()),
               );
               break;
             case 3:
@@ -152,6 +150,23 @@ class MitraProfileScreen extends StatelessWidget {
         },
       ),
     );
+  }
+
+  void _openMitraHome(BuildContext context) {
+    var dashboardFound = false;
+    Navigator.of(context).popUntil((route) {
+      if (route.settings.name == MitraDashboardScreen.routeName) {
+        dashboardFound = true;
+        return true;
+      }
+      return route.isFirst;
+    });
+    if (!dashboardFound && context.mounted) {
+      Navigator.pushReplacement(
+        context,
+        nexusTabRoute(const MitraDashboardScreen()),
+      );
+    }
   }
 
   Widget _buildInfoTile(

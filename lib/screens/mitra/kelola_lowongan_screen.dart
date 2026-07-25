@@ -6,6 +6,7 @@ import '../../models/mitra_provider.dart';
 import '../../models/mitra_model.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/mitra_bottom_nav.dart';
+import '../../widgets/bottom_nav.dart';
 import '../mitra/mitra_dashboard_screen.dart';
 import '../mitra/profile_screen.dart';
 import '../../screens/notifications_screen.dart';
@@ -143,29 +144,43 @@ class _MitraKelolaLowonganScreenState extends State<MitraKelolaLowonganScreen> {
         onDestinationSelected: (index) {
           switch (index) {
             case 0:
-              Navigator.pushReplacementNamed(
-                context,
-                MitraDashboardScreen.routeName,
-              );
+              _openMitraHome(context);
               break;
             case 1:
               break;
             case 2:
-              Navigator.pushReplacementNamed(
+              Navigator.pushReplacement(
                 context,
-                NotificationsScreen.routeName,
+                nexusTabRoute(const NotificationsScreen()),
               );
               break;
             case 3:
-              Navigator.pushReplacementNamed(
+              Navigator.pushReplacement(
                 context,
-                MitraProfileScreen.routeName,
+                nexusTabRoute(const MitraProfileScreen()),
               );
               break;
           }
         },
       ),
     );
+  }
+
+  void _openMitraHome(BuildContext context) {
+    var dashboardFound = false;
+    Navigator.of(context).popUntil((route) {
+      if (route.settings.name == MitraDashboardScreen.routeName) {
+        dashboardFound = true;
+        return true;
+      }
+      return route.isFirst;
+    });
+    if (!dashboardFound && context.mounted) {
+      Navigator.pushReplacement(
+        context,
+        nexusTabRoute(const MitraDashboardScreen()),
+      );
+    }
   }
 
   Widget _buildLowonganCard(BuildContext context, LowonganMitra lowongan) {

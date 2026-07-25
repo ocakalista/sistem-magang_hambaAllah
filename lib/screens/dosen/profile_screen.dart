@@ -3,7 +3,12 @@ import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/logout_button.dart';
 import '../../models/nexus_app_state.dart';
+import '../../widgets/bottom_nav.dart';
+import '../../widgets/dosen_bottom_nav.dart';
 import '../notification_settings_screen.dart';
+import '../notifications_screen.dart';
+import 'dosen_dashboard_screen.dart';
+import 'students_screen.dart';
 
 class DosenProfileScreen extends StatelessWidget {
   static const routeName = '/dosen/profile';
@@ -12,16 +17,16 @@ class DosenProfileScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final state = NexusScope.of(context);
     final user =
-        NexusScope.of(context).currentUser ?? const <String, dynamic>{};
+        state.currentUser ?? const <String, dynamic>{};
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(title: const Text('Profile')),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+          child: ListView(
             children: [
               Container(
                 padding: const EdgeInsets.all(20),
@@ -48,7 +53,7 @@ class DosenProfileScreen extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            user['name']?.toString() ?? '-',
+                            state.currentDisplayName,
                             style: Theme.of(context).textTheme.titleLarge
                                 ?.copyWith(fontWeight: FontWeight.w700),
                           ),
@@ -69,14 +74,24 @@ class DosenProfileScreen extends StatelessWidget {
                 context,
                 Icons.email_rounded,
                 'Email / NIDN',
-                user['email_or_nim']?.toString() ?? '-',
+                state.currentUserValue(const [
+                      'email_or_nim',
+                      'nidn',
+                      'email',
+                    ]) ??
+                    '-',
               ),
               const SizedBox(height: 12),
               _buildInfoTile(
                 context,
                 Icons.phone_rounded,
                 'Telepon',
-                user['phone']?.toString() ?? '-',
+                state.currentUserValue(const [
+                      'phone',
+                      'no_telp',
+                      'telepon',
+                    ]) ??
+                    '-',
               ),
               const SizedBox(height: 12),
               _buildInfoTile(
@@ -122,7 +137,45 @@ class DosenProfileScreen extends StatelessWidget {
           ),
         ),
       ),
+      bottomNavigationBar: DosenBottomNav(
+        selectedIndex: 3,
+        onDestinationSelected: (index) => _handleNavigation(context, index),
+      ),
     );
+  }
+
+  void _handleNavigation(BuildContext context, int index) {
+    if (index == 3) return;
+    if (index == 0) {
+      var dashboardFound = false;
+      Navigator.of(context).popUntil((route) {
+        if (route.settings.name == DosenDashboardScreen.routeName) {
+          dashboardFound = true;
+          return true;
+        }
+        return route.isFirst;
+      });
+      if (!dashboardFound && context.mounted) {
+        Navigator.pushReplacement(
+          context,
+          nexusTabRoute(const DosenDashboardScreen()),
+        );
+      }
+      return;
+    }
+    if (index == 1) {
+      Navigator.pushReplacement(
+        context,
+        nexusTabRoute(const StudentsScreen()),
+      );
+      return;
+    }
+    if (index == 2) {
+      Navigator.pushReplacement(
+        context,
+        nexusTabRoute(const NotificationsScreen()),
+      );
+    }
   }
 
   Widget _buildInfoTile(

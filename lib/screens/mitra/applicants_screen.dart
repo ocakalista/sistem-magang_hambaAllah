@@ -114,6 +114,13 @@ class _MitraApplicantsScreenState extends State<MitraApplicantsScreen> {
     child: ChoiceChip(
       label: Text(label),
       selected: _status == value,
+      backgroundColor: Colors.white,
+      selectedColor: AppColors.primary,
+      labelStyle: TextStyle(
+        color: _status == value ? Colors.white : Colors.black87,
+        fontWeight: FontWeight.w600,
+      ),
+      side: BorderSide.none,
       onSelected: (_) => setState(() => _status = value),
     ),
   );

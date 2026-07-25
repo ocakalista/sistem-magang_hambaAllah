@@ -10,6 +10,7 @@ import '../../screens/mitra/tambah_lowongan_screen.dart';
 import '../../screens/notifications_screen.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/mitra_bottom_nav.dart';
+import '../../widgets/bottom_nav.dart';
 import '../../models/nexus_app_state.dart';
 import 'applicants_screen.dart';
 
@@ -43,6 +44,7 @@ class _MitraDashboardScreenState extends State<MitraDashboardScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
+        automaticallyImplyLeading: false,
         titleSpacing: 20,
         title: InkWell(
           onTap:
@@ -512,16 +514,16 @@ class _MitraDashboardScreenState extends State<MitraDashboardScreen> {
       case 0:
         break;
       case 1:
-        Navigator.pushReplacementNamed(
+        Navigator.push(
           context,
-          MitraKelolaLowonganScreen.routeName,
+          nexusTabRoute(const MitraKelolaLowonganScreen()),
         );
         break;
       case 2:
-        Navigator.pushReplacementNamed(context, NotificationsScreen.routeName);
+        Navigator.push(context, nexusTabRoute(const NotificationsScreen()));
         break;
       case 3:
-        Navigator.pushReplacementNamed(context, MitraProfileScreen.routeName);
+        Navigator.push(context, nexusTabRoute(const MitraProfileScreen()));
         break;
     }
   }

@@ -5,6 +5,7 @@ import '../../models/nexus_app_state.dart';
 import '../../theme/app_theme.dart';
 import '../notifications_screen.dart';
 import '../../widgets/dosen_bottom_nav.dart';
+import '../../widgets/bottom_nav.dart';
 import 'profile_screen.dart';
 import 'student_profile_screen.dart';
 import 'students_screen.dart';
@@ -144,6 +145,21 @@ class _DosenDashboardScreenState extends State<DosenDashboardScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              Text(
+                'Halo, ${state.currentGreetingName}!',
+                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                  fontSize: 30,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Pantau perkembangan mahasiswa bimbinganmu hari ini.',
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyMedium?.copyWith(color: AppColors.neutral),
+              ),
+              const SizedBox(height: 20),
               // Overview Header
               Text(
                 'Overview',
@@ -729,18 +745,18 @@ class _DosenDashboardScreenState extends State<DosenDashboardScreen> {
           }
 
           if (index == 2) {
-            Navigator.pushNamed(
+            Navigator.push(
               context,
-              NotificationsScreen.routeName,
-            ).then((_) => setState(() => _selectedIndex = 0));
+              nexusTabRoute(const NotificationsScreen()),
+            );
             return;
           }
 
           if (index == 3) {
-            Navigator.pushNamed(
+            Navigator.push(
               context,
-              DosenProfileScreen.routeName,
-            ).then((_) => setState(() => _selectedIndex = 0));
+              nexusTabRoute(const DosenProfileScreen()),
+            );
             return;
           }
         },
@@ -785,7 +801,7 @@ class _DosenDashboardScreenState extends State<DosenDashboardScreen> {
   void _navigateToStudents() {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => StudentsScreen()),
-    ).then((_) => setState(() => _selectedIndex = 0));
+      nexusTabRoute(const StudentsScreen()),
+    );
   }
 }

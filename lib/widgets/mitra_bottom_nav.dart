@@ -14,66 +14,33 @@ class MitraBottomNavigationBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final destinations = <_MitraNavDestination>[
-      _MitraNavDestination(label: 'Home', icon: Icons.home_rounded),
-      _MitraNavDestination(label: 'Lowongan', icon: Icons.work_rounded),
-      _MitraNavDestination(label: 'Alerts', icon: Icons.notifications_rounded),
-      _MitraNavDestination(label: 'Profile', icon: Icons.person_rounded),
-    ];
-
-    return Container(
-      color: AppColors.white,
-      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: List.generate(destinations.length, (index) {
-          final item = destinations[index];
-          final active = index == selectedIndex;
-          return Expanded(
-            child: InkWell(
-              borderRadius: BorderRadius.circular(18),
-              onTap: () => onDestinationSelected(index),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 42,
-                      height: 42,
-                      decoration: BoxDecoration(
-                        color:
-                            active ? AppColors.primary : AppColors.background,
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        item.icon,
-                        color: active ? AppColors.white : AppColors.neutral,
-                        size: 20,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      item.label,
-                      textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: active ? AppColors.primary : AppColors.neutral,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          );
-        }),
-      ),
+    return NavigationBar(
+      selectedIndex: selectedIndex,
+      onDestinationSelected: onDestinationSelected,
+      backgroundColor: AppColors.white,
+      indicatorColor: AppColors.primary.withValues(alpha: 0.12),
+      destinations: const [
+        NavigationDestination(
+          icon: Icon(Icons.home_outlined),
+          selectedIcon: Icon(Icons.home_rounded),
+          label: 'Home',
+        ),
+        NavigationDestination(
+          icon: Icon(Icons.work_outline_rounded),
+          selectedIcon: Icon(Icons.work_rounded),
+          label: 'Lowongan',
+        ),
+        NavigationDestination(
+          icon: Icon(Icons.notifications_none_rounded),
+          selectedIcon: Icon(Icons.notifications_rounded),
+          label: 'Alerts',
+        ),
+        NavigationDestination(
+          icon: Icon(Icons.person_outline_rounded),
+          selectedIcon: Icon(Icons.person_rounded),
+          label: 'Profile',
+        ),
+      ],
     );
   }
-}
-
-class _MitraNavDestination {
-  const _MitraNavDestination({required this.label, required this.icon});
-
-  final String label;
-  final IconData icon;
 }

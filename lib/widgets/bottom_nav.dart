@@ -2,6 +2,14 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
 
+Route<T> nexusTabRoute<T>(Widget page) {
+  return PageRouteBuilder<T>(
+    pageBuilder: (_, _, _) => page,
+    transitionDuration: Duration.zero,
+    reverseTransitionDuration: Duration.zero,
+  );
+}
+
 class NexusBottomNavigationBar extends StatelessWidget {
   const NexusBottomNavigationBar({
     super.key,

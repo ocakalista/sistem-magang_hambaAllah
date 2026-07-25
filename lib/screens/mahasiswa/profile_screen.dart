@@ -3,7 +3,11 @@ import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/logout_button.dart';
 import '../../models/nexus_app_state.dart';
+import '../../widgets/bottom_nav.dart';
 import '../notification_settings_screen.dart';
+import '../notifications_screen.dart';
+import 'application_history_screen.dart';
+import 'dashboard_mahasiswa.dart';
 import 'edit_profile_screen.dart';
 
 class DashboardMahasiswaProfileScreen extends StatelessWidget {
@@ -15,8 +19,16 @@ class DashboardMahasiswaProfileScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final user =
         NexusScope.of(context).currentUser ?? const <String, dynamic>{};
-    final name = user['name']?.toString() ?? '-';
-    final identifier = user['email_or_nim']?.toString() ?? '-';
+    final name = _profileValue(user, const [
+      'name',
+      'nama_lengkap',
+      'nama',
+    ]);
+    final identifier = _profileValue(user, const [
+      'email_or_nim',
+      'nim',
+      'email',
+    ]);
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -39,8 +51,7 @@ class DashboardMahasiswaProfileScreen extends StatelessWidget {
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+          child: ListView(
             children: [
               Container(
                 padding: const EdgeInsets.all(20),
@@ -95,14 +106,18 @@ class DashboardMahasiswaProfileScreen extends StatelessWidget {
                 context,
                 Icons.school_rounded,
                 'Semester',
-                (user['semester'] ?? '-')?.toString() ?? '-',
+                _profileValue(user, const ['semester']),
               ),
               const SizedBox(height: 12),
               _buildInfoTile(
                 context,
                 Icons.phone_rounded,
                 'Telepon',
-                (user['phone'] ?? user['no_telp'] ?? '-')?.toString() ?? '-',
+                _profileValue(user, const [
+                  'phone',
+                  'no_telp',
+                  'telepon',
+                ]),
               ),
               const SizedBox(height: 24),
               Text(
@@ -142,7 +157,45 @@ class DashboardMahasiswaProfileScreen extends StatelessWidget {
           ),
         ),
       ),
+      bottomNavigationBar: NexusBottomNavigationBar(
+        selectedIndex: 3,
+        onDestinationSelected: (index) => _handleNavigation(context, index),
+      ),
     );
+  }
+
+  void _handleNavigation(BuildContext context, int index) {
+    if (index == 3) return;
+    if (index == 0) {
+      var dashboardFound = false;
+      Navigator.of(context).popUntil((route) {
+        if (route.settings.name == DashboardMahasiswa.routeName) {
+          dashboardFound = true;
+          return true;
+        }
+        return route.isFirst;
+      });
+      if (!dashboardFound && context.mounted) {
+        Navigator.pushReplacementNamed(
+          context,
+          DashboardMahasiswa.routeName,
+        );
+      }
+      return;
+    }
+    if (index == 1) {
+      Navigator.pushReplacement(
+        context,
+        nexusTabRoute(const ApplicationHistoryScreen()),
+      );
+      return;
+    }
+    if (index == 2) {
+      Navigator.pushReplacement(
+        context,
+        nexusTabRoute(const NotificationsScreen()),
+      );
+    }
   }
 
   Widget _buildInfoTile(
@@ -180,6 +233,25 @@ class DashboardMahasiswaProfileScreen extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  String _profileValue(Map<String, dynamic> user, List<String> keys) {
+    final nestedProfiles = [
+      user,
+      if (user['data'] is Map)
+        (user['data'] as Map).cast<String, dynamic>(),
+      if (user['mahasiswa'] is Map)
+        (user['mahasiswa'] as Map).cast<String, dynamic>(),
+      if (user['profile'] is Map)
+        (user['profile'] as Map).cast<String, dynamic>(),
+    ];
+    for (final profile in nestedProfiles) {
+      for (final key in keys) {
+        final value = profile[key]?.toString().trim();
+        if (value != null && value.isNotEmpty) return value;
+      }
+    }
+    return '-';
   }
 
   Widget _buildActionTile(

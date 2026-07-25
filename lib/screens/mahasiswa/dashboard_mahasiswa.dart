@@ -11,6 +11,7 @@ import 'all_internships_screen.dart';
 import 'profile_screen.dart';
 import '../notifications_screen.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/bottom_nav.dart';
 
 class DashboardMahasiswa extends StatefulWidget {
   static const routeName = '/dashboard';
@@ -130,7 +131,7 @@ class _DashboardMahasiswaState extends State<DashboardMahasiswa> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Hello, Mahasiswa!',
+                'Halo, ${appState.currentGreetingName}!',
                 style: Theme.of(
                   context,
                 ).textTheme.headlineMedium?.copyWith(fontSize: 30),
@@ -332,23 +333,21 @@ class _DashboardMahasiswaState extends State<DashboardMahasiswa> {
           ),
         ),
       ),
-      bottomNavigationBar: NavigationBar(
+      bottomNavigationBar: NexusBottomNavigationBar(
         selectedIndex: _selectedIndex,
         onDestinationSelected: (index) {
           if (index == 1) {
             Navigator.push(
               context,
-              MaterialPageRoute(
-                builder: (_) => const ApplicationHistoryScreen(),
-              ),
+              nexusTabRoute(const ApplicationHistoryScreen()),
             );
             return;
           }
 
           if (index == 3) {
-            Navigator.pushNamed(
+            Navigator.push(
               context,
-              DashboardMahasiswaProfileScreen.routeName,
+              nexusTabRoute(const DashboardMahasiswaProfileScreen()),
             );
             return;
           }
@@ -356,35 +355,13 @@ class _DashboardMahasiswaState extends State<DashboardMahasiswa> {
           if (index == 2) {
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (_) => const NotificationsScreen()),
+              nexusTabRoute(const NotificationsScreen()),
             );
             return;
           }
 
           setState(() => _selectedIndex = index);
         },
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home_rounded),
-            label: 'Home',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.work_outline_rounded),
-            selectedIcon: Icon(Icons.work_rounded),
-            label: 'My Internship',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.notifications_none_rounded),
-            selectedIcon: Icon(Icons.notifications_rounded),
-            label: 'Alerts',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.person_outline_rounded),
-            selectedIcon: Icon(Icons.person_rounded),
-            label: 'Profile',
-          ),
-        ],
       ),
     );
   }

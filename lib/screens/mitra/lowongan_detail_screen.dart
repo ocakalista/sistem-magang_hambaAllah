@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../../models/mitra_model.dart';
+import '../../models/mitra_provider.dart';
 import '../../theme/app_theme.dart';
+import 'pendaftar_detail_screen.dart';
 
 class MitraLowonganDetailScreen extends StatelessWidget {
   const MitraLowonganDetailScreen({super.key, required this.lowongan});
@@ -10,6 +13,12 @@ class MitraLowonganDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final applicants =
+        context
+            .watch<MitraProvider>()
+            .pendaftarTerbaru
+            .where((applicant) => applicant.lowonganId == lowongan.id)
+            .toList();
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(title: const Text('Detail Lowongan')),
@@ -63,11 +72,13 @@ class MitraLowonganDetailScreen extends StatelessWidget {
                 _Info(
                   icon: Icons.group_outlined,
                   label: 'Pendaftar',
-                  value: '${lowongan.applicantCount}',
+                  value: '${applicants.length}',
                 ),
               ],
             ),
           ),
+          const SizedBox(height: 14),
+          _ApplicantsSection(applicants: applicants),
           const SizedBox(height: 14),
           _Section(title: 'Deskripsi', text: lowongan.description),
           const SizedBox(height: 14),
@@ -81,6 +92,109 @@ class MitraLowonganDetailScreen extends StatelessWidget {
 
   static String _date(DateTime date) =>
       '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
+}
+
+class _ApplicantsSection extends StatelessWidget {
+  const _ApplicantsSection({required this.applicants});
+
+  final List<PendaftarTerbaru> applicants;
+
+  @override
+  Widget build(BuildContext context) {
+    return _Card(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Expanded(
+                child: Text(
+                  'Daftar Pendaftar',
+                  style: TextStyle(fontWeight: FontWeight.w800),
+                ),
+              ),
+              Text(
+                '${applicants.length} mahasiswa',
+                style: const TextStyle(
+                  color: AppColors.primary,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          if (applicants.isEmpty)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 12),
+              child: Center(
+                child: Text('Belum ada mahasiswa yang melamar.'),
+              ),
+            )
+          else
+            ...applicants.map(
+              (applicant) => Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Material(
+                  color: AppColors.background,
+                  borderRadius: BorderRadius.circular(16),
+                  child: ListTile(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    leading: CircleAvatar(
+                      backgroundColor: AppColors.primary.withValues(
+                        alpha: 0.14,
+                      ),
+                      child: Text(
+                        applicant.name.isEmpty
+                            ? '?'
+                            : applicant.name[0].toUpperCase(),
+                        style: const TextStyle(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                    title: Text(
+                      applicant.name.isEmpty
+                          ? 'Mahasiswa'
+                          : applicant.name,
+                    ),
+                    subtitle: Text(
+                      [
+                        applicant.nim,
+                        applicant.semester == null
+                            ? null
+                            : 'Semester ${applicant.semester}',
+                      ].whereType<String>().join(' • '),
+                    ),
+                    trailing: Chip(
+                      label: Text(applicant.status.mitraBadgeLabel),
+                      backgroundColor: applicant.status.mitraBadgeColor,
+                      labelStyle: TextStyle(
+                        color: applicant.status.mitraBadgeTextColor,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    onTap:
+                        () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder:
+                                (_) => PendaftarDetailScreen(
+                                  applicant: applicant,
+                                ),
+                          ),
+                        ),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
 }
 
 class _Card extends StatelessWidget {

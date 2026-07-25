@@ -83,15 +83,15 @@ class ApplicationHistoryScreen extends StatelessWidget {
     if (index == 2) {
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (_) => const NotificationsScreen()),
+        nexusTabRoute(const NotificationsScreen()),
       );
       return;
     }
 
     if (index == 3) {
-      Navigator.pushReplacementNamed(
+      Navigator.pushReplacement(
         context,
-        DashboardMahasiswaProfileScreen.routeName,
+        nexusTabRoute(const DashboardMahasiswaProfileScreen()),
       );
     }
   }

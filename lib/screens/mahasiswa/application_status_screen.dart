@@ -4,7 +4,7 @@ import '../../models/application_model.dart';
 import '../../models/nexus_app_state.dart';
 import '../../theme/app_theme.dart';
 import 'dashboard_mahasiswa.dart';
-import 'internship_progress_screen.dart';
+import 'profile_screen.dart';
 import '../notifications_screen.dart';
 import '../../widgets/bottom_nav.dart';
 
@@ -163,25 +163,21 @@ class ApplicationStatusScreen extends StatelessWidget {
     }
 
     if (index == 1) {
-      final activeInternship = NexusScope.of(context).activeInternship;
-      if (activeInternship != null) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder:
-                (_) => InternshipProgressScreen(
-                  application: activeInternship,
-                ),
-          ),
-        );
-      }
       return;
     }
 
     if (index == 2) {
-      Navigator.push(
+      Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (_) => const NotificationsScreen()),
+        nexusTabRoute(const NotificationsScreen()),
+      );
+      return;
+    }
+
+    if (index == 3) {
+      Navigator.pushReplacement(
+        context,
+        nexusTabRoute(const DashboardMahasiswaProfileScreen()),
       );
     }
   }

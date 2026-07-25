@@ -171,6 +171,7 @@ class WeeklyReport {
   final String description;
   final String status;
   final DateTime? dueDate;
+  final String? reportFileUrl;
   String? feedbackFromLecturer;
   String? lecturerName;
 
@@ -181,12 +182,21 @@ class WeeklyReport {
     required this.description,
     required this.status,
     this.dueDate,
+    this.reportFileUrl,
     this.feedbackFromLecturer,
     this.lecturerName,
   });
 
   factory WeeklyReport.fromJson(Map<String, dynamic> json) {
     final validation = json['status_validasi']?.toString().toLowerCase();
+    final lecturer =
+        json['dosen_pembimbing'] is Map
+            ? json['dosen_pembimbing'] as Map
+            : json['dosen'] is Map
+            ? json['dosen'] as Map
+            : json['lecturer'] is Map
+            ? json['lecturer'] as Map
+            : const <String, dynamic>{};
     return WeeklyReport(
       id: json['id_logbook']?.toString() ?? json['id']?.toString() ?? '',
       weekNumber: int.tryParse(json['minggu_ke']?.toString() ?? '') ?? 0,
@@ -202,9 +212,24 @@ class WeeklyReport {
               ? 'revision'
               : 'submitted',
       dueDate: DateTime.tryParse(json['tanggal']?.toString() ?? ''),
+      reportFileUrl:
+          (json['url_berkas_logbook'] ??
+                  json['berkas_logbook_url'] ??
+                  json['file_url'] ??
+                  json['url_file'] ??
+                  json['berkas_logbook'] ??
+                  json['file_laporan'])
+              ?.toString(),
       feedbackFromLecturer:
           (json['feedback_dosen'] ?? json['lecturer_feedback'])?.toString(),
-      lecturerName: (json['nama_dosen'] ?? json['lecturer_name'])?.toString(),
+      lecturerName:
+          (json['nama_dosen'] ??
+                  json['nama_dosen_pembimbing'] ??
+                  json['lecturer_name'] ??
+                  lecturer['name'] ??
+                  lecturer['nama_lengkap'] ??
+                  lecturer['nama_dosen'])
+              ?.toString(),
     );
   }
 }

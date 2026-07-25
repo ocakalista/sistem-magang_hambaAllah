@@ -48,10 +48,32 @@ class MitraProvider extends ChangeNotifier {
 
     try {
       final user = await ApiService.fetchCurrentUser(token);
+      final data =
+          user['data'] is Map
+              ? (user['data'] as Map).cast<String, dynamic>()
+              : user;
+      final mitra =
+          data['mitra'] is Map
+              ? (data['mitra'] as Map).cast<String, dynamic>()
+              : data['profile'] is Map
+              ? (data['profile'] as Map).cast<String, dynamic>()
+              : const <String, dynamic>{};
+      String firstValue(List<String> keys, {String fallback = ''}) {
+        for (final source in [mitra, data, user]) {
+          for (final key in keys) {
+            final value = source[key]?.toString().trim();
+            if (value != null && value.isNotEmpty) return value;
+          }
+        }
+        return fallback;
+      }
       info = MitraInfo(
-        idMitra: '',
-        idUser: user['id']?.toString() ?? '',
-        companyName: user['name']?.toString() ?? 'Mitra',
+        idMitra: firstValue(const ['id_mitra', 'id']),
+        idUser: firstValue(const ['id_user', 'user_id', 'id']),
+        companyName: firstValue(
+          const ['nama_perusahaan', 'company_name', 'company', 'name'],
+          fallback: 'Mitra',
+        ),
       );
       final fetched = await ApiService.fetchMitraLowongan(token);
       lowonganList = fetched;
@@ -71,6 +93,7 @@ class MitraProvider extends ChangeNotifier {
           applicants.add(
             PendaftarTerbaru(
               id: row['id_pendaftaran']?.toString() ?? '',
+              lowonganId: lowongan.id,
               name: row['nama_mahasiswa']?.toString() ?? '',
               position: lowongan.position,
               avatarUrl: null,
@@ -84,6 +107,7 @@ class MitraProvider extends ChangeNotifier {
                   (row['url_cv'] ??
                           row['cv_url'] ??
                           row['berkas_cv_url'] ??
+                          row['cv'] ??
                           row['berkas_cv'])
                       ?.toString(),
               email: row['email']?.toString(),
@@ -91,9 +115,13 @@ class MitraProvider extends ChangeNotifier {
               semester: row['semester']?.toString(),
               motivation: (row['motivasi'] ?? row['motivation'])?.toString(),
               portfolioUrl:
-                  (row['portofolio_link'] ??
+                  (row['url_portofolio'] ??
+                          row['portofolio_url'] ??
+                          row['portfolio_link'] ??
+                          row['portofolio_link'] ??
                           row['portfolio_url'] ??
-                          row['berkas_portofolio_url'])
+                          row['berkas_portofolio_url'] ??
+                          row['berkas_portofolio'])
                       ?.toString(),
             ),
           );
@@ -154,6 +182,7 @@ class MitraProvider extends ChangeNotifier {
     await ApiService.updateApplicantStatus(token, id, apiStatus);
     pendaftarTerbaru[index] = PendaftarTerbaru(
       id: pendaftarTerbaru[index].id,
+      lowonganId: pendaftarTerbaru[index].lowonganId,
       name: pendaftarTerbaru[index].name,
       position: pendaftarTerbaru[index].position,
       avatarUrl: pendaftarTerbaru[index].avatarUrl,

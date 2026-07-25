@@ -39,6 +39,7 @@ class MitraStats {
 
 class PendaftarTerbaru {
   final String id;
+  final String lowonganId;
   final String name;
   final String position;
   final String? avatarUrl;
@@ -55,6 +56,7 @@ class PendaftarTerbaru {
 
   PendaftarTerbaru({
     required this.id,
+    required this.lowonganId,
     required this.name,
     required this.position,
     required this.avatarUrl,

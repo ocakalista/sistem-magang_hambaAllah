@@ -3,6 +3,11 @@ import 'package:flutter/material.dart';
 import '../../models/dosen_model.dart';
 import '../../models/nexus_app_state.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/bottom_nav.dart';
+import '../../widgets/dosen_bottom_nav.dart';
+import '../notifications_screen.dart';
+import 'dosen_dashboard_screen.dart';
+import 'profile_screen.dart';
 import 'student_profile_screen.dart';
 
 class StudentsScreen extends StatefulWidget {
@@ -95,11 +100,7 @@ class _StudentsScreenState extends State<StudentsScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        leading: IconButton(
-          tooltip: 'Kembali',
-          onPressed: () => Navigator.maybePop(context),
-          icon: const Icon(Icons.arrow_back_ios_new_rounded),
-        ),
+        automaticallyImplyLeading: false,
         titleSpacing: 0,
         title: Text(
           'Mahasiswa Bimbingan',
@@ -341,6 +342,48 @@ class _StudentsScreenState extends State<StudentsScreen> {
           ],
         ),
       ),
+      bottomNavigationBar: DosenBottomNav(
+        selectedIndex: 1,
+        onDestinationSelected: (index) => _handleNavigation(context, index),
+      ),
     );
+  }
+
+  void _handleNavigation(BuildContext context, int index) {
+    if (index == 1) return;
+    if (index == 0) {
+      _openDosenHome(context);
+      return;
+    }
+    if (index == 2) {
+      Navigator.pushReplacement(
+        context,
+        nexusTabRoute(const NotificationsScreen()),
+      );
+      return;
+    }
+    if (index == 3) {
+      Navigator.pushReplacement(
+        context,
+        nexusTabRoute(const DosenProfileScreen()),
+      );
+    }
+  }
+
+  void _openDosenHome(BuildContext context) {
+    var dashboardFound = false;
+    Navigator.of(context).popUntil((route) {
+      if (route.settings.name == DosenDashboardScreen.routeName) {
+        dashboardFound = true;
+        return true;
+      }
+      return route.isFirst;
+    });
+    if (!dashboardFound && context.mounted) {
+      Navigator.pushReplacement(
+        context,
+        nexusTabRoute(const DosenDashboardScreen()),
+      );
+    }
   }
 }

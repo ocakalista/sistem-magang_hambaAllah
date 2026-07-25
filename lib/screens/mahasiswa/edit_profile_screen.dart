@@ -27,15 +27,34 @@ class _EditMahasiswaProfileScreenState
     final user =
         NexusScope.of(context).currentUser ?? const <String, dynamic>{};
     _nameController = TextEditingController(
-      text: (user['name'] ?? user['nama_lengkap'] ?? '').toString(),
+      text: _profileValue(user, const ['name', 'nama_lengkap', 'nama']),
     );
     _semesterController = TextEditingController(
-      text: (user['semester'] ?? '').toString(),
+      text: _profileValue(user, const ['semester']),
     );
     _phoneController = TextEditingController(
-      text: (user['phone'] ?? user['no_telp'] ?? '').toString(),
+      text: _profileValue(user, const ['phone', 'no_telp', 'telepon']),
     );
     _initialized = true;
+  }
+
+  String _profileValue(Map<String, dynamic> user, List<String> keys) {
+    final profiles = [
+      user,
+      if (user['data'] is Map)
+        (user['data'] as Map).cast<String, dynamic>(),
+      if (user['mahasiswa'] is Map)
+        (user['mahasiswa'] as Map).cast<String, dynamic>(),
+      if (user['profile'] is Map)
+        (user['profile'] as Map).cast<String, dynamic>(),
+    ];
+    for (final profile in profiles) {
+      for (final key in keys) {
+        final value = profile[key]?.toString().trim();
+        if (value != null && value.isNotEmpty) return value;
+      }
+    }
+    return '';
   }
 
   @override

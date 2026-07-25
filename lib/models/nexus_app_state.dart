@@ -42,6 +42,65 @@ class NexusAppState extends ChangeNotifier {
 
   Application? get currentApplication => _currentApplication;
 
+  String get currentDisplayName {
+    final value = _currentUserValue(const [
+      'name',
+      'nama_lengkap',
+      'nama',
+    ]);
+    return value ?? _roleFallback;
+  }
+
+  String get currentGreetingName {
+    final displayName = currentDisplayName.trim();
+    if (currentUserRole == UserRole.mitra) return displayName;
+    final withoutTitle = displayName.replaceFirst(
+      RegExp(r'^(dr\.?|prof\.?|ir\.?)\s+', caseSensitive: false),
+      '',
+    );
+    return withoutTitle.split(RegExp(r'\s+')).first;
+  }
+
+  String? currentUserValue(List<String> keys) => _currentUserValue(keys);
+
+  String? _currentUserValue(List<String> keys) {
+    final user = currentUser;
+    if (user == null) return null;
+    final profiles = <Map<String, dynamic>>[
+      user,
+      for (final nestedKey in const [
+        'data',
+        'user',
+        'mahasiswa',
+        'dosen',
+        'mitra',
+        'profile',
+      ])
+        if (user[nestedKey] is Map)
+          (user[nestedKey] as Map).cast<String, dynamic>(),
+    ];
+    for (final profile in profiles.reversed) {
+      for (final key in keys) {
+        final value = profile[key]?.toString().trim();
+        if (value != null && value.isNotEmpty) return value;
+      }
+    }
+    return null;
+  }
+
+  String get _roleFallback {
+    switch (currentUserRole) {
+      case UserRole.student:
+        return 'Mahasiswa';
+      case UserRole.dosen:
+        return 'Dosen';
+      case UserRole.mitra:
+        return 'Mitra';
+      case UserRole.admin:
+        return 'Admin';
+    }
+  }
+
   Application? get activeInternship {
     for (final application in applications) {
       if (application.status == ApplicationStatus.accepted) {
@@ -79,12 +138,13 @@ class NexusAppState extends ChangeNotifier {
     if (token == null || token.isEmpty) {
       throw Exception('Sesi login tidak ditemukan.');
     }
-    currentUser = await ApiService.updateStudentProfile(
+    await ApiService.updateStudentProfile(
       token: token,
       name: name,
       semester: semester,
       phone: phone,
     );
+    currentUser = await ApiService.fetchCurrentUser(token);
     notifyListeners();
   }
 
@@ -151,6 +211,7 @@ class NexusAppState extends ChangeNotifier {
       description: report.description,
       status: status,
       dueDate: report.dueDate,
+      reportFileUrl: report.reportFileUrl,
       feedbackFromLecturer: feedbackFromLecturer ?? report.feedbackFromLecturer,
       lecturerName: lecturerName ?? report.lecturerName,
     );
@@ -264,6 +325,9 @@ class NexusAppState extends ChangeNotifier {
       orElse: () => UserRole.student,
     );
     notifyListeners();
+    if (savedToken != null && savedToken.isNotEmpty) {
+      await syncForCurrentRole();
+    }
   }
 
   Future<void> logout() async {
@@ -332,10 +396,33 @@ class NexusAppState extends ChangeNotifier {
       final detail = await ApiService.fetchLowonganDetail(lowonganId);
       final appId =
           item['id_pendaftaran']?.toString() ?? item['id']?.toString() ?? '';
+      final supervisorRaw =
+          item['dosen_pembimbing'] ?? item['dosen'] ?? item['lecturer'];
+      final supervisor =
+          supervisorRaw is Map
+              ? supervisorRaw.cast<String, dynamic>()
+              : const <String, dynamic>{};
+      final supervisorName =
+          (item['nama_dosen_pembimbing'] ??
+                  item['nama_dosen'] ??
+                  item['lecturer_name'] ??
+                  (supervisorRaw is String ? supervisorRaw : null) ??
+                  supervisor['name'] ??
+                  supervisor['nama_lengkap'] ??
+                  supervisor['nama_dosen'])
+              ?.toString();
       final reports =
           logbooks
               .where((row) => row['id_pendaftaran']?.toString() == appId)
-              .map(WeeklyReport.fromJson)
+              .map(
+                (row) => WeeklyReport.fromJson({
+                  ...row,
+                  if ((row['nama_dosen']?.toString().trim().isEmpty ?? true) &&
+                      supervisorName != null &&
+                      supervisorName.trim().isNotEmpty)
+                    'nama_dosen': supervisorName,
+                }),
+              )
               .toList();
       parsed.add(
         Application.fromJson(
