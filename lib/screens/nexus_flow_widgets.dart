@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
+import 'package:pemrog_hambaallah/l10n/localized_text.dart';
 
 import '../theme/app_theme.dart';
 

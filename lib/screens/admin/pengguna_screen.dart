@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
+import 'package:pemrog_hambaallah/l10n/localized_text.dart';
 
 import '../../models/admin_model.dart';
 import '../../models/nexus_app_state.dart';
@@ -161,13 +162,13 @@ class _PenggunaScreenState extends State<PenggunaScreen> {
           return TextField(
             onChanged: (value) => setState(() => _query = value),
             decoration: InputDecoration(
-              hintText: hint,
+              hintText: tr(hint),
               prefixIcon: const Icon(Icons.search_rounded),
               suffixIcon:
                   _query.isEmpty
                       ? null
                       : IconButton(
-                        tooltip: 'Hapus pencarian',
+                        tooltip: tr('Hapus pencarian'),
                         onPressed: () => setState(() => _query = ''),
                         icon: const Icon(Icons.close_rounded),
                       ),

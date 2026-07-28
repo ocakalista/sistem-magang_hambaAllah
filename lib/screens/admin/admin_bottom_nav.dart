@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
+import 'package:pemrog_hambaallah/l10n/app_localizations.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/bottom_nav.dart';
 import 'admin_dashboard_screen.dart';
@@ -40,26 +41,26 @@ class AdminBottomNav extends StatelessWidget {
       onDestinationSelected: onDestinationSelected,
       backgroundColor: AppColors.white,
       indicatorColor: AppColors.primary.withValues(alpha: 0.12),
-      destinations: const [
+      destinations: [
         NavigationDestination(
           icon: Icon(Icons.dashboard_outlined),
           selectedIcon: Icon(Icons.dashboard_rounded),
-          label: 'Home',
+          label: tr('Home'),
         ),
         NavigationDestination(
           icon: Icon(Icons.work_outline_rounded),
           selectedIcon: Icon(Icons.work_rounded),
-          label: 'Lowongan',
+          label: tr('Lowongan'),
         ),
         NavigationDestination(
           icon: Icon(Icons.group_outlined),
           selectedIcon: Icon(Icons.group_rounded),
-          label: 'Pengguna',
+          label: tr('Pengguna'),
         ),
         NavigationDestination(
           icon: Icon(Icons.person_outline_rounded),
           selectedIcon: Icon(Icons.person_rounded),
-          label: 'Profile',
+          label: tr('Profil'),
         ),
       ],
     );

@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
+import 'package:pemrog_hambaallah/l10n/localized_text.dart';
 
 import '../../models/dosen_model.dart';
 import '../../models/nexus_app_state.dart';
@@ -66,7 +67,7 @@ class _WeeklyReportDetailScreenState extends State<WeeklyReportDetailScreen> {
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text('Cancel'),
+                child: const Text('Batal'),
               ),
               ElevatedButton(
                 onPressed: () {
@@ -113,15 +114,15 @@ class _WeeklyReportDetailScreenState extends State<WeeklyReportDetailScreen> {
               controller: reasonController,
               minLines: 3,
               maxLines: 5,
-              decoration: const InputDecoration(
-                hintText: 'Enter rejection reason...',
+              decoration: InputDecoration(
+                hintText: tr('Enter rejection reason...'),
                 border: OutlineInputBorder(),
               ),
             ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text('Cancel'),
+                child: const Text('Batal'),
               ),
               ElevatedButton(
                 style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
@@ -408,7 +409,7 @@ class _WeeklyReportDetailScreenState extends State<WeeklyReportDetailScreen> {
                       minLines: 3,
                       maxLines: 5,
                       decoration: InputDecoration(
-                        hintText: 'Write your feedback...',
+                        hintText: tr('Write your feedback...'),
                         counterText:
                             '${_feedbackController.text.length} characters',
                       ),

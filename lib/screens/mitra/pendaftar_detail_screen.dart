@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
+import 'package:pemrog_hambaallah/l10n/localized_text.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -88,9 +89,7 @@ class _PendaftarDetailScreenState extends State<PendaftarDetailScreen> {
                 onTap:
                     widget.applicant.portfolioUrl == null
                         ? null
-                        : () => _openDocument(
-                          widget.applicant.portfolioUrl!,
-                        ),
+                        : () => _openDocument(widget.applicant.portfolioUrl!),
               ),
               const SizedBox(height: 20),
               _buildMotivationSection(context),
@@ -388,11 +387,11 @@ class _PendaftarDetailScreenState extends State<PendaftarDetailScreen> {
     final parsed = Uri.tryParse(normalizedValue);
     if (parsed != null && parsed.hasScheme) return parsed;
     final apiUri = Uri.parse(ApiConfig.baseUrl);
-    var path = normalizedValue.startsWith('/')
-        ? normalizedValue
-        : '/$normalizedValue';
+    var path =
+        normalizedValue.startsWith('/') ? normalizedValue : '/$normalizedValue';
     if (!path.startsWith('/storage/')) {
-      path = '/storage${path.startsWith('/storage') ? path.substring(8) : path}';
+      path =
+          '/storage${path.startsWith('/storage') ? path.substring(8) : path}';
     }
     return apiUri.replace(path: path);
   }
@@ -409,7 +408,7 @@ class _PendaftarDetailScreenState extends State<PendaftarDetailScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Motivation Letter',
+            'Motivasi',
             style: Theme.of(
               context,
             ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),

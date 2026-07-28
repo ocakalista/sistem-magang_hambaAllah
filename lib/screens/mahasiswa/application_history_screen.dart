@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
+import 'package:pemrog_hambaallah/l10n/localized_text.dart';
 
 import '../../models/application_model.dart';
 import '../../models/nexus_app_state.dart';
@@ -72,10 +73,7 @@ class ApplicationHistoryScreen extends StatelessWidget {
         return route.isFirst;
       });
       if (!dashboardFound && context.mounted) {
-        Navigator.pushReplacementNamed(
-          context,
-          DashboardMahasiswa.routeName,
-        );
+        Navigator.pushReplacementNamed(context, DashboardMahasiswa.routeName);
       }
       return;
     }
@@ -171,9 +169,8 @@ class _ApplicationCard extends StatelessWidget {
                         const Spacer(),
                         Text(
                           _formatDate(application.appliedDate),
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: AppColors.neutral,
-                          ),
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(color: AppColors.neutral),
                         ),
                       ],
                     ),

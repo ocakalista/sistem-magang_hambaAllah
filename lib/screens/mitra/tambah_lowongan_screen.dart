@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
+import 'package:pemrog_hambaallah/l10n/localized_text.dart';
 import 'package:provider/provider.dart';
 
 import '../../models/admin_model.dart';
@@ -74,7 +75,7 @@ class _TambahLowonganScreenState extends State<TambahLowonganScreen> {
         ),
         actions: [
           IconButton(
-            tooltip: 'Lihat draft',
+            tooltip: tr('Lihat draft'),
             onPressed:
                 () => Navigator.push(
                   context,
@@ -103,7 +104,7 @@ class _TambahLowonganScreenState extends State<TambahLowonganScreen> {
                 label: 'Judul Posisi',
                 validator: (value) {
                   if (value?.trim().isEmpty ?? true) {
-                    return 'Judul posisi wajib diisi';
+                    return tr('Judul posisi wajib diisi');
                   }
                   return null;
                 },
@@ -124,7 +125,7 @@ class _TambahLowonganScreenState extends State<TambahLowonganScreen> {
                 prefixIcon: const Icon(Icons.location_on_outlined),
                 validator: (value) {
                   if (value?.trim().isEmpty ?? true) {
-                    return 'Lokasi wajib diisi';
+                    return tr('Lokasi wajib diisi');
                   }
                   return null;
                 },
@@ -158,10 +159,10 @@ class _TambahLowonganScreenState extends State<TambahLowonganScreen> {
                 maxLines: 6,
                 validator: (value) {
                   if (value?.trim().isEmpty ?? true) {
-                    return 'Deskripsi wajib diisi';
+                    return tr('Deskripsi wajib diisi');
                   }
                   if ((value?.trim().length ?? 0) < 20) {
-                    return 'Deskripsi minimal 20 karakter';
+                    return tr('Deskripsi minimal 20 karakter');
                   }
                   return null;
                 },
@@ -225,11 +226,25 @@ class _TambahLowonganScreenState extends State<TambahLowonganScreen> {
               Wrap(
                 spacing: 10,
                 runSpacing: 10,
-                children: const [
-                  _SuggestionChip(label: 'Competitive Stipend'),
-                  _SuggestionChip(label: 'Mentorship Program'),
-                  _SuggestionChip(label: 'Full-time Offer'),
-                  _SuggestionChip(label: 'Certificate'),
+                children: [
+                  _SuggestionChip(
+                    label: 'Uang Saku Kompetitif',
+                    onPressed:
+                        () => _addSuggestedBenefit('Uang Saku Kompetitif'),
+                  ),
+                  _SuggestionChip(
+                    label: 'Program Mentoring',
+                    onPressed: () => _addSuggestedBenefit('Program Mentoring'),
+                  ),
+                  _SuggestionChip(
+                    label: 'Peluang Kerja Penuh Waktu',
+                    onPressed:
+                        () => _addSuggestedBenefit('Peluang Kerja Penuh Waktu'),
+                  ),
+                  _SuggestionChip(
+                    label: 'Sertifikat',
+                    onPressed: () => _addSuggestedBenefit('Sertifikat'),
+                  ),
                 ],
               ),
             ],
@@ -308,7 +323,7 @@ class _TambahLowonganScreenState extends State<TambahLowonganScreen> {
       maxLines: maxLines,
       validator: validator,
       decoration: InputDecoration(
-        labelText: label,
+        labelText: tr(label),
         prefixIcon: prefixIcon,
         filled: true,
         fillColor: fillColor,
@@ -325,13 +340,13 @@ class _TambahLowonganScreenState extends State<TambahLowonganScreen> {
     return DropdownButtonFormField<String>(
       initialValue: _selectedKategori,
       items: const [
-        DropdownMenuItem(value: 'Engineering', child: Text('Engineering')),
+        DropdownMenuItem(value: 'Engineering', child: Text('Teknik')),
         DropdownMenuItem(value: 'Design', child: Text('Design')),
-        DropdownMenuItem(value: 'Business', child: Text('Business')),
-        DropdownMenuItem(value: 'Marketing', child: Text('Marketing')),
-        DropdownMenuItem(value: 'Other', child: Text('Other')),
+        DropdownMenuItem(value: 'Business', child: Text('Bisnis')),
+        DropdownMenuItem(value: 'Marketing', child: Text('Pemasaran')),
+        DropdownMenuItem(value: 'Other', child: Text('Lainnya')),
       ],
-      decoration: const InputDecoration(labelText: 'Kategori'),
+      decoration: InputDecoration(labelText: tr('Kategori')),
       onChanged: (value) {
         setState(() {
           _selectedKategori = value;
@@ -339,11 +354,23 @@ class _TambahLowonganScreenState extends State<TambahLowonganScreen> {
       },
       validator: (value) {
         if (value == null || value.isEmpty) {
-          return 'Kategori wajib dipilih';
+          return tr('Kategori wajib dipilih');
         }
         return null;
       },
     );
+  }
+
+  String _optionLabel(String option) {
+    return switch (option) {
+      'Remote' => 'Jarak Jauh',
+      'On-site' => 'Di Lokasi',
+      'Hybrid' => 'Hybrid',
+      'Full-time' => 'Penuh Waktu',
+      'Part-time' => 'Paruh Waktu',
+      'Project-based' => 'Berbasis Proyek',
+      _ => option,
+    };
   }
 
   Widget _buildChipSelector({
@@ -370,7 +397,7 @@ class _TambahLowonganScreenState extends State<TambahLowonganScreen> {
               options.map((option) {
                 final active = option == selected;
                 return ChoiceChip(
-                  label: Text(option),
+                  label: Text(_optionLabel(option)),
                   selected: active,
                   onSelected: (_) => onSelected(option),
                   selectedColor: AppColors.primary,
@@ -423,7 +450,7 @@ class _TambahLowonganScreenState extends State<TambahLowonganScreen> {
       onTap: onTap,
       child: InputDecorator(
         decoration: InputDecoration(
-          labelText: label,
+          labelText: tr(label),
           suffixIcon: const Icon(Icons.calendar_today_rounded),
         ),
         child: Text(
@@ -484,7 +511,7 @@ class _TambahLowonganScreenState extends State<TambahLowonganScreen> {
         Expanded(
           child: TextField(
             controller: controller,
-            decoration: InputDecoration(labelText: label),
+            decoration: InputDecoration(labelText: tr(label)),
           ),
         ),
         const SizedBox(width: 10),
@@ -509,6 +536,11 @@ class _TambahLowonganScreenState extends State<TambahLowonganScreen> {
       _benefits.add(value);
       _benefitController.clear();
     });
+  }
+
+  void _addSuggestedBenefit(String value) {
+    if (_benefits.contains(value)) return;
+    setState(() => _benefits.add(value));
   }
 
   Future<void> _pickDate(BuildContext context, bool isStart) async {
@@ -625,9 +657,10 @@ class _TambahLowonganScreenState extends State<TambahLowonganScreen> {
 }
 
 class _SuggestionChip extends StatelessWidget {
-  const _SuggestionChip({required this.label});
+  const _SuggestionChip({required this.label, required this.onPressed});
 
   final String label;
+  final VoidCallback onPressed;
 
   @override
   Widget build(BuildContext context) {
@@ -635,7 +668,7 @@ class _SuggestionChip extends StatelessWidget {
       label: Text(label),
       labelStyle: Theme.of(context).textTheme.bodyMedium,
       backgroundColor: AppColors.background,
-      onPressed: () {},
+      onPressed: onPressed,
     );
   }
 }

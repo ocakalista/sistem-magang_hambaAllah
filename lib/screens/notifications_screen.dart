@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
+import 'package:pemrog_hambaallah/l10n/localized_text.dart';
 import 'package:provider/provider.dart';
 
 import '../models/dosen_model.dart';
@@ -89,7 +90,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             const Icon(Icons.notifications_rounded, color: AppColors.primary),
             const SizedBox(width: 10),
             Text(
-              'Alerts',
+              'Notifikasi',
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
                 color: AppColors.primary,
                 fontWeight: FontWeight.w800,
@@ -108,7 +109,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                     state.unreadNotificationCount == 0
                         ? null
                         : state.markAllNotificationsAsRead,
-                tooltip: 'Mark all as read',
+                tooltip: tr('Mark all as read'),
                 icon: const Icon(
                   Icons.done_all_rounded,
                   color: AppColors.primary,
@@ -119,7 +120,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           Padding(
             padding: EdgeInsets.only(right: 20),
             child: IconButton(
-              tooltip: 'Profil',
+              tooltip: tr('Profil'),
               onPressed: () => _openProfile(context, role),
               icon: const CircleAvatar(
                 radius: 18,
@@ -164,7 +165,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                     children: [
                                       if (newNotifications.isNotEmpty) ...[
                                         _SectionHeader(
-                                          title: 'New Notifications',
+                                          title: 'Notifikasi Baru',
                                           count: unreadCount,
                                           emphasis: true,
                                         ),
@@ -389,8 +390,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
     if (notification.title == 'Internship Offer' ||
         notification.title == 'Logbook Approved') {
-      final application =
-          state.activeInternship ?? state.currentApplication;
+      final application = state.activeInternship ?? state.currentApplication;
       if (application != null && context.mounted) {
         Navigator.push(
           context,

@@ -1,4 +1,6 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
+import 'package:pemrog_hambaallah/l10n/localized_text.dart';
+import 'package:flutter/services.dart';
 
 import '../../models/application_model.dart';
 import '../../models/nexus_app_state.dart';
@@ -72,7 +74,7 @@ class InternshipDetailScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 20),
                   _SectionCard(
-                    title: 'Job Description',
+                    title: 'Deskripsi Pekerjaan',
                     child: Text(
                       internship.description,
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
@@ -85,7 +87,7 @@ class InternshipDetailScreen extends StatelessWidget {
 
                   // INJEKSI: Mengatasi error jika requirements dari API kosong
                   _SectionCard(
-                    title: 'Requirements',
+                    title: 'Persyaratan',
                     child:
                         internship.requirements.isEmpty
                             ? Text(
@@ -115,7 +117,7 @@ class InternshipDetailScreen extends StatelessWidget {
 
                   // INJEKSI: Mengatasi error jika benefits dari API kosong
                   _SectionCard(
-                    title: 'Benefits',
+                    title: 'Benefit',
                     child:
                         internship.benefits.isEmpty
                             ? Text(
@@ -158,7 +160,8 @@ class InternshipDetailScreen extends StatelessWidget {
                 ),
               ),
               child: IconButton(
-                onPressed: () {},
+                tooltip: tr('Salin info lowongan'),
+                onPressed: () => _copyInternshipInfo(context),
                 icon: const Icon(
                   Icons.share_outlined,
                   color: AppColors.primary,
@@ -197,7 +200,7 @@ class InternshipDetailScreen extends StatelessWidget {
                   label: Text(
                     state.hasAcceptedApplication
                         ? 'Magang Sedang Aktif'
-                        : 'Apply Now',
+                        : 'Daftar Sekarang',
                   ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.transparent,
@@ -210,6 +213,21 @@ class InternshipDetailScreen extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Future<void> _copyInternshipInfo(BuildContext context) async {
+    final text = [
+      internship.position,
+      internship.company,
+      internship.location,
+      internship.period,
+      internship.description,
+    ].where((item) => item.trim().isNotEmpty).join('\n');
+    await Clipboard.setData(ClipboardData(text: text));
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Info lowongan disalin.')));
   }
 }
 
@@ -505,8 +523,8 @@ class _BenefitRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final icon = switch (benefit) {
-      'Competitive Stipend' => '💰',
-      'Mentorship Program' => '🧭',
+      'Uang Saku Kompetitif' => '💰',
+      'Program Mentoring' => '🧭',
       _ => '🚀',
     };
 

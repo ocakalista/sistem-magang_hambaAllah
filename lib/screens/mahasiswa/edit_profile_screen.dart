@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
+import 'package:pemrog_hambaallah/l10n/localized_text.dart';
 
 import '../../models/nexus_app_state.dart';
 import '../../theme/app_theme.dart';
@@ -41,8 +42,7 @@ class _EditMahasiswaProfileScreenState
   String _profileValue(Map<String, dynamic> user, List<String> keys) {
     final profiles = [
       user,
-      if (user['data'] is Map)
-        (user['data'] as Map).cast<String, dynamic>(),
+      if (user['data'] is Map) (user['data'] as Map).cast<String, dynamic>(),
       if (user['mahasiswa'] is Map)
         (user['mahasiswa'] as Map).cast<String, dynamic>(),
       if (user['profile'] is Map)
@@ -94,7 +94,7 @@ class _EditMahasiswaProfileScreenState
               validator: (value) {
                 final semester = int.tryParse(value?.trim() ?? '');
                 if (semester == null || semester < 1 || semester > 14) {
-                  return 'Semester harus berupa angka 1–14.';
+                  return tr('Semester harus berupa angka 1–14.');
                 }
                 return null;
               },
@@ -108,7 +108,7 @@ class _EditMahasiswaProfileScreenState
               validator: (value) {
                 final phone = value?.trim() ?? '';
                 if (!RegExp(r'^[0-9+]{8,15}$').hasMatch(phone)) {
-                  return 'Masukkan nomor telepon yang valid.';
+                  return tr('Masukkan nomor telepon yang valid.');
                 }
                 return null;
               },
@@ -153,9 +153,7 @@ class _EditMahasiswaProfileScreenState
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            error.toString().replaceFirst('Exception: ', ''),
-          ),
+          content: Text(error.toString().replaceFirst('Exception: ', '')),
         ),
       );
     } finally {
@@ -185,10 +183,7 @@ class _ProfileField extends StatelessWidget {
       controller: controller,
       keyboardType: keyboardType,
       validator: validator,
-      decoration: InputDecoration(
-        labelText: label,
-        prefixIcon: Icon(icon),
-      ),
+      decoration: InputDecoration(labelText: tr(label), prefixIcon: Icon(icon)),
     );
   }
 }

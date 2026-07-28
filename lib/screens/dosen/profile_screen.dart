@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
+import 'package:pemrog_hambaallah/l10n/localized_text.dart';
 
 import '../../theme/app_theme.dart';
 import '../../widgets/logout_button.dart';
@@ -18,11 +19,10 @@ class DosenProfileScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final state = NexusScope.of(context);
-    final user =
-        state.currentUser ?? const <String, dynamic>{};
+    final user = state.currentUser ?? const <String, dynamic>{};
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(title: const Text('Profile')),
+      appBar: AppBar(title: const Text('Profil')),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(20),
@@ -86,11 +86,7 @@ class DosenProfileScreen extends StatelessWidget {
                 context,
                 Icons.phone_rounded,
                 'Telepon',
-                state.currentUserValue(const [
-                      'phone',
-                      'no_telp',
-                      'telepon',
-                    ]) ??
+                state.currentUserValue(const ['phone', 'no_telp', 'telepon']) ??
                     '-',
               ),
               const SizedBox(height: 12),
@@ -110,14 +106,8 @@ class DosenProfileScreen extends StatelessWidget {
               const SizedBox(height: 12),
               _buildActionTile(
                 context,
-                Icons.lock_outline_rounded,
-                'Ubah Kata Sandi',
-              ),
-              const SizedBox(height: 12),
-              _buildActionTile(
-                context,
                 Icons.settings_outlined,
-                'Pengaturan Notifikasi',
+                'Pengaturan',
                 onTap:
                     () => Navigator.pushNamed(
                       context,
@@ -164,10 +154,7 @@ class DosenProfileScreen extends StatelessWidget {
       return;
     }
     if (index == 1) {
-      Navigator.pushReplacement(
-        context,
-        nexusTabRoute(const StudentsScreen()),
-      );
+      Navigator.pushReplacement(context, nexusTabRoute(const StudentsScreen()));
       return;
     }
     if (index == 2) {

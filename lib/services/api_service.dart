@@ -44,10 +44,9 @@ class ApiService {
   }
 
   static Future<Map<String, dynamic>> fetchCurrentUser(String token) async {
-    final response = await http.get(
-      Uri.parse('$baseUrl/user'),
-      headers: _headers(token),
-    );
+    final response = await http
+        .get(Uri.parse('$baseUrl/user'), headers: _headers(token))
+        .timeout(_timeout);
     final decoded = _decode(response);
     if (decoded is Map<String, dynamic>) return decoded;
     if (decoded is Map) return decoded.cast<String, dynamic>();
@@ -60,15 +59,17 @@ class ApiService {
     required int semester,
     required String phone,
   }) async {
-    final response = await http.put(
-      Uri.parse('$baseUrl/user/profile'),
-      headers: _headers(token),
-      body: jsonEncode({
-        'name': name,
-        'semester': semester,
-        'phone': phone,
-      }),
-    );
+    final response = await http
+        .put(
+          Uri.parse('$baseUrl/user/profile'),
+          headers: _headers(token),
+          body: jsonEncode({
+            'name': name,
+            'semester': semester,
+            'phone': phone,
+          }),
+        )
+        .timeout(_timeout);
     final decoded = _decode(response);
     final data = decoded is Map ? decoded['data'] ?? decoded : decoded;
     if (data is Map) return data.cast<String, dynamic>();
@@ -115,11 +116,16 @@ class ApiService {
   ) async {
     final url = ApiConfig.uri('/login');
     try {
-      final response = await http.post(
-        url,
-        headers: _headers(null),
-        body: jsonEncode({'email_or_nim': emailOrNim, 'password': password}),
-      );
+      final response = await http
+          .post(
+            url,
+            headers: _headers(null),
+            body: jsonEncode({
+              'email_or_nim': emailOrNim,
+              'password': password,
+            }),
+          )
+          .timeout(_timeout);
       final decoded = _decode(response);
       if (decoded is Map<String, dynamic>) return decoded;
       if (decoded is Map) return decoded.cast<String, dynamic>();
@@ -132,11 +138,13 @@ class ApiService {
   static Future<Map<String, dynamic>> register(
     Map<String, dynamic> payload,
   ) async {
-    final response = await http.post(
-      ApiConfig.uri('/register'),
-      headers: _headers(null),
-      body: jsonEncode(payload),
-    );
+    final response = await http
+        .post(
+          ApiConfig.uri('/register'),
+          headers: _headers(null),
+          body: jsonEncode(payload),
+        )
+        .timeout(_timeout);
     final decoded = _decode(response);
     if (decoded is Map<String, dynamic>) return decoded;
     if (decoded is Map) return decoded.cast<String, dynamic>();
@@ -145,7 +153,11 @@ class ApiService {
 
   static Future<List<Map<String, dynamic>>> fetchMitra() async {
     return _dataList(
-      _decode(await http.get(ApiConfig.uri('/mitra'), headers: _headers(null))),
+      _decode(
+        await http
+            .get(ApiConfig.uri('/mitra'), headers: _headers(null))
+            .timeout(_timeout),
+      ),
     ).whereType<Map>().map((item) => item.cast<String, dynamic>()).toList();
   }
 
@@ -194,31 +206,14 @@ class ApiService {
   }
 
   static Future<List<PendingLowongan>> fetchAdminLowongan(String? token) async {
-    final url = Uri.parse('$baseUrl/admin/lowongan');
-    try {
-      final response = await http.get(
-        url,
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          if (token != null) 'Authorization': 'Bearer $token',
-        },
-      );
-      final decoded = jsonDecode(response.body);
-      final data =
-          decoded is Map && decoded.containsKey('data')
-              ? decoded['data']
-              : decoded;
-      if (data is List) {
-        return data
-            .cast<Map<String, dynamic>>()
-            .map(PendingLowongan.fromJson)
-            .toList();
-      }
-      throw Exception('Invalid response format for admin lowongan');
-    } catch (e) {
-      rethrow;
-    }
+    final response = await http
+        .get(ApiConfig.uri('/admin/lowongan'), headers: _headers(token))
+        .timeout(_timeout);
+    final data = _dataList(_decode(response));
+    return data
+        .whereType<Map>()
+        .map((item) => PendingLowongan.fromJson(item.cast<String, dynamic>()))
+        .toList();
   }
 
   static Future<List<PendingLowongan>> fetchPublicLowonganForAdmin() async {
@@ -257,85 +252,44 @@ class ApiService {
   }
 
   static Future<AdminProfile> fetchAdminProfile(String? token) async {
-    final url = Uri.parse('$baseUrl/admin/profile');
-    try {
-      final response = await http.get(
-        url,
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          if (token != null) 'Authorization': 'Bearer $token',
-        },
-      );
-      final decoded = jsonDecode(response.body);
-      final data =
-          decoded is Map && decoded.containsKey('data')
-              ? decoded['data']
-              : decoded;
-      if (data is Map<String, dynamic>) {
-        return AdminProfile.fromJson(data);
-      }
-      if (data is Map) {
-        return AdminProfile.fromJson(data.cast<String, dynamic>());
-      }
-      throw Exception('Invalid response format for Admin profile');
-    } catch (e) {
-      rethrow;
+    final response = await http
+        .get(ApiConfig.uri('/admin/profile'), headers: _headers(token))
+        .timeout(_timeout);
+    final decoded = _decode(response);
+    final data = decoded is Map ? decoded['data'] ?? decoded : decoded;
+    if (data is Map) {
+      return AdminProfile.fromJson(data.cast<String, dynamic>());
     }
+    throw Exception('Format profil admin tidak sesuai.');
   }
 
   static Future<List<UserAccount>> fetchUsers(String? token) async {
-    final url = Uri.parse('$baseUrl/admin/users');
-    try {
-      final response = await http.get(
-        url,
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          if (token != null) 'Authorization': 'Bearer $token',
-        },
-      );
-      final decoded = jsonDecode(response.body);
-      final data =
-          decoded is Map && decoded.containsKey('data')
-              ? decoded['data']
-              : decoded;
-      if (data is List) {
-        return data
-            .cast<Map<String, dynamic>>()
-            .map(UserAccount.fromJson)
-            .toList();
-      }
-      throw Exception('Invalid response format for users list');
-    } catch (e) {
-      rethrow;
-    }
+    final response = await http
+        .get(ApiConfig.uri('/admin/users'), headers: _headers(token))
+        .timeout(_timeout);
+    return _dataList(_decode(response))
+        .whereType<Map>()
+        .map((item) => UserAccount.fromJson(item.cast<String, dynamic>()))
+        .toList();
   }
 
   static Future<void> approveLowongan(String? token, String id) async {
-    final url = Uri.parse('$baseUrl/admin/lowongan/$id/approve');
-    try {
-      var response = await http.post(
-        url,
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          if (token != null) 'Authorization': 'Bearer $token',
-        },
-      );
-      if (response.statusCode == 404) {
-        response = await http.put(
-          ApiConfig.uri('/admin/lowongan/$id/validasi'),
+    var response = await http
+        .post(
+          ApiConfig.uri('/admin/lowongan/$id/approve'),
           headers: _headers(token),
-          body: jsonEncode({'status_approval': 'approved'}),
-        );
-      }
-      if (response.statusCode < 200 || response.statusCode >= 300) {
-        throw Exception('Failed to approve lowongan: ${response.statusCode}');
-      }
-    } catch (e) {
-      rethrow;
+        )
+        .timeout(_timeout);
+    if (response.statusCode == 404) {
+      response = await http
+          .put(
+            ApiConfig.uri('/admin/lowongan/$id/validasi'),
+            headers: _headers(token),
+            body: jsonEncode({'status_approval': 'approved'}),
+          )
+          .timeout(_timeout);
     }
+    _decode(response);
   }
 
   static Future<void> rejectLowongan(
@@ -343,57 +297,40 @@ class ApiService {
     String id,
     String reason,
   ) async {
-    final url = Uri.parse('$baseUrl/admin/lowongan/$id/reject');
-    try {
-      var response = await http.post(
-        url,
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          if (token != null) 'Authorization': 'Bearer $token',
-        },
-        body: jsonEncode({'reason': reason}),
-      );
-      if (response.statusCode == 404) {
-        response = await http.put(
-          ApiConfig.uri('/admin/lowongan/$id/validasi'),
+    var response = await http
+        .post(
+          ApiConfig.uri('/admin/lowongan/$id/reject'),
           headers: _headers(token),
-          body: jsonEncode({'status_approval': 'rejected'}),
-        );
-      }
-      if (response.statusCode < 200 || response.statusCode >= 300) {
-        throw Exception('Failed to reject lowongan: ${response.statusCode}');
-      }
-    } catch (e) {
-      rethrow;
+          body: jsonEncode({'reason': reason}),
+        )
+        .timeout(_timeout);
+    if (response.statusCode == 404) {
+      response = await http
+          .put(
+            ApiConfig.uri('/admin/lowongan/$id/validasi'),
+            headers: _headers(token),
+            body: jsonEncode({'status_approval': 'rejected'}),
+          )
+          .timeout(_timeout);
     }
+    _decode(response);
   }
 
   static Future<List<Internship>> fetchLowonganMahasiswa(String? token) async {
-    final url = Uri.parse('$baseUrl/lowongan');
-    try {
-      final response = await http.get(
-        url,
-        headers: {
-          'Accept': 'application/json',
-          if (token != null) 'Authorization': 'Bearer $token',
-        },
-      );
-      final decoded = _decode(response);
-      return _dataList(decoded)
-          .whereType<Map>()
-          .map((item) => Internship.fromJson(item.cast<String, dynamic>()))
-          .toList();
-    } catch (_) {
-      rethrow;
-    }
+    final response = await http
+        .get(ApiConfig.uri('/lowongan'), headers: _headers(token))
+        .timeout(_timeout);
+    final decoded = _decode(response);
+    return _dataList(decoded)
+        .whereType<Map>()
+        .map((item) => Internship.fromJson(item.cast<String, dynamic>()))
+        .toList();
   }
 
   static Future<Map<String, dynamic>> fetchLowonganDetail(String id) async {
-    final response = await http.get(
-      Uri.parse('$baseUrl/lowongan/$id'),
-      headers: _headers(null),
-    );
+    final response = await http
+        .get(ApiConfig.uri('/lowongan/$id'), headers: _headers(null))
+        .timeout(_timeout);
     final decoded = _decode(response);
     if (decoded is Map<String, dynamic>) return decoded;
     if (decoded is Map) return decoded.cast<String, dynamic>();
@@ -403,20 +340,18 @@ class ApiService {
   static Future<List<Map<String, dynamic>>> fetchApplicationHistory(
     String token,
   ) async {
-    final response = await http.get(
-      Uri.parse('$baseUrl/pendaftaran/riwayat'),
-      headers: _headers(token),
-    );
+    final response = await http
+        .get(ApiConfig.uri('/pendaftaran/riwayat'), headers: _headers(token))
+        .timeout(_timeout);
     return _dataList(
       _decode(response),
     ).whereType<Map>().map((item) => item.cast<String, dynamic>()).toList();
   }
 
   static Future<List<Map<String, dynamic>>> fetchLogbooks(String token) async {
-    final response = await http.get(
-      Uri.parse('$baseUrl/logbook'),
-      headers: _headers(token),
-    );
+    final response = await http
+        .get(ApiConfig.uri('/logbook'), headers: _headers(token))
+        .timeout(_timeout);
     return _dataList(
       _decode(response),
     ).whereType<Map>().map((item) => item.cast<String, dynamic>()).toList();
@@ -431,10 +366,7 @@ class ApiService {
     required List<int> reportBytes,
     required String reportFileName,
   }) async {
-    final request = http.MultipartRequest(
-      'POST',
-      Uri.parse('$baseUrl/logbook'),
-    );
+    final request = http.MultipartRequest('POST', ApiConfig.uri('/logbook'));
     request.headers.addAll({
       'Accept': 'application/json',
       'Authorization': 'Bearer $token',
@@ -487,11 +419,13 @@ class ApiService {
     String applicationId,
     String status,
   ) async {
-    final response = await http.put(
-      Uri.parse('$baseUrl/pendaftaran/$applicationId/status'),
-      headers: _headers(token),
-      body: jsonEncode({'status': status}),
-    );
+    final response = await http
+        .put(
+          ApiConfig.uri('/pendaftaran/$applicationId/status'),
+          headers: _headers(token),
+          body: jsonEncode({'status': status}),
+        )
+        .timeout(_timeout);
     _decode(response);
   }
 
@@ -501,11 +435,16 @@ class ApiService {
     String status,
     String feedback,
   ) async {
-    final response = await http.put(
-      Uri.parse('$baseUrl/logbook/$logbookId/status'),
-      headers: _headers(token),
-      body: jsonEncode({'status_validasi': status, 'feedback_dosen': feedback}),
-    );
+    final response = await http
+        .put(
+          ApiConfig.uri('/logbook/$logbookId/status'),
+          headers: _headers(token),
+          body: jsonEncode({
+            'status_validasi': status,
+            'feedback_dosen': feedback,
+          }),
+        )
+        .timeout(_timeout);
     _decode(response);
   }
 
@@ -513,11 +452,13 @@ class ApiService {
     String token,
     Map<String, dynamic> payload,
   ) async {
-    final response = await http.post(
-      Uri.parse('$baseUrl/lowongan'),
-      headers: _headers(token),
-      body: jsonEncode(payload),
-    );
+    final response = await http
+        .post(
+          ApiConfig.uri('/lowongan'),
+          headers: _headers(token),
+          body: jsonEncode(payload),
+        )
+        .timeout(_timeout);
     final decoded = _decode(response);
     final data = decoded is Map ? decoded['data'] : null;
     if (data is Map) {
@@ -527,10 +468,9 @@ class ApiService {
   }
 
   static Future<Map<String, dynamic>> fetchAdminDashboard(String token) async {
-    final response = await http.get(
-      Uri.parse('$baseUrl/admin/dashboard'),
-      headers: _headers(token),
-    );
+    final response = await http
+        .get(ApiConfig.uri('/admin/dashboard'), headers: _headers(token))
+        .timeout(_timeout);
     final decoded = _decode(response);
     final data = decoded is Map ? decoded['data'] : null;
     if (data is Map<String, dynamic>) return data;
@@ -539,10 +479,9 @@ class ApiService {
   }
 
   static Future<void> logout(String token) async {
-    final response = await http.post(
-      Uri.parse('$baseUrl/logout'),
-      headers: _headers(token),
-    );
+    final response = await http
+        .post(ApiConfig.uri('/logout'), headers: _headers(token))
+        .timeout(_timeout);
     _decode(response);
   }
 
@@ -567,7 +506,7 @@ class ApiService {
     String? portfolioFileName,
     String? portfolioLink,
   }) async {
-    final url = Uri.parse('$baseUrl/pendaftaran');
+    final url = ApiConfig.uri('/pendaftaran');
     try {
       var request = http.MultipartRequest('POST', url);
 

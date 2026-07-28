@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
+import 'package:pemrog_hambaallah/l10n/localized_text.dart';
 
 import '../../models/application_model.dart';
 import '../../models/nexus_app_state.dart';
@@ -147,7 +148,7 @@ class _DashboardMahasiswaState extends State<DashboardMahasiswa> {
               TextField(
                 onChanged: (value) => setState(() => _query = value),
                 decoration: InputDecoration(
-                  hintText: 'Search internships...',
+                  hintText: tr('Search internships...'),
                   prefixIcon: const Icon(Icons.search_rounded),
                   suffixIcon: IconButton(
                     onPressed: _showFilter,
@@ -353,10 +354,7 @@ class _DashboardMahasiswaState extends State<DashboardMahasiswa> {
           }
 
           if (index == 2) {
-            Navigator.push(
-              context,
-              nexusTabRoute(const NotificationsScreen()),
-            );
+            Navigator.push(context, nexusTabRoute(const NotificationsScreen()));
             return;
           }
 
@@ -405,11 +403,6 @@ class _DashboardMahasiswaState extends State<DashboardMahasiswa> {
     );
     if (!mounted || selected == null) return;
     setState(() => _categoryFilter = selected.isEmpty ? null : selected);
-  }
-
-  String _formatDate(DateTime date) {
-    if (date.millisecondsSinceEpoch == 0) return '-';
-    return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
   }
 
   void _openApplication(BuildContext context, Application application) {
@@ -551,42 +544,45 @@ class _ActivityTile extends StatelessWidget {
           borderRadius: BorderRadius.circular(20),
         ),
         child: Row(
-        children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: 0.12),
-              shape: BoxShape.circle,
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.12),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.history_rounded,
+                color: AppColors.primary,
+              ),
             ),
-            child: const Icon(Icons.history_rounded, color: AppColors.primary),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Lamaran ${application.status.label}',
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '${application.internship.position} - ${application.internship.company}',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodySmall?.copyWith(color: AppColors.neutral),
-                ),
-              ],
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Lamaran ${application.status.label}',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${application.internship.position} - ${application.internship.company}',
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodySmall?.copyWith(color: AppColors.neutral),
+                  ),
+                ],
+              ),
             ),
-          ),
-          const SizedBox(width: 10),
-          Text(
-            _formatDate(application.appliedDate),
-            style: Theme.of(
-              context,
-            ).textTheme.labelSmall?.copyWith(color: AppColors.neutral),
-          ),
+            const SizedBox(width: 10),
+            Text(
+              _formatDate(application.appliedDate),
+              style: Theme.of(
+                context,
+              ).textTheme.labelSmall?.copyWith(color: AppColors.neutral),
+            ),
           ],
         ),
       ),

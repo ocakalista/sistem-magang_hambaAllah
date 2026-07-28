@@ -1,6 +1,7 @@
 import 'dart:convert';
 
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
+import 'package:pemrog_hambaallah/l10n/localized_text.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -142,7 +143,7 @@ class _ApplyScreenState extends State<ApplyScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Apply for Internship',
+                  'Daftar Magang',
                   style: Theme.of(
                     context,
                   ).textTheme.headlineMedium?.copyWith(fontSize: 30),
@@ -161,7 +162,7 @@ class _ApplyScreenState extends State<ApplyScreen> {
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
-                        '${widget.internship.position} at ${widget.internship.company}',
+                        '${widget.internship.position} di ${widget.internship.company}',
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: AppColors.neutral,
                         ),
@@ -195,7 +196,7 @@ class _ApplyScreenState extends State<ApplyScreen> {
             Expanded(
               child: OutlinedButton(
                 onPressed: _saveDraft,
-                child: const Text('Save Draft'),
+                child: const Text('Simpan Draft'),
               ),
             ),
             const SizedBox(width: 12),
@@ -239,7 +240,7 @@ class _ApplyScreenState extends State<ApplyScreen> {
                                                     _portfolioController.text
                                                         .trim()
                                                         .isEmpty
-                                                ? 'Isi URL Portofolio atau Upload filenya!'
+                                                ? 'Isi URL portofolio atau upload filenya!'
                                                 : 'Motivasi minimal 10 karakter!',
                                           ),
                                           backgroundColor:
@@ -275,9 +276,7 @@ class _ApplyScreenState extends State<ApplyScreen> {
                             ),
                           )
                           : Text(
-                            _currentStep == 2
-                                ? 'Submit Application'
-                                : 'Continue',
+                            _currentStep == 2 ? 'Kirim Lamaran' : 'Lanjut',
                           ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.transparent,
@@ -301,29 +300,29 @@ class _ApplyScreenState extends State<ApplyScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _cardTitle('Personal Details'),
+            _cardTitle('Data Diri'),
             const SizedBox(height: 14),
             TextFormField(
               controller: _fullNameController,
-              decoration: const InputDecoration(labelText: 'Full Name'),
+              decoration: InputDecoration(labelText: tr('Nama Lengkap')),
               validator:
                   (value) =>
                       (value == null || value.trim().isEmpty)
-                          ? 'Please enter your full name'
+                          ? 'Nama lengkap wajib diisi'
                           : null,
             ),
             const SizedBox(height: 14),
             TextFormField(
               controller: _phoneController,
               keyboardType: TextInputType.phone,
-              decoration: const InputDecoration(
-                labelText: 'Phone Number',
-                hintText: '+62...',
+              decoration: InputDecoration(
+                labelText: tr('Nomor Telepon'),
+                hintText: tr('+62...'),
               ),
               validator:
                   (value) =>
                       (value == null || value.trim().isEmpty)
-                          ? 'Please enter your phone number'
+                          ? 'Nomor telepon wajib diisi'
                           : null,
             ),
             const SizedBox(height: 14),
@@ -331,15 +330,17 @@ class _ApplyScreenState extends State<ApplyScreen> {
               controller: _semesterController,
               keyboardType: TextInputType.number,
               inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-              decoration: const InputDecoration(
-                labelText: 'University Semester',
-                hintText: 'e.g. 6',
+              decoration: InputDecoration(
+                labelText: tr('Semester'),
+                hintText: tr('Contoh: 6'),
               ),
               validator: (value) {
                 final semester = int.tryParse(value?.trim() ?? '');
-                if (semester == null) return 'Semester harus berupa angka';
+                if (semester == null) {
+                  return tr('Semester harus berupa angka');
+                }
                 if (semester < 1 || semester > 14) {
-                  return 'Semester harus antara 1 dan 14';
+                  return tr('Semester harus antara 1 dan 14');
                 }
                 return null;
               },
@@ -362,15 +363,15 @@ class _ApplyScreenState extends State<ApplyScreen> {
                   ),
                   const SizedBox(height: 10),
                   _SnapshotRow(
-                    label: 'Position',
+                    label: 'Posisi',
                     value: widget.internship.position,
                   ),
                   _SnapshotRow(
-                    label: 'Company',
+                    label: 'Perusahaan',
                     value: widget.internship.company,
                   ),
                   _SnapshotRow(
-                    label: 'Location',
+                    label: 'Lokasi',
                     value: widget.internship.location,
                   ),
                 ],
@@ -388,13 +389,13 @@ class _ApplyScreenState extends State<ApplyScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _cardTitle('Documents'),
+          _cardTitle('Berkas'),
           const SizedBox(height: 14),
           _UploadCard(
             title: 'Upload CV / Resume',
             subtitle: 'PDF/DOCX/JPG, Max 5MB',
             icon: Icons.description_outlined,
-            actionLabel: _cvFileName == null ? 'Upload' : 'Replace',
+            actionLabel: _cvFileName == null ? 'Upload' : 'Ganti',
             onAction: _pickCvFile,
             fileName: _cvFileName,
             progress: _cvUploadProgress,
@@ -419,7 +420,7 @@ class _ApplyScreenState extends State<ApplyScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'Motivation Letter',
+                      'Motivasi',
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w700,
                       ),
@@ -437,9 +438,10 @@ class _ApplyScreenState extends State<ApplyScreen> {
                   controller: _motivationController,
                   maxLines: 7,
                   maxLength: 1000,
-                  decoration: const InputDecoration(
-                    hintText:
-                        'Tuliskan alasan Anda mendaftar (min. 10 karakter)',
+                  decoration: InputDecoration(
+                    hintText: tr(
+                      'Tuliskan alasan Anda mendaftar (min. 10 karakter)',
+                    ),
                   ),
                 ),
               ],
@@ -456,10 +458,10 @@ class _ApplyScreenState extends State<ApplyScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _cardTitle('Review Application'),
+          _cardTitle('Tinjau Lamaran'),
           const SizedBox(height: 14),
           _ReviewCard(
-            title: 'Personal Details',
+            title: 'Data Diri',
             onEdit:
                 () => _pageController.animateToPage(
                   0,
@@ -467,14 +469,14 @@ class _ApplyScreenState extends State<ApplyScreen> {
                   curve: Curves.easeOut,
                 ),
             children: [
-              _SnapshotRow(label: 'Full Name', value: _fullNameController.text),
-              _SnapshotRow(label: 'Phone', value: _phoneController.text),
+              _SnapshotRow(label: 'Nama', value: _fullNameController.text),
+              _SnapshotRow(label: 'Telepon', value: _phoneController.text),
               _SnapshotRow(label: 'Semester', value: _semesterController.text),
             ],
           ),
           const SizedBox(height: 14),
           _ReviewCard(
-            title: 'Uploads',
+            title: 'Berkas',
             onEdit:
                 () => _pageController.animateToPage(
                   1,
@@ -482,15 +484,17 @@ class _ApplyScreenState extends State<ApplyScreen> {
                   curve: Curves.easeOut,
                 ),
             children: [
-              _SnapshotRow(label: 'CV', value: _cvFileName ?? 'Not uploaded'),
               _SnapshotRow(
-                label: 'Portfolio',
+                label: 'CV',
+                value: _cvFileName ?? 'Belum di-upload',
+              ),
+              _SnapshotRow(
+                label: 'Portofolio',
                 value: _portfolioSelection ?? _portfolioController.text,
               ),
               _SnapshotRow(
-                label: 'Letter',
-                value:
-                    '${_motivationController.text.length} characters written',
+                label: 'Motivasi',
+                value: '${_motivationController.text.length} karakter ditulis',
               ),
             ],
           ),
@@ -718,7 +722,7 @@ class _StepIndicator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final steps = ['Details', 'Uploads', 'Review'];
+    final steps = ['Data Diri', 'Berkas', 'Tinjau'];
     return Row(
       children: List.generate(steps.length * 2 - 1, (index) {
         if (index.isOdd) {
@@ -977,14 +981,14 @@ class _PortfolioDropZone extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Upload Work Portfolio',
+                      'Upload Portofolio',
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w700,
                       ),
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Link or Document',
+                      'Link atau Dokumen',
                       style: Theme.of(
                         context,
                       ).textTheme.bodySmall?.copyWith(color: AppColors.neutral),
@@ -1016,7 +1020,7 @@ class _PortfolioDropZone extends StatelessWidget {
                   ),
                   const SizedBox(height: 10),
                   Text(
-                    selection ?? 'Tap to attach portfolio',
+                    selection ?? 'Ketuk untuk melampirkan portofolio',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       fontWeight: FontWeight.w600,
                     ),
@@ -1025,8 +1029,8 @@ class _PortfolioDropZone extends StatelessWidget {
                   const SizedBox(height: 6),
                   Text(
                     selection == null
-                        ? 'Pilih File atau Gunakan URL'
-                        : 'Portfolio berhasil dilampirkan',
+                        ? 'Pilih file atau gunakan URL'
+                        : 'Portofolio berhasil dilampirkan',
                     style: Theme.of(
                       context,
                     ).textTheme.bodySmall?.copyWith(color: AppColors.neutral),
@@ -1040,9 +1044,9 @@ class _PortfolioDropZone extends StatelessWidget {
             const SizedBox(height: 12),
             TextField(
               controller: controller,
-              decoration: const InputDecoration(
-                labelText: 'Ketikkan URL Portfolio',
-                hintText: 'Contoh: behance.net/profil-anda',
+              decoration: InputDecoration(
+                labelText: tr('Ketikkan URL Portofolio'),
+                hintText: tr('Contoh: behance.net/profil-anda'),
               ),
             ),
           ],

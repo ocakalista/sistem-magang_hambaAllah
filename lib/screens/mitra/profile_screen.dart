@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
+import 'package:pemrog_hambaallah/l10n/localized_text.dart';
 import 'package:provider/provider.dart';
 
 import '../../theme/app_theme.dart';
@@ -22,7 +23,7 @@ class MitraProfileScreen extends StatelessWidget {
       backgroundColor: AppColors.background,
       appBar: AppBar(
         title: Text(
-          'Profile',
+          'Profil',
           style: Theme.of(context).textTheme.titleLarge?.copyWith(
             color: AppColors.primary,
             fontWeight: FontWeight.w700,
@@ -103,14 +104,8 @@ class MitraProfileScreen extends StatelessWidget {
                   const SizedBox(height: 12),
                   _buildActionTile(
                     context,
-                    Icons.lock_outline_rounded,
-                    'Ubah Kata Sandi',
-                  ),
-                  const SizedBox(height: 12),
-                  _buildActionTile(
-                    context,
                     Icons.settings_outlined,
-                    'Pengaturan Notifikasi',
+                    'Pengaturan',
                     onTap:
                         () => Navigator.pushNamed(
                           context,

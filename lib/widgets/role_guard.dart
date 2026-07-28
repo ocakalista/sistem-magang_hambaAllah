@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
 
 import '../models/nexus_app_state.dart';
 import '../screens/login_screen.dart';

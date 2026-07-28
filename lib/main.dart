@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 
+import 'l10n/app_localizations.dart';
 import 'models/mitra_provider.dart';
 import 'models/nexus_app_state.dart';
 import 'screens/mahasiswa/dashboard_mahasiswa.dart';
@@ -37,6 +39,23 @@ class _NexusAppState extends State<NexusApp> {
   final NexusAppState _appState = NexusAppState();
 
   @override
+  void initState() {
+    super.initState();
+    _appState.addListener(_refresh);
+  }
+
+  void _refresh() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    _appState.removeListener(_refresh);
+    _appState.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [ChangeNotifierProvider(create: (_) => MitraProvider())],
@@ -46,6 +65,14 @@ class _NexusAppState extends State<NexusApp> {
           debugShowCheckedModeBanner: false,
           title: 'Nexus',
           theme: AppTheme.lightTheme,
+          locale: _appState.locale,
+          supportedLocales: AppLocalizations.supportedLocales,
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
           initialRoute: SplashScreen.routeName,
           // TODO: Enhance role-based routing to protect all role-specific routes behind auth+role checks
           // - Admin routes: /admin (requires UserRole.admin)

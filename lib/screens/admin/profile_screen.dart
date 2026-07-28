@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
+import 'package:pemrog_hambaallah/l10n/localized_text.dart';
 
 import '../../models/admin_model.dart';
 import '../../models/nexus_app_state.dart';
@@ -185,7 +186,7 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
           const SizedBox(height: 12),
           _buildInfoTile(context, Icons.email_rounded, 'Email', profile.email),
           const SizedBox(height: 12),
-          _buildInfoTile(context, Icons.badge_rounded, 'Role', profile.role),
+          _buildInfoTile(context, Icons.badge_rounded, 'Peran', profile.role),
           const SizedBox(height: 12),
           _buildInfoTile(
             context,
@@ -230,14 +231,8 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
           const SizedBox(height: 20),
           _buildActionTile(
             context,
-            Icons.lock_outline_rounded,
-            'Ubah Kata Sandi',
-          ),
-          const SizedBox(height: 12),
-          _buildActionTile(
-            context,
             Icons.settings_outlined,
-            'Pengaturan Notifikasi',
+            'Pengaturan',
             onTap:
                 () => Navigator.pushNamed(
                   context,

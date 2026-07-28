@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
+import 'package:pemrog_hambaallah/l10n/localized_text.dart';
 
 import '../../models/admin_model.dart';
 import '../../models/nexus_app_state.dart';
@@ -244,7 +245,7 @@ class LowonganScreen extends StatelessWidget {
               const SizedBox(height: 12),
               TextField(
                 controller: controller,
-                decoration: const InputDecoration(labelText: 'Alasan'),
+                decoration: InputDecoration(labelText: tr('Alasan')),
                 maxLines: 3,
               ),
             ],

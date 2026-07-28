@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
+import 'package:pemrog_hambaallah/l10n/localized_text.dart';
 
 import '../../models/dosen_model.dart';
 import '../../models/nexus_app_state.dart';
@@ -126,7 +127,7 @@ class _StudentsScreenState extends State<StudentsScreen> {
               child: TextField(
                 controller: _searchController,
                 decoration: InputDecoration(
-                  hintText: 'Cari mahasiswa...',
+                  hintText: tr('Cari mahasiswa...'),
                   prefixIcon: const Icon(Icons.search_rounded),
                   suffixIcon:
                       _searchController.text.isEmpty

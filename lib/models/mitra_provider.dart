@@ -46,46 +46,22 @@ class MitraProvider extends ChangeNotifier {
       return;
     }
 
+    final infoFuture = _loadMitraInfo(token);
+
     try {
-      final user = await ApiService.fetchCurrentUser(token);
-      final data =
-          user['data'] is Map
-              ? (user['data'] as Map).cast<String, dynamic>()
-              : user;
-      final mitra =
-          data['mitra'] is Map
-              ? (data['mitra'] as Map).cast<String, dynamic>()
-              : data['profile'] is Map
-              ? (data['profile'] as Map).cast<String, dynamic>()
-              : const <String, dynamic>{};
-      String firstValue(List<String> keys, {String fallback = ''}) {
-        for (final source in [mitra, data, user]) {
-          for (final key in keys) {
-            final value = source[key]?.toString().trim();
-            if (value != null && value.isNotEmpty) return value;
-          }
-        }
-        return fallback;
-      }
-      info = MitraInfo(
-        idMitra: firstValue(const ['id_mitra', 'id']),
-        idUser: firstValue(const ['id_user', 'user_id', 'id']),
-        companyName: firstValue(
-          const ['nama_perusahaan', 'company_name', 'company', 'name'],
-          fallback: 'Mitra',
-        ),
-      );
       final fetched = await ApiService.fetchMitraLowongan(token);
       lowonganList = fetched;
-      final applicants = <PendaftarTerbaru>[];
+      stats = stats.copyWith(totalLowongan: fetched.length);
+
+      // Daftar lowongan adalah data utama halaman. Tampilkan segera tanpa
+      // menunggu profil dan request pelamar untuk setiap lowongan.
+      isLoadingLowongan = false;
+      notifyListeners();
+
       final applicantRows = await Future.wait(
-        fetched.map(
-          (lowongan) async => (
-            lowongan: lowongan,
-            rows: await ApiService.fetchApplicants(token, lowongan.id),
-          ),
-        ),
+        fetched.map((lowongan) => _loadApplicants(token, lowongan)),
       );
+      final applicants = <PendaftarTerbaru>[];
       for (final result in applicantRows) {
         final lowongan = result.lowongan;
         final rows = result.rows;
@@ -154,9 +130,63 @@ class MitraProvider extends ChangeNotifier {
       );
     } catch (e) {
       lowonganError = e.toString();
+    } finally {
+      isLoadingLowongan = false;
+      notifyListeners();
     }
-    isLoadingLowongan = false;
-    notifyListeners();
+
+    await infoFuture;
+  }
+
+  Future<void> _loadMitraInfo(String token) async {
+    try {
+      final user = await ApiService.fetchCurrentUser(token);
+      final data =
+          user['data'] is Map
+              ? (user['data'] as Map).cast<String, dynamic>()
+              : user;
+      final mitra =
+          data['mitra'] is Map
+              ? (data['mitra'] as Map).cast<String, dynamic>()
+              : data['profile'] is Map
+              ? (data['profile'] as Map).cast<String, dynamic>()
+              : const <String, dynamic>{};
+
+      String firstValue(List<String> keys, {String fallback = ''}) {
+        for (final source in [mitra, data, user]) {
+          for (final key in keys) {
+            final value = source[key]?.toString().trim();
+            if (value != null && value.isNotEmpty) return value;
+          }
+        }
+        return fallback;
+      }
+
+      info = MitraInfo(
+        idMitra: firstValue(const ['id_mitra', 'id']),
+        idUser: firstValue(const ['id_user', 'user_id', 'id']),
+        companyName: firstValue(const [
+          'nama_perusahaan',
+          'company_name',
+          'company',
+          'name',
+        ], fallback: 'Mitra'),
+      );
+      notifyListeners();
+    } catch (_) {
+      // Profil bukan prasyarat untuk menampilkan daftar lowongan.
+    }
+  }
+
+  Future<({LowonganMitra lowongan, List<Map<String, dynamic>> rows})>
+  _loadApplicants(String token, LowonganMitra lowongan) async {
+    try {
+      final rows = await ApiService.fetchApplicants(token, lowongan.id);
+      return (lowongan: lowongan, rows: rows);
+    } catch (_) {
+      // Satu endpoint pelamar yang gagal tidak boleh menahan semua lowongan.
+      return (lowongan: lowongan, rows: <Map<String, dynamic>>[]);
+    }
   }
 
   Future<void> tambahLowongan(

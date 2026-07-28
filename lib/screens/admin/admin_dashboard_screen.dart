@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
+import 'package:pemrog_hambaallah/l10n/localized_text.dart';
 
 import '../../models/nexus_app_state.dart';
 import '../../models/admin_model.dart';
@@ -90,7 +91,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           Padding(
             padding: EdgeInsets.only(right: 16),
             child: IconButton(
-              tooltip: 'Profil admin',
+              tooltip: tr('Profil admin'),
               onPressed:
                   () => Navigator.push(
                     context,
@@ -323,8 +324,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               const SizedBox(height: 12),
               TextField(
                 controller: controller,
-                decoration: const InputDecoration(
-                  labelText: 'Reason for rejection',
+                decoration: InputDecoration(
+                  labelText: tr('Reason for rejection'),
                 ),
                 maxLines: 3,
               ),
@@ -333,7 +334,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
+              child: const Text('Batal'),
             ),
             ElevatedButton(
               onPressed: () {

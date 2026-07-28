@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
+import 'package:pemrog_hambaallah/l10n/localized_text.dart';
 
 import '../../theme/app_theme.dart';
 import '../../widgets/logout_button.dart';
@@ -19,11 +20,7 @@ class DashboardMahasiswaProfileScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final user =
         NexusScope.of(context).currentUser ?? const <String, dynamic>{};
-    final name = _profileValue(user, const [
-      'name',
-      'nama_lengkap',
-      'nama',
-    ]);
+    final name = _profileValue(user, const ['name', 'nama_lengkap', 'nama']);
     final identifier = _profileValue(user, const [
       'email_or_nim',
       'nim',
@@ -32,7 +29,7 @@ class DashboardMahasiswaProfileScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Profile'),
+        title: const Text('Profil'),
         actions: [
           TextButton.icon(
             onPressed:
@@ -113,11 +110,7 @@ class DashboardMahasiswaProfileScreen extends StatelessWidget {
                 context,
                 Icons.phone_rounded,
                 'Telepon',
-                _profileValue(user, const [
-                  'phone',
-                  'no_telp',
-                  'telepon',
-                ]),
+                _profileValue(user, const ['phone', 'no_telp', 'telepon']),
               ),
               const SizedBox(height: 24),
               Text(
@@ -129,15 +122,8 @@ class DashboardMahasiswaProfileScreen extends StatelessWidget {
               const SizedBox(height: 12),
               _buildActionTile(
                 context,
-                Icons.lock_outline_rounded,
-                'Ubah Kata Sandi',
-                onTap: () {},
-              ),
-              const SizedBox(height: 12),
-              _buildActionTile(
-                context,
                 Icons.settings_outlined,
-                'Pengaturan Notifikasi',
+                'Pengaturan',
                 onTap:
                     () => Navigator.pushNamed(
                       context,
@@ -176,10 +162,7 @@ class DashboardMahasiswaProfileScreen extends StatelessWidget {
         return route.isFirst;
       });
       if (!dashboardFound && context.mounted) {
-        Navigator.pushReplacementNamed(
-          context,
-          DashboardMahasiswa.routeName,
-        );
+        Navigator.pushReplacementNamed(context, DashboardMahasiswa.routeName);
       }
       return;
     }
@@ -238,8 +221,7 @@ class DashboardMahasiswaProfileScreen extends StatelessWidget {
   String _profileValue(Map<String, dynamic> user, List<String> keys) {
     final nestedProfiles = [
       user,
-      if (user['data'] is Map)
-        (user['data'] as Map).cast<String, dynamic>(),
+      if (user['data'] is Map) (user['data'] as Map).cast<String, dynamic>(),
       if (user['mahasiswa'] is Map)
         (user['mahasiswa'] as Map).cast<String, dynamic>(),
       if (user['profile'] is Map)

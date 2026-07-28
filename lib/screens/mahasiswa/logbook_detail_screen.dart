@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
+import 'package:pemrog_hambaallah/l10n/localized_text.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../config/api_config.dart';
@@ -107,10 +108,7 @@ class LogbookDetailScreen extends StatelessWidget {
                   onTap:
                       report.reportFileUrl == null
                           ? null
-                          : () => _openDocument(
-                            context,
-                            report.reportFileUrl!,
-                          ),
+                          : () => _openDocument(context, report.reportFileUrl!),
                 ),
               ],
             ),
@@ -140,9 +138,7 @@ class LogbookDetailScreen extends StatelessWidget {
                             report.lecturerName?.trim().isNotEmpty == true
                                 ? report.lecturerName!
                                 : 'Nama dosen belum tersedia',
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w700,
-                            ),
+                            style: const TextStyle(fontWeight: FontWeight.w700),
                           ),
                           const Text(
                             'Dosen Pembimbing',

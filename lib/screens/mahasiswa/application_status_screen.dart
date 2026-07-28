@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
+import 'package:pemrog_hambaallah/l10n/localized_text.dart';
 
 import '../../models/application_model.dart';
 import '../../models/nexus_app_state.dart';
@@ -7,6 +8,7 @@ import 'dashboard_mahasiswa.dart';
 import 'profile_screen.dart';
 import '../notifications_screen.dart';
 import '../../widgets/bottom_nav.dart';
+import 'application_history_screen.dart';
 
 class ApplicationStatusScreen extends StatelessWidget {
   const ApplicationStatusScreen({super.key, this.application});
@@ -31,7 +33,7 @@ class ApplicationStatusScreen extends StatelessWidget {
             ),
           ],
         ),
-        body: const Center(child: Text('No application found yet.')),
+        body: const Center(child: Text('Belum ada lamaran.')),
         bottomNavigationBar: NexusBottomNavigationBar(
           selectedIndex: 1,
           onDestinationSelected: (index) => _handleNav(context, index),
@@ -76,16 +78,25 @@ class ApplicationStatusScreen extends StatelessWidget {
           _CompanySummaryCard(application: app),
           const SizedBox(height: 18),
           _SectionBlock(
-            title: 'Application Progress',
+            title: 'Perkembangan Lamaran',
             trailing: TextButton(
-              onPressed: () {},
-              child: const Text('View History'),
+              onPressed:
+                  () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder:
+                          (_) => const ApplicationHistoryScreen(
+                            showBackButton: true,
+                          ),
+                    ),
+                  ),
+              child: const Text('Riwayat'),
             ),
             child: _Timeline(application: app, stageIndex: stageIndex),
           ),
           const SizedBox(height: 18),
           _SectionBlock(
-            title: 'Activity History',
+            title: 'Riwayat Aktivitas',
             child: Column(
               children:
                   _activityItems(
@@ -125,9 +136,8 @@ class ApplicationStatusScreen extends StatelessWidget {
     final items = <_ActivityItemData>[
       _ActivityItemData(
         icon: Icons.send_rounded,
-        title: 'Application submitted',
-        description:
-            'Your application has been received by ${app.internship.company}.',
+        title: 'Lamaran dikirim',
+        description: 'Lamaranmu sudah diterima oleh ${app.internship.company}.',
         timestamp: _formatActivityDate(app.appliedDate),
       ),
     ];
@@ -217,8 +227,8 @@ class _CompanySummaryCard extends StatelessWidget {
               Wrap(
                 spacing: 8,
                 children: const [
-                  _MiniTag(label: 'Full-time Internship'),
-                  _MiniTag(label: '6 Months'),
+                  _MiniTag(label: 'Magang Penuh Waktu'),
+                  _MiniTag(label: '6 Bulan'),
                 ],
               ),
             ],
@@ -271,37 +281,36 @@ class _Timeline extends StatelessWidget {
   Widget build(BuildContext context) {
     final stages = [
       _TimelineStage(
-        title: 'Application Submitted',
-        description:
-            'Your internship application has been successfully received.',
+        title: 'Lamaran Dikirim',
+        description: 'Lamaran magangmu sudah berhasil diterima.',
         date: application.appliedDate,
-        estimatedTime: 'Usually reviewed within 1-2 days.',
+        estimatedTime: 'Biasanya ditinjau dalam 1-2 hari.',
       ),
       _TimelineStage(
-        title: 'Under Technical Review',
+        title: 'Sedang Ditinjau',
         description:
-            'The team is checking your portfolio, resume, and alignment to the role.',
+            'Tim sedang memeriksa CV, portofolio, dan kecocokanmu dengan posisi ini.',
         date: application.appliedDate.add(const Duration(days: 2)),
-        estimatedTime: 'Technical review typically takes 3-4 days.',
+        estimatedTime: 'Proses tinjauan biasanya memerlukan 3-4 hari.',
       ),
       _TimelineStage(
-        title: 'Interview Session',
+        title: 'Sesi Wawancara',
         description:
-            'A recruiter or design lead will reach out for a discussion.',
+            'Tim mitra akan menghubungi kamu jika perlu sesi wawancara.',
         date: application.appliedDate.add(const Duration(days: 5)),
-        estimatedTime: 'Interview invites are usually sent within a week.',
+        estimatedTime: 'Undangan wawancara biasanya dikirim dalam satu minggu.',
       ),
       _TimelineStage(
-        title: 'Final Decision',
+        title: 'Keputusan Akhir',
         description:
             application.status == ApplicationStatus.rejected
-                ? 'Your application was not selected this round, but your profile remains valuable for future openings.'
-                : 'Final offer and onboarding details will be shared here.',
+                ? 'Lamaranmu belum terpilih pada periode ini. Kamu masih bisa mencoba lowongan lain.'
+                : 'Hasil akhir dan informasi lanjutan akan ditampilkan di sini.',
         date: application.appliedDate.add(const Duration(days: 9)),
         estimatedTime:
             application.status == ApplicationStatus.rejected
-                ? 'You may reapply for future openings.'
-                : 'Final decision usually follows soon after interviews.',
+                ? 'Kamu dapat mendaftar ke lowongan lain yang tersedia.'
+                : 'Keputusan akhir biasanya muncul setelah proses wawancara.',
       ),
     ];
 
@@ -622,7 +631,7 @@ class _FeedbackSection extends StatelessWidget {
               borderRadius: BorderRadius.circular(999),
             ),
             child: const Text(
-              'TOP CANDIDATE HIGHLIGHT',
+              'CATATAN LAMARAN',
               style: TextStyle(
                 color: Colors.white,
                 fontWeight: FontWeight.w700,
@@ -632,7 +641,7 @@ class _FeedbackSection extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           Text(
-            'Your portfolio scores in the top 5%',
+            'Informasi dari mitra akan tampil di sini',
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
               color: Colors.white,
               fontWeight: FontWeight.w700,
@@ -640,7 +649,7 @@ class _FeedbackSection extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           Text(
-            '“The clarity in your case studies and the structure of your design thinking make you stand out for this internship.”',
+            'Pantau perkembangan lamaranmu secara berkala. Jika ada pesan atau catatan dari mitra, informasi tersebut akan muncul pada bagian ini.',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
               color: Colors.white.withValues(alpha: 0.95),
               fontStyle: FontStyle.italic,
@@ -652,15 +661,15 @@ class _FeedbackSection extends StatelessWidget {
             children: const [
               Expanded(
                 child: _FeedbackMiniChip(
-                  title: 'VIBE CHECK',
-                  text: 'Strong design maturity',
+                  title: 'STATUS',
+                  text: 'Menunggu pembaruan',
                 ),
               ),
               SizedBox(width: 12),
               Expanded(
                 child: _FeedbackMiniChip(
-                  title: 'UPSKILLING',
-                  text: 'Sharpen mobile micro-interactions',
+                  title: 'TINDAK LANJUT',
+                  text: 'Ikuti arahan mitra',
                 ),
               ),
             ],
@@ -697,7 +706,7 @@ class _FeedbackSection extends StatelessWidget {
                   child: Align(
                     alignment: Alignment.bottomLeft,
                     child: Text(
-                      'Preparing for the next step? Read our guide before the interview round opens.',
+                      'Siapkan dokumen pendukung dan pastikan kontakmu aktif selama proses seleksi.',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: Colors.white,
                         fontWeight: FontWeight.w600,

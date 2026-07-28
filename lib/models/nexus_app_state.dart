@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../l10n/app_localizations.dart';
 import 'application_model.dart';
 import 'admin_model.dart';
 import 'dosen_model.dart';
@@ -18,6 +19,7 @@ class NexusAppState extends ChangeNotifier {
 
   static const _tokenKey = 'auth_token';
   static const _roleKey = 'user_role';
+  static const _localeKey = 'app_locale';
 
   Application? _currentApplication;
   UserRole currentUserRole = UserRole.student;
@@ -25,6 +27,7 @@ class NexusAppState extends ChangeNotifier {
   Map<String, dynamic>? currentUser;
   bool isSyncing = false;
   String? syncError;
+  Locale locale = const Locale('id');
   final List<Application> applications = <Application>[];
   final Set<String> _savedInternshipIds = <String>{};
   final List<AppNotification> _notifications = <AppNotification>[];
@@ -43,11 +46,7 @@ class NexusAppState extends ChangeNotifier {
   Application? get currentApplication => _currentApplication;
 
   String get currentDisplayName {
-    final value = _currentUserValue(const [
-      'name',
-      'nama_lengkap',
-      'nama',
-    ]);
+    final value = _currentUserValue(const ['name', 'nama_lengkap', 'nama']);
     return value ?? _roleFallback;
   }
 
@@ -126,8 +125,7 @@ class NexusAppState extends ChangeNotifier {
 
   bool get hasApplication => _currentApplication != null;
 
-  bool get hasAcceptedApplication =>
-      activeInternship != null;
+  bool get hasAcceptedApplication => activeInternship != null;
 
   Future<void> updateStudentProfile({
     required String name,
@@ -315,11 +313,23 @@ class NexusAppState extends ChangeNotifier {
     }
   }
 
+  Future<void> setLocale(Locale value) async {
+    if (value.languageCode != 'id' && value.languageCode != 'en') return;
+    locale = Locale(value.languageCode);
+    AppLocalizations.use(locale);
+    notifyListeners();
+    final preferences = await SharedPreferences.getInstance();
+    await preferences.setString(_localeKey, locale.languageCode);
+  }
+
   Future<void> _restoreSession() async {
     final preferences = await SharedPreferences.getInstance();
     final savedToken = preferences.getString(_tokenKey);
     final savedRole = preferences.getString(_roleKey);
+    final savedLocale = preferences.getString(_localeKey);
     authToken = savedToken;
+    locale = Locale(savedLocale == 'en' ? 'en' : 'id');
+    AppLocalizations.use(locale);
     currentUserRole = UserRole.values.firstWhere(
       (role) => role.name == savedRole,
       orElse: () => UserRole.student,

@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
+import 'package:pemrog_hambaallah/l10n/localized_text.dart';
 import 'package:file_picker/file_picker.dart';
 
 import '../../models/application_model.dart';
@@ -42,7 +43,7 @@ class _InternshipProgressScreenState extends State<InternshipProgressScreen> {
             ),
           ],
         ),
-        body: const Center(child: Text('No accepted internship found.')),
+        body: const Center(child: Text('Belum ada magang aktif.')),
         bottomNavigationBar: NexusBottomNavigationBar(
           selectedIndex: 1,
           onDestinationSelected: (index) => _handleNav(context, index),
@@ -95,7 +96,7 @@ class _InternshipProgressScreenState extends State<InternshipProgressScreen> {
         ),
         actions: [
           IconButton(
-            tooltip: 'Riwayat Lamaran',
+            tooltip: tr('Riwayat Lamaran'),
             onPressed:
                 () => Navigator.push(
                   context,
@@ -109,7 +110,7 @@ class _InternshipProgressScreenState extends State<InternshipProgressScreen> {
             icon: const Icon(Icons.history_rounded),
           ),
           IconButton(
-            tooltip: 'Alerts',
+            tooltip: tr('Notifikasi'),
             onPressed:
                 () => Navigator.push(
                   context,
@@ -151,8 +152,8 @@ class _InternshipProgressScreenState extends State<InternshipProgressScreen> {
           ),
           const SizedBox(height: 6),
           _SectionTitleWithAction(
-            title: 'Weekly Timeline',
-            actionLabel: 'View History',
+            title: 'Linimasa Mingguan',
+            actionLabel: 'Lihat Riwayat',
             onAction:
                 () => Navigator.push(
                   context,
@@ -210,8 +211,8 @@ class _InternshipProgressScreenState extends State<InternshipProgressScreen> {
                         TextField(
                           controller: weekController,
                           keyboardType: TextInputType.number,
-                          decoration: const InputDecoration(
-                            labelText: 'Minggu ke',
+                          decoration: InputDecoration(
+                            labelText: tr('Minggu ke'),
                           ),
                         ),
                         const SizedBox(height: 12),
@@ -219,8 +220,8 @@ class _InternshipProgressScreenState extends State<InternshipProgressScreen> {
                           controller: descriptionController,
                           minLines: 3,
                           maxLines: 6,
-                          decoration: const InputDecoration(
-                            labelText: 'Deskripsi kegiatan',
+                          decoration: InputDecoration(
+                            labelText: tr('Deskripsi kegiatan'),
                           ),
                         ),
                         const SizedBox(height: 14),
@@ -237,9 +238,7 @@ class _InternshipProgressScreenState extends State<InternshipProgressScreen> {
                               if (!context.mounted) return;
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
-                                  content: Text(
-                                    'Ukuran PDF maksimal 5 MB.',
-                                  ),
+                                  content: Text('Ukuran PDF maksimal 5 MB.'),
                                 ),
                               );
                               return;

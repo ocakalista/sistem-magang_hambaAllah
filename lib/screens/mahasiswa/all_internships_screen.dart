@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
+import 'package:pemrog_hambaallah/l10n/localized_text.dart';
 
 import '../../models/application_model.dart';
 import '../../services/api_service.dart';
@@ -100,7 +101,7 @@ class _AllInternshipsScreenState extends State<AllInternshipsScreen> {
                   controller: _searchController,
                   onChanged: (_) => setState(() {}),
                   decoration: InputDecoration(
-                    hintText: 'Cari posisi, perusahaan, atau lokasi...',
+                    hintText: tr('Cari posisi, perusahaan, atau lokasi...'),
                     prefixIcon: const Icon(Icons.search_rounded),
                     suffixIcon:
                         _searchController.text.isEmpty

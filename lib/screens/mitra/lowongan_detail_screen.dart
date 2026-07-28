@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
+import 'package:pemrog_hambaallah/l10n/localized_text.dart';
 import 'package:provider/provider.dart';
 
 import '../../models/mitra_model.dart';
@@ -126,9 +127,7 @@ class _ApplicantsSection extends StatelessWidget {
           if (applicants.isEmpty)
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 12),
-              child: Center(
-                child: Text('Belum ada mahasiswa yang melamar.'),
-              ),
+              child: Center(child: Text('Belum ada mahasiswa yang melamar.')),
             )
           else
             ...applicants.map(
@@ -156,9 +155,7 @@ class _ApplicantsSection extends StatelessWidget {
                       ),
                     ),
                     title: Text(
-                      applicant.name.isEmpty
-                          ? 'Mahasiswa'
-                          : applicant.name,
+                      applicant.name.isEmpty ? 'Mahasiswa' : applicant.name,
                     ),
                     subtitle: Text(
                       [
@@ -182,9 +179,8 @@ class _ApplicantsSection extends StatelessWidget {
                           context,
                           MaterialPageRoute(
                             builder:
-                                (_) => PendaftarDetailScreen(
-                                  applicant: applicant,
-                                ),
+                                (_) =>
+                                    PendaftarDetailScreen(applicant: applicant),
                           ),
                         ),
                   ),

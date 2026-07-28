@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
+import 'package:pemrog_hambaallah/l10n/localized_text.dart';
 
 import '../theme/app_theme.dart';
 import '../models/nexus_app_state.dart';
@@ -101,14 +102,14 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     const SizedBox(height: 24),
                     Text(
-                      'Welcome Back',
+                      'Selamat Datang Kembali',
                       style: Theme.of(
                         context,
                       ).textTheme.headlineMedium?.copyWith(fontSize: 30),
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Unlock your future internship at Universitas Amikom',
+                      'Masuk untuk mengelola proses magang Universitas Amikom',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: AppColors.neutral,
                         height: 1.5,
@@ -117,8 +118,8 @@ class _LoginScreenState extends State<LoginScreen> {
                     const SizedBox(height: 24),
                     TextField(
                       controller: _emailController,
-                      decoration: const InputDecoration(
-                        hintText: 'Email or NIM',
+                      decoration: InputDecoration(
+                        hintText: tr('Email atau NIM'),
                         prefixIcon: Icon(Icons.person_outline_rounded),
                       ),
                     ),
@@ -127,7 +128,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       controller: _passwordController,
                       obscureText: _obscurePassword,
                       decoration: InputDecoration(
-                        hintText: 'Password',
+                        hintText: tr('Kata sandi'),
                         prefixIcon: const Icon(Icons.lock_outline_rounded),
                         suffixIcon: IconButton(
                           icon: Icon(
@@ -140,14 +141,6 @@ class _LoginScreenState extends State<LoginScreen> {
                                 () => _obscurePassword = !_obscurePassword,
                               ),
                         ),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: TextButton(
-                        onPressed: () {},
-                        child: const Text('Forgot Password?'),
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -272,7 +265,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                     strokeWidth: 2.5,
                                   ),
                                 )
-                                : const Text('LOGIN TO NEXUS →'),
+                                : const Text('MASUK KE NEXUS →'),
                       ),
                     ),
                     const SizedBox(height: 18),
@@ -309,9 +302,9 @@ class _LoginScreenState extends State<LoginScreen> {
               const SizedBox(height: 22),
               Row(
                 children: [
-                  Expanded(child: _Badge(label: 'Secure Encryption')),
+                  Expanded(child: _Badge(label: 'Keamanan Terenkripsi')),
                   const SizedBox(width: 12),
-                  Expanded(child: _Badge(label: 'Amikom Certified')),
+                  Expanded(child: _Badge(label: 'Terhubung AMIKOM')),
                 ],
               ),
               const SizedBox(height: 18),

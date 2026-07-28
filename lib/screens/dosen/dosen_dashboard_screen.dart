@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
+import 'package:pemrog_hambaallah/l10n/localized_text.dart';
 
 import '../../models/dosen_model.dart';
 import '../../models/nexus_app_state.dart';
@@ -54,7 +55,7 @@ class _DosenDashboardScreenState extends State<DosenDashboardScreen> {
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text('Cancel'),
+                child: const Text('Batal'),
               ),
               ElevatedButton(
                 onPressed: () {
@@ -125,7 +126,7 @@ class _DosenDashboardScreenState extends State<DosenDashboardScreen> {
           Padding(
             padding: const EdgeInsets.only(right: 8),
             child: IconButton(
-              tooltip: 'Notifikasi',
+              tooltip: tr('Notifikasi'),
               onPressed:
                   () => Navigator.pushNamed(
                     context,
@@ -745,18 +746,12 @@ class _DosenDashboardScreenState extends State<DosenDashboardScreen> {
           }
 
           if (index == 2) {
-            Navigator.push(
-              context,
-              nexusTabRoute(const NotificationsScreen()),
-            );
+            Navigator.push(context, nexusTabRoute(const NotificationsScreen()));
             return;
           }
 
           if (index == 3) {
-            Navigator.push(
-              context,
-              nexusTabRoute(const DosenProfileScreen()),
-            );
+            Navigator.push(context, nexusTabRoute(const DosenProfileScreen()));
             return;
           }
         },
@@ -799,9 +794,6 @@ class _DosenDashboardScreenState extends State<DosenDashboardScreen> {
   }
 
   void _navigateToStudents() {
-    Navigator.push(
-      context,
-      nexusTabRoute(const StudentsScreen()),
-    );
+    Navigator.push(context, nexusTabRoute(const StudentsScreen()));
   }
 }

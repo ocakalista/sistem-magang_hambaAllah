@@ -1,6 +1,8 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
+import 'package:pemrog_hambaallah/l10n/localized_text.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../models/nexus_app_state.dart';
 import '../theme/app_theme.dart';
 
 class NotificationSettingsScreen extends StatefulWidget {
@@ -52,13 +54,55 @@ class _NotificationSettingsScreenState
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(title: const Text('Pengaturan Notifikasi')),
+      appBar: AppBar(title: const Text('Pengaturan')),
       body:
           _loading
               ? const Center(child: CircularProgressIndicator())
               : ListView(
                 padding: const EdgeInsets.all(20),
                 children: [
+                  Text(
+                    'Bahasa',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  const Text('Pilih bahasa aplikasi'),
+                  const SizedBox(height: 12),
+                  _SettingsCard(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: SizedBox(
+                          width: double.infinity,
+                          child: SegmentedButton<String>(
+                            segments: const [
+                              ButtonSegment(
+                                value: 'id',
+                                icon: Icon(Icons.language_rounded),
+                                label: Text('Bahasa Indonesia'),
+                              ),
+                              ButtonSegment(
+                                value: 'en',
+                                icon: Icon(Icons.translate_rounded),
+                                label: Text('Bahasa Inggris'),
+                              ),
+                            ],
+                            selected: {
+                              NexusScope.of(context).locale.languageCode,
+                            },
+                            onSelectionChanged: (selected) {
+                              NexusScope.of(
+                                context,
+                              ).setLocale(Locale(selected.first));
+                            },
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
                   Text(
                     'Preferensi Notifikasi',
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(

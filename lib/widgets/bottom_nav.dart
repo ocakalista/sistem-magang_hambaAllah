@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
+import 'package:pemrog_hambaallah/l10n/app_localizations.dart';
 
 import '../theme/app_theme.dart';
 
@@ -27,26 +28,26 @@ class NexusBottomNavigationBar extends StatelessWidget {
       onDestinationSelected: onDestinationSelected,
       backgroundColor: AppColors.white,
       indicatorColor: AppColors.primary.withValues(alpha: 0.12),
-      destinations: const [
+      destinations: [
         NavigationDestination(
           icon: Icon(Icons.home_outlined),
           selectedIcon: Icon(Icons.home_rounded),
-          label: 'Home',
+          label: tr('Home'),
         ),
         NavigationDestination(
           icon: Icon(Icons.work_outline_rounded),
           selectedIcon: Icon(Icons.work_rounded),
-          label: 'My Internship',
+          label: tr('My Internship'),
         ),
         NavigationDestination(
           icon: Icon(Icons.notifications_none_rounded),
           selectedIcon: Icon(Icons.notifications_rounded),
-          label: 'Alerts',
+          label: tr('Alerts'),
         ),
         NavigationDestination(
           icon: Icon(Icons.person_outline_rounded),
           selectedIcon: Icon(Icons.person_rounded),
-          label: 'Profile',
+          label: tr('Profile'),
         ),
       ],
     );

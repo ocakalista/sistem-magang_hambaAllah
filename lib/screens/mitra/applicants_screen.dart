@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
+import 'package:pemrog_hambaallah/l10n/localized_text.dart';
 import 'package:provider/provider.dart';
 
 import '../../models/application_model.dart';
@@ -38,8 +39,8 @@ class _MitraApplicantsScreenState extends State<MitraApplicantsScreen> {
             padding: const EdgeInsets.fromLTRB(20, 8, 20, 10),
             child: TextField(
               onChanged: (value) => setState(() => _query = value),
-              decoration: const InputDecoration(
-                hintText: 'Cari mahasiswa atau posisi...',
+              decoration: InputDecoration(
+                hintText: tr('Cari mahasiswa atau posisi...'),
                 prefixIcon: Icon(Icons.search_rounded),
               ),
             ),
